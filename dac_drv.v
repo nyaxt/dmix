@@ -45,10 +45,7 @@ function gen_data(
 			gen_data = lr_data[lr_data_idx];
 		end
 		else
-		begin
-			lr_data_idx = 5'b0;
 			gen_data = 1'b0;
-		end
    end
 endfunction
 
