@@ -13,28 +13,24 @@ module dac_drv(
 
 assign sck = clk; // 128fs * 192kHz = 24.57Mhz
 
-// generate bck = 2x clk
-reg bck_ff;
-always @(posedge sck or rst)
+wire [6:0] next_clk = clk_counter + 1;
+reg [6:0] clk_counter;
+always @(posedge clk or rst)
 	if(rst)
-		bck_ff <= 0;
+		clk_counter <= 0;
 	else
-		bck_ff <= ~bck_ff;
+		clk_counter <= next_clk;
 
-assign bck = bck_ff; // 64fs * 192kHz = 12.29Mhz
+// generate bck = 2x clk = 64fs * 192kHz = 12.28Mhz
+assign bck = clk_counter[0];
 
-reg [5:0] bck_counter;
-always @(posedge bck or rst)
-	if(rst)
-		bck_counter <= 0;
-	else
-		bck_counter <= bck_counter + 1;
-
-// generate lrck = 64x bck
+// generate lrck = 64x clk = 192kHz
 reg lrck_ff;
-always @(posedge bck)
-	lrck_ff <= ~bck_counter[5]; // 192kHz
-
+always @(posedge clk or rst)
+	if(clk_counter == 7'h00 || rst)
+		lrck_ff <= 1'b0;
+	else if(clk_counter == 7'h40)
+		lrck_ff <= 1'b1;
 assign lrck = lrck_ff;
 
 // generate data
@@ -63,8 +59,8 @@ function gen_data(
 endfunction
 
 reg data_r;
-always @(posedge bck)
-	data_r <= gen_data(l_data, r_data, bck_counter);
+always @(posedge clk)
+		data_r <= gen_data(l_data, r_data, next_clk[6:1]);
 
 assign data = data_r;
 
