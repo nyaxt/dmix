@@ -25,13 +25,7 @@ always @(posedge clk or rst)
 assign bck = clk_counter[0];
 
 // generate lrck = 64x clk = 192kHz
-reg lrck_ff;
-always @(posedge clk or rst)
-	if(clk_counter == 7'h00 || rst)
-		lrck_ff <= 1'b0;
-	else if(clk_counter == 7'h40)
-		lrck_ff <= 1'b1;
-assign lrck = lrck_ff;
+assign lrck = clk_counter[6];
 
 // generate data
 function gen_data(
@@ -60,7 +54,7 @@ endfunction
 
 reg data_r;
 always @(posedge clk)
-		data_r <= gen_data(l_data, r_data, next_clk[6:1]);
+	data_r <= gen_data(l_data, r_data, next_clk[6:1]);
 
 assign data = data_r;
 
