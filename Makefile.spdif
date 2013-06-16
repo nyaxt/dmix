@@ -1,0 +1,12 @@
+dump: spdif_dai_t.lxt
+	gtkwave spdif_dai_t.lxt &
+
+runsim: spdif_dai_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+spdif_dai_t.vvp: spdif_dai.v spdif_dai_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp

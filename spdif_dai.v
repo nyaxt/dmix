@@ -3,7 +3,7 @@
 
 module spdif_dai #(
 parameter CLK_PER_BIT = 4,
-parameter SUBFRAME_WIDTH = 28,
+parameter SUBFRAME_WIDTH = 28
 )(
     input clk,
     input rst,
@@ -18,7 +18,12 @@ parameter SUBFRAME_WIDTH = 28,
 parameter PHASE_SAMELVL_END = CLK_PER_BIT/2*3 - 1;
 parameter PHASE_SYNC_CODE_END = CLK_PER_BIT/2*8 - 1;
 parameter PHASE_AUDIODATA_END = CLK_PER_BIT*(4+24) - 1;
+parameter PHASE_FETCH_UDATA = CLK_PER_BIT*30 - 1;
+parameter PHASE_FETCH_CDATA = CLK_PER_BIT*31 - 1;
 parameter PHASE_SUBFRAME_END = CLK_PER_BIT*32 - 1;
+
+parameter SYNC_BLK_B1 = 6'b010111;
+parameter SYNC_BLK_B2 = 6'b101000;
 
 parameter ST_FIND_START = 0;
 parameter ST_FIND_B = 1;
@@ -37,9 +42,13 @@ wire prev_lvl = recent_lvl_hist_ff[1];
 
 // a bit in syncblk. only valid when syncblk_bit_valid
 wire syncblk_bit = recent_lvl[1:0] == 2'b11; // FIXME: support variable CLK_PER_BIT
-wire syncblk_bit_valid = phase_counter & (CLK_PER_BIT/2-1) == (CLK_PER_BIT/2-1);
+wire syncblk_bit_valid = (phase_counter & (CLK_PER_BIT/2-1)) == (CLK_PER_BIT/2-1);
 reg [4:0] prev_syncblk_ff;
-wire curr_syncblk = {prev_syncblk_ff, syncblk_bit};
+wire [5:0] curr_syncblk = {prev_syncblk_ff, syncblk_bit};
+
+reg [(SUBFRAME_WIDTH-1):0] data_ff;
+assign data_o = data_ff[23:0];
+assign we_o = (phase_counter == PHASE_AUDIODATA_END+1) & locked;
 
 // FIXME: support variable CLK_PER_BIT
 function bmcdecode(
@@ -48,7 +57,7 @@ function bmcdecode(
 reg [3:0] plvl;
 
 begin
-    plvl = {(last ? ~lvl[3:2] : lvl[3:2]), lvl[1:0]}
+    plvl = {(last ? ~lvl[3:2] : lvl[3:2]), lvl[1:0]};
     case(plvl)
         // obvious
         4'b0000, 4'b0001, 4'b0010, 4'b0100, 4'b1000: bmcdecode = 0;
@@ -60,20 +69,19 @@ begin
 end
 endfunction
 
-wire bmcdecode_bit = bmcdecode(recent_lvl);
-wire bmcdecode_bit_valid = phase_counter & (CLK_PER_BIT-1) == (CLK_PER_BIT-1);
+wire bmcdecode_bit_last = data_ff[0];
+wire bmcdecode_bit = bmcdecode(recent_lvl, bmcdecode_bit_last);
+wire bmcdecode_bit_valid = (phase_counter & (CLK_PER_BIT-1)) == (CLK_PER_BIT-1);
 
-reg [(SUBFRAME_WIDTH-1):0] data_ff;
-assign data_o = data_ff[23:0];
-assign we_o = (phase_counter == PHASE_AUDIODATA_END+1) & locked;
-
-parameter SYNC_BLK_B1 = 6'b010111;
-parameter SYNC_BLK_B2 = 6'b101000;
+reg [191:0] u_data_ff;
+reg [191:0] c_data_ff;
 
 always @(posedge clk) begin
     if(rst) begin
         phase_counter <= 0;
         data_ff <= 0;
+        u_data_ff <= 0;
+        c_data_ff <= 0;
 
         state <= ST_FIND_START;
     end else begin
@@ -92,7 +100,7 @@ always @(posedge clk) begin
             prev_syncblk_ff <= {4'b0, signal};
         else if(phase_counter <= PHASE_SAMELVL_END) begin
             // verify that still at same lvl
-            if(signal != prev_syncblk_ff[0]) begin
+            if(state == ST_FIND_START && signal != prev_syncblk_ff[0]) begin
                 prev_syncblk_ff <= {4'b0, signal};
                 phase_counter <= 1;
                 state <= ST_FIND_START;
@@ -104,10 +112,10 @@ always @(posedge clk) begin
             // FIXME: check B/M/W?
         end else begin
             // handle control data
-            if(phase == PHASE_FETCH_UDATA)
-                u_data_ff <= {u_data_ff[191:0], data[0]};
-            if(phase == PHASE_FETCH_CDATA)
-                c_data_ff <= {c_data_ff[191:0], data[0]};
+            if(phase_counter == PHASE_FETCH_UDATA)
+                u_data_ff <= {u_data_ff[190:0], bmcdecode_bit};
+            if(phase_counter == PHASE_FETCH_CDATA)
+                c_data_ff <= {c_data_ff[190:0], bmcdecode_bit};
         end
                     
         case(state)
