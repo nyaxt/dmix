@@ -36,9 +36,8 @@ reg [10:0] phase_counter;
 reg sync_start_lvl_ff;
 reg [10:0] sync_code_ff;
 
-reg [(CLK_PER_BIT-2):0] recent_lvl_hist_ff;
-wire [(CLK_PER_BIT-1):0] recent_lvl = {recent_lvl_hist_ff, signal};
-wire prev_lvl = recent_lvl_hist_ff[1];
+reg [CLK_PER_BIT:0] recent_lvl_hist_ff;
+wire [(CLK_PER_BIT+1):0] recent_lvl = {recent_lvl_hist_ff, signal};
 
 // a bit in syncblk. only valid when syncblk_bit_valid
 wire syncblk_bit = recent_lvl[1:0] == 2'b11; // FIXME: support variable CLK_PER_BIT
@@ -57,20 +56,17 @@ function bmcdecode(
 reg [3:0] plvl;
 
 begin
-    plvl = {(last ? ~lvl[3:2] : lvl[3:2]), lvl[1:0]};
+    plvl = last ? ~lvl : lvl;
     case(plvl)
-        // obvious
-        4'b0000, 4'b0001, 4'b0010, 4'b0100, 4'b1000: bmcdecode = 0;
-        4'b1111, 4'b1110, 4'b1101, 4'b1011, 4'b0111: bmcdecode = 1;
-        // hmm..., use first, then middle?
-        4'b1100, 4'b0110, 4'b1010: bmcdecode = 1;
-        4'b0011, 4'b1001, 4'b0101: bmcdecode = 0;
+        4'b1100, 4'b0110, 4'b1000, 4'b0011, 4'b0001,
+        4'b0011, 4'b0100, 4'b1001: bmcdecode = 1; 
+        4'b1111, 4'b1110, 4'b1101, 4'b1011, 4'b0111,
+        4'b0000, 4'b0001, 4'b0010: bmcdecode = 0;
     endcase
 end
 endfunction
 
-wire bmcdecode_bit_last = data_ff[0];
-wire bmcdecode_bit = bmcdecode(recent_lvl, bmcdecode_bit_last);
+wire bmcdecode_bit = bmcdecode(recent_lvl[3:0], recent_lvl[5]);
 wire bmcdecode_bit_valid = (phase_counter & (CLK_PER_BIT-1)) == (CLK_PER_BIT-1);
 
 reg [191:0] u_data_ff;
