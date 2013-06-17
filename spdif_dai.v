@@ -81,7 +81,7 @@ always @(posedge clk) begin
 
         state <= ST_FIND_START;
     end else begin
-        recent_lvl_hist_ff <= recent_lvl[(CLK_PER_BIT-2):0];
+        recent_lvl_hist_ff <= recent_lvl[CLK_PER_BIT:0];
 
         if(phase_counter == PHASE_SUBFRAME_END)
             phase_counter <= 0;
@@ -106,6 +106,11 @@ always @(posedge clk) begin
                 prev_syncblk_ff <= curr_syncblk[4:0];
 
             // FIXME: check B/M/W?
+            if(phase_counter == PHASE_SYNC_CODE_END &&
+               curr_syncblk[5] == curr_syncblk[4]) begin
+                phase_counter <= 0;
+                state <= ST_FIND_START;
+            end
         end else begin
             // handle control data
             if(phase_counter == PHASE_FETCH_UDATA)

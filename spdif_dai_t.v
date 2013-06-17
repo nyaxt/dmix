@@ -149,7 +149,7 @@ initial begin
     recv_B();
     recv_bmcbyte(8'hde);
     recv_bmcbyte(8'had);
-    recv_bmcbyte(8'hbe);
+    recv_bmcbyte(8'hff);
     recv_bmcbit(1);
     recv_bmcbit(1);
     recv_bmcbit(1);
