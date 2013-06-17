@@ -12,7 +12,8 @@ parameter SUBFRAME_WIDTH = 28
 
     output [23:0] data_o,
     output we_o,
-    output locked
+    output locked,
+    output lrck
 );
 
 parameter PHASE_SAMELVL_END = CLK_PER_BIT/2*3 - 1;
@@ -23,7 +24,11 @@ parameter PHASE_FETCH_CDATA = CLK_PER_BIT*31 - 1;
 parameter PHASE_SUBFRAME_END = CLK_PER_BIT*32 - 1;
 
 parameter SYNC_BLK_B1 = 6'b010111;
-parameter SYNC_BLK_B2 = 6'b101000;
+parameter SYNC_BLK_W1 = 6'b011011;
+parameter SYNC_BLK_M1 = 6'b011101;
+parameter SYNC_BLK_B2 = ~SYNC_BLK_B1;
+parameter SYNC_BLK_W2 = ~SYNC_BLK_W1;
+parameter SYNC_BLK_M2 = ~SYNC_BLK_M1;
 
 parameter ST_FIND_START = 0;
 parameter ST_FIND_B = 1;
@@ -44,6 +49,9 @@ wire syncblk_bit = recent_lvl[1:0] == 2'b11; // FIXME: support variable CLK_PER_
 wire syncblk_bit_valid = (phase_counter & (CLK_PER_BIT/2-1)) == (CLK_PER_BIT/2-1);
 reg [4:0] prev_syncblk_ff;
 wire [5:0] curr_syncblk = {prev_syncblk_ff, syncblk_bit};
+
+reg lrck_ff;
+wire lrck = lrck_ff;
 
 reg [(SUBFRAME_WIDTH-1):0] data_ff;
 assign data_o = data_ff[23:0];
@@ -75,6 +83,7 @@ reg [191:0] c_data_ff;
 always @(posedge clk) begin
     if(rst) begin
         phase_counter <= 0;
+        lrck_ff <= 0;
         data_ff <= 0;
         u_data_ff <= 0;
         c_data_ff <= 0;
@@ -126,12 +135,21 @@ always @(posedge clk) begin
             end
             ST_FIND_B: begin
                 if(phase_counter == PHASE_SYNC_CODE_END) begin
-                    if(curr_syncblk == SYNC_BLK_B1 || curr_syncblk == SYNC_BLK_B2) begin
+                    if(curr_syncblk == SYNC_BLK_B1 ||
+                       curr_syncblk == SYNC_BLK_B2) begin
                         state <= ST_LOCKED;
                     end
                 end
             end
             ST_LOCKED: begin
+                if(phase_counter == PHASE_SYNC_CODE_END) begin
+                    if(curr_syncblk == SYNC_BLK_W1 ||
+                       curr_syncblk == SYNC_BLK_W2) begin
+                        lrck_ff <= 1;
+                    end else begin
+                        lrck_ff <= 0;
+                    end
+                end
             end
             default: state <= ST_FIND_START;
         endcase

@@ -132,10 +132,19 @@ task recv_bmcbyte;
     end
 endtask
 
+task recv_bmcctl;
+    begin
+        recv_bmcbit(1);
+        recv_bmcbit(1);
+        recv_bmcbit(1);
+        recv_bmcbit(1);
+    end
+endtask
+
 initial begin
 	$dumpfile("spdif_dai_t.lxt");
 	$dumpvars(0, spdif_dai_t);
-	
+
 	clk = 1'b0;
 	rst = 1'b0;
     signal = 0;
@@ -150,10 +159,25 @@ initial begin
     recv_bmcbyte(8'hde);
     recv_bmcbyte(8'had);
     recv_bmcbyte(8'hff);
-    recv_bmcbit(1);
-    recv_bmcbit(1);
-    recv_bmcbit(1);
-    recv_bmcbit(1);
+    recv_bmcctl();
+
+    recv_W();
+    recv_bmcbyte(8'h00);
+    recv_bmcbyte(8'hbe);
+    recv_bmcbyte(8'hef);
+    recv_bmcctl();
+
+    recv_M();
+    recv_bmcbyte(8'h01);
+    recv_bmcbyte(8'h23);
+    recv_bmcbyte(8'h45);
+    recv_bmcctl();
+
+    recv_W();
+    recv_bmcbyte(8'h67);
+    recv_bmcbyte(8'h89);
+    recv_bmcbyte(8'hab);
+    recv_bmcctl();
 
 	#(TCLK*100000);
 	// #(1000_000_00);
@@ -161,5 +185,11 @@ initial begin
 end
 
 always #(TCLK/2) clk = ~clk;
+
+always @(posedge clk) begin
+    if(uut.we_o) begin
+        $display("data_o: %x", uut.data_o);
+    end
+end
 
 endmodule
