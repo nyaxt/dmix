@@ -1,0 +1,12 @@
+dump: ringbuf_t.lxt
+	gtkwave ringbuf_t.lxt &
+
+runsim: ringbuf_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+ringbuf_t.vvp: ringbuf.v ringbuf_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp

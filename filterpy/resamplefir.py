@@ -129,7 +129,7 @@ outn = int(n * to_rate / from_rate)
 # outn = 100000
 for i in range(outn):
   if i % 10000 == 0:
-    print i
+    print(i)
 
   fir = pf.firs[i % len(pf.firs)]
   
