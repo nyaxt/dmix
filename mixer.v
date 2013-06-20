@@ -5,14 +5,15 @@ parameter FS = 128
     input clk, // 24.576Mhz
     input rst,
 
+    // FIXME: use pop/ack
+
     input [(NUM_CH*2*24-1):0] data_i,
     input [(NUM_CH*2*16-1):0] vol_i,
     output [(NUM_CH*2-1):0] pop_o,
 
     output [23:0] data_o,
     output lrck_o,
-    output we_o
-    );
+    output we_o);
 
 parameter FS2 = FS/2;
 parameter OUTPUT_LCH = FS2-1;

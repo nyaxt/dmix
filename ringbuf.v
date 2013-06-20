@@ -6,7 +6,6 @@ module ringbuf(
     input we_i,
     
     input pop_i,
-
     input [3:0] offset_i,
     output [23:0] data_o);
 
