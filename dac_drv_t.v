@@ -6,19 +6,14 @@ module dac_drv_t;
 reg clk;
 reg rst;
 
-wire [23:0] l_data;
-reg [23:0] r_data;
+reg [23:0] data_i;
+reg lrck_i;
+reg ack_i;
 
 reg [3:0] clk_scaler;
 always @(posedge clk)
 	clk_scaler <= clk_scaler + 1;
 wire clk_s = clk_scaler[3];
-
-// outs
-wire sck;
-wire bck;
-wire data;
-wire lrck;
 
 // - function cfgs
 wire ml;
@@ -27,13 +22,8 @@ wire mc;
 wire rstb;
 
 dac_drv uut(
-	.sck(sck), .bck(bck), .data(data), .lrck(lrck),
-	.l_data(l_data), .r_data(r_data), .clk(clk), .rst(rst)
-);
-
-synth synth(
-	.data(l_data),
-	.clk(clk)
+    .clk(clk), .rst(rst),
+    .data_i(data_i), .lrck_i(lrck_i), .ack_i(ack_i)
 );
 
 fa1242 fa1242_cfg(
@@ -47,8 +37,10 @@ initial begin
 	$dumpfile("dac_drv_t.lxt");
 	$dumpvars(0, dac_drv_t);
 	
-	// l_data = 24'b0;
-	r_data = 24'hffffff;
+	data_i = 24'h0;
+    lrck_i = 0;
+    ack_i = 0;
+
 	clk = 1'b0;
 	clk_scaler = 0;
 
@@ -62,6 +54,20 @@ initial begin
 	#(TCLK*100000);
 	// #(1000_000_00);
 	$finish(2);
+end
+
+always @(posedge uut.pop_o) begin
+    #TCLK;
+    data_i = 24'h123456;
+    lrck_i = 0;
+    ack_i = 1;
+    #TCLK;
+    data_i = 24'h789abc;
+    lrck_i = 1;
+    ack_i = 1;
+    #TCLK;
+    ack_i = 0;
+    lrck_i = 0;
 end
 
 always #(TCLK/2) clk = ~clk;
