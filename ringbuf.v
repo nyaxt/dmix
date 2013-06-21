@@ -3,7 +3,7 @@ module ringbuf(
     input rst,
 
     input [23:0] data_i,
-    input we_i,
+    input wpulse_i,
     
     input pop_i,
     input [3:0] offset_i,
@@ -12,16 +12,17 @@ module ringbuf(
 reg [23:0] mem [15:0];
 
 // WRITE
+reg wpulse_handled_ff;
 reg [3:0] witer;
 always @(posedge clk) begin
     if(rst) begin
         witer <= 0;
-    end else begin
-        if(we_i) begin
-            mem[witer] <= data_i;
-            witer <= witer + 1;
-        end
-    end
+    end else if(wpulse_i && !wpulse_handled_ff) begin
+        wpulse_handled_ff <= 1;
+        mem[witer] <= data_i;
+        witer <= witer + 1;
+    end else if(!wpulse_i)
+        wpulse_handled_ff <= 0;
 end
 
 // READ
