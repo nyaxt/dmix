@@ -16,7 +16,7 @@ module resampler_1ch
 
     // to ringbuf
     output pop_o,
-    output [(FIRDEPTH_LOG2+1):0] offset_o,
+    output [(FIRDEPTH_LOG2-1):0] offset_o,
     input [23:0] data_i,
 
     // data output
@@ -116,4 +116,42 @@ assign data_o = result_ff;
 
 endmodule
 
+module upsample2x_1ch(
+    input clk,
+    input rst,
 
+    // data input
+    output pop_o,
+    input [23:0] data_i,
+    input ack_i,
+
+    // data output
+    input pop_i,
+    output [23:0] data_o,
+    output ack_o);
+
+wire [6:0] fb_addr;
+wire [15:0] fb_data;
+
+rom_firbank_half fb(.addr(fb_addr), .data(fb_data));
+
+wire rb_pop;
+wire [5:0] rb_offset;
+wire [23:0] rb_data;
+
+ringbuf #(
+    .LEN(64), // should work w/ 32, but buffer a little to address input jitter
+    .LEN_LOG2(6)
+) rb(
+    .clk(clk), .rst(rst),
+    .data_i(data_i), .we_i(ack_i),
+    .pop_i(rb_pop), .offset_i(rb_offset), .data_o(rb_data));
+assign pop_o = rb_pop;
+
+resampler_1ch r(
+    .clk(clk), .rst(rst),
+    .bank_addr_o(fb_addr), .bank_data_i(fb_data),
+    .pop_o(rb_pop), .offset_o(rb_offset), .data_i(rb_data),
+    .pop_i(pop_i), .data_o(data_o), .ack_o(ack_o));
+
+endmodule

@@ -7,17 +7,29 @@ reg clk;
 reg rst;
 
 reg [23:0] data_i;
-reg we_i;
+reg wpulse_i;
 
 reg pop_i;
 reg [3:0] offset_i;
 
 ringbuf uut(
     .clk(clk), .rst(rst),
-    .data_i(data_i), .we_i(we_i),
+    .data_i(data_i), .wpulse_i(wpulse_i),
     .pop_i(pop_i), .offset_i(offset_i));
 
 parameter TCLK = 41.0; // ~40.69ns (24.576Mhz)
+
+task recv_data;
+    input [23:0] b;
+    begin
+        data_i = b;
+        #10;
+        wpulse_i = 1;
+        #130;
+        wpulse_i = 0;
+        #500;
+    end
+endtask
 
 initial begin
 	$dumpfile("ringbuf_t.lxt");
@@ -26,7 +38,7 @@ initial begin
 	clk = 1'b0;
 
 	data_i = 24'h0;
-    we_i = 0;
+    wpulse_i = 0;
     pop_i = 0;
     offset_i = 0;
 
@@ -37,41 +49,22 @@ initial begin
 	rst = 1'b0;
 	#TCLK;
 
-    we_i = 1;
-    data_i = 24'h0;
-    #TCLK;
-    data_i = 24'h1;
-    #TCLK;
-    data_i = 24'h2;
-    #TCLK;
-    data_i = 24'h3;
-    #TCLK;
-    data_i = 24'h4;
-    #TCLK;
-    data_i = 24'h5;
-    #TCLK;
-    data_i = 24'h6;
-    #TCLK;
-    data_i = 24'h7;
-    #TCLK;
-    data_i = 24'h8;
-    #TCLK;
-    data_i = 24'h9;
-    #TCLK;
-    data_i = 24'ha;
-    #TCLK;
-    data_i = 24'hb;
-    #TCLK;
-    data_i = 24'hc;
-    #TCLK;
-    data_i = 24'hd;
-    #TCLK;
-    data_i = 24'he;
-    #TCLK;
-    data_i = 24'hf;
-    #TCLK;
-    we_i = 0;
-    #TCLK;
+    recv_data(24'h0);
+    recv_data(24'h1);
+    recv_data(24'h2);
+    recv_data(24'h3);
+    recv_data(24'h4);
+    recv_data(24'h5);
+    recv_data(24'h6);
+    recv_data(24'h7);
+    recv_data(24'h8);
+    recv_data(24'h9);
+    recv_data(24'ha);
+    recv_data(24'hb);
+    recv_data(24'hc);
+    recv_data(24'hd);
+    recv_data(24'he);
+    recv_data(24'hf);
 
     offset_i = 0;
     #TCLK;
