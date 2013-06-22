@@ -31,13 +31,19 @@ end
 // READ
 reg [(LEN_LOG2-1):0] riter;
 wire [(LEN_LOG2-1):0] raddr = riter - offset_i;
-assign data_o = mem[raddr];
+
+reg [23:0] data_ff;
+assign data_o = data_ff;
 
 always @(posedge clk) begin
     if(rst)
         riter <= LEN - 1;
-    else if(pop_i)
-        riter <= riter + 1; 
+    else begin
+        if(pop_i)
+            riter <= riter + 1;
+            
+        data_ff <= mem[raddr];
+    end
 end
 
 endmodule
