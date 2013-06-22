@@ -71,6 +71,7 @@ always @(addr) begin
         61: data_reg = 16'd49;
         62: data_reg = -16'd13;
         63: data_reg = -16'd2;
+        default: data_reg = 0;
     endcase
 end
 endmodule

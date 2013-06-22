@@ -34,7 +34,6 @@ parameter PIPELINEDEPTH = 2;
 
 reg [(NUM_FIR_LOG2-1):0] firidx_ff;
 reg [(NUM_FIR_LOG2-1):0] pop_counter;
-wire [(NUM_FIR_LOG2+1-1):0] pop_counter_next = pop_counter + DECIM;
 
 reg [(FIRDEPTH_LOG2+1-1):0] depthidx_ff; // +1 is because depthidx_ff max is FIRDEPTH + PIPELINEDEPTH
 assign offset_o = depthidx_ff[(FIRDEPTH_LOG2-1):0];
@@ -42,10 +41,11 @@ assign bank_addr_o = {firidx_ff, depthidx_ff[(FIRDEPTH_LOG2-1):0]};
 
 reg signed [23:0] sample_ff;
 reg signed [15:0] coeff_ff;
+wire [39:0] full_prod = sample_ff * coeff_ff;
 
-reg signed [39:0] prod_ff;
+reg signed [23:0] prod_ff;
 
-reg signed [39:0] result_ff;
+reg signed [23:0] result_ff;
 reg pop_ff;
 assign pop_o = pop_ff;
 
@@ -55,6 +55,7 @@ always @(posedge clk) begin
 
         sample_ff <= 0;
         coeff_ff <= 0;
+        prod_ff <= 0;
         result_ff <= 0;
 
         depthidx_ff <= 0;
@@ -85,13 +86,15 @@ always @(posedge clk) begin
             coeff_ff <= bank_data_i;
             
             // PIPELINE STAGE 2: mul
-            prod_ff <= sample_ff * coeff_ff;
+            prod_ff <= full_prod >>> 16;
 
             // PIPELINE STAGE 3: add
             result_ff <= result_ff + prod_ff;
 
             if(depthidx_ff == FIRDEPTH+PIPELINEDEPTH)
                 state <= ST_NEXT_FIR;
+            else
+                depthidx_ff <= depthidx_ff + 1;
         end
         ST_NEXT_FIR: begin
             if(firidx_ff == NUM_FIR-1)
@@ -99,11 +102,11 @@ always @(posedge clk) begin
             else
                 firidx_ff <= firidx_ff + 1;
 
-            if(pop_counter_next > NUM_FIR) begin
-                pop_counter <= pop_counter_next - NUM_FIR;
+            if(pop_counter >= NUM_FIR - 1) begin
+                pop_counter <= pop_counter + 1 - NUM_FIR;
                 pop_ff <= 1;
             end else
-                pop_counter <= pop_counter_next;
+                pop_counter <= pop_counter + 1;
 
             state <= ST_IDLE;
         end
