@@ -1,23 +1,28 @@
-module resampler_1ch(
+module resampler_1ch
+#(
+    parameter FIRDEPTH = 32,
+    parameter FIRDEPTH_LOG2 = 6,
+    parameter NUM_FIR = 2,
+    parameter NUM_FIR_LOG2 = 1,
+    parameter DECIM = 1,
+    parameter BANK_WIDTH = FIRDEPTH_LOG2+NUM_FIR_LOG2
+)(
     input clk,
     input rst,
 
+    // to firbank
+    output [(BANK_WIDTH-1):0] bank_addr_o,
+    input [15:0] bank_data_i,
+
     // to ringbuf
     output pop_o,
-    output [3:0] offset_o,
+    output [(FIRDEPTH_LOG2+1):0] offset_o,
     input [23:0] data_i,
 
-    // to mixer
+    // data output
     input pop_i,
     output [23:0] data_o,
     output ack_o);
-
-parameter FIRDEPTH = 16;
-parameter FIRDEPTH_LOG2 = 4;
-parameter NUM_FIR = 123;
-parameter NUM_FIR_LOG2 = 7;
-parameter DECIM = 31;
-reg [15:0] firbank [(NUM_FIR*FIRDEPTH):0];
 
 parameter ST_IDLE = 0;
 parameter ST_RESULT = 1;
@@ -31,15 +36,16 @@ reg [(NUM_FIR_LOG2-1):0] firidx_ff;
 reg [(NUM_FIR_LOG2-1):0] pop_counter;
 wire [(NUM_FIR_LOG2+1-1):0] pop_counter_next = pop_counter + DECIM;
 
-reg [(FIRDEPTH_LOG2+1-1):0] depthidx_ff;
-assign offset_o = depthidx_ff;
+reg [(FIRDEPTH_LOG2+1-1):0] depthidx_ff; // +1 is because depthidx_ff max is FIRDEPTH + PIPELINEDEPTH
+assign offset_o = depthidx_ff[(FIRDEPTH_LOG2-1):0];
+assign bank_addr_o = {firidx_ff, depthidx_ff[(FIRDEPTH_LOG2-1):0]};
 
-reg [23:0] sample_ff;
-reg [15:0] coeff_ff;
+reg signed [23:0] sample_ff;
+reg signed [15:0] coeff_ff;
 
-reg [39:0] seki_ff;
+reg signed [39:0] prod_ff;
 
-reg [39:0] result_ff;
+reg signed [39:0] result_ff;
 reg pop_ff;
 assign pop_o = pop_ff;
 
@@ -76,15 +82,13 @@ always @(posedge clk) begin
         ST_CALC: begin
             // PIPELINE STAGE 1: load sample / filter coeff
             sample_ff <= data_i;
-            coeff_ff <= firbank[firidx_ff*FIRDEPTH + depthidx_ff];
+            coeff_ff <= bank_data_i;
             
             // PIPELINE STAGE 2: mul
-            // FIXME: coeff signed!
-            seki_ff <= sample_ff * coeff_ff;
+            prod_ff <= sample_ff * coeff_ff;
 
             // PIPELINE STAGE 3: add
-            // FIXME: result_ff signed!
-            result_ff <= result_ff + seki_ff;
+            result_ff <= result_ff + prod_ff;
 
             if(depthidx_ff == FIRDEPTH+PIPELINEDEPTH)
                 state <= ST_NEXT_FIR;
@@ -111,3 +115,5 @@ assign ack_o = (state == ST_RESULT);
 assign data_o = result_ff;
 
 endmodule
+
+
