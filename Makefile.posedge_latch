@@ -1,0 +1,12 @@
+dump: posedge_latch_t.lxt
+	gtkwave posedge_latch_t.lxt &
+
+runsim: posedge_latch_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+posedge_latch_t.vvp: posedge_latch.v posedge_latch_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp

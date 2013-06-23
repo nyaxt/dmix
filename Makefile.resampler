@@ -1,0 +1,12 @@
+dump: resampler_t.lxt
+	gtkwave resampler_t.lxt &
+
+runsim: resampler_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+resampler_t.vvp: resampler.v rom_firbank_half.v ringbuf.v resampler_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp

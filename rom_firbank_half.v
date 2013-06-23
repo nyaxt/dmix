@@ -1,6 +1,6 @@
 // polyphase FIR bank depth 32 x 2
 module rom_firbank_half(
-    input [6:0] addr,
+    input [5:0] addr,
     output [15:0] data);
 
 reg [15:0] data_reg;
@@ -71,7 +71,6 @@ always @(addr) begin
         61: data_reg = 16'd49;
         62: data_reg = -16'd13;
         63: data_reg = -16'd2;
-        default: data_reg = 0;
     endcase
 end
 endmodule

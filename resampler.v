@@ -1,7 +1,7 @@
 module resampler_1ch
 #(
     parameter FIRDEPTH = 32,
-    parameter FIRDEPTH_LOG2 = 6,
+    parameter FIRDEPTH_LOG2 = 5,
     parameter NUM_FIR = 2,
     parameter NUM_FIR_LOG2 = 1,
     parameter DECIM = 1,
@@ -133,13 +133,13 @@ module upsample2x_1ch(
     output [23:0] data_o,
     output ack_o);
 
-wire [6:0] fb_addr;
+wire [5:0] fb_addr;
 wire [15:0] fb_data;
 
 rom_firbank_half fb(.addr(fb_addr), .data(fb_data));
 
 wire rb_pop;
-wire [5:0] rb_offset;
+wire [4:0] rb_offset;
 wire [23:0] rb_data;
 
 ringbuf #(
@@ -148,7 +148,7 @@ ringbuf #(
 ) rb(
     .clk(clk), .rst(rst),
     .data_i(data_i), .we_i(ack_i),
-    .pop_i(rb_pop), .offset_i(rb_offset), .data_o(rb_data));
+    .pop_i(rb_pop), .offset_i({1'b0, rb_offset}), .data_o(rb_data));
 assign pop_o = rb_pop;
 
 resampler_1ch r(

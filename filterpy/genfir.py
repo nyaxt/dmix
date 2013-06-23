@@ -78,7 +78,6 @@ if False:
   show()
   sys.exit()
 
-from collections import deque
 import wave
 import struct
 
