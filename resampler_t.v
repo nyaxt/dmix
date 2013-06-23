@@ -68,29 +68,44 @@ end
 
 always #(TCLK/2) clk = ~clk;
 
-always @(posedge uut.pop_o) begin
+reg TESTCH = 1'b1;
+
+always @(posedge uut.pop_o[TESTCH]) begin
     #(TCLK);
     data_i = {testdata[testdata_iter], 8'h00};
 `ifndef NODUMP
     $display("in data: %d", data_i >>> 16);
 `endif
     testdata_iter = testdata_iter+1;
-    ack_i = 1;
+    ack_i[TESTCH] = 1;
     #(TCLK);
-    ack_i = 0;
+    ack_i[TESTCH] = 0;
     if(testdata_iter == DATALEN-1)
         $finish(2);
 end
 
+always @(posedge uut.pop_o[1-TESTCH]) begin
+    #(TCLK);
+    data_i = -{testdata_iter, 16'h00};
+    ack_i[1-TESTCH] = 1;
+    #(TCLK);
+    ack_i[1-TESTCH] = 0;
+end
+
+
 always begin
     pop_i = 0;
-    #(TCLK*127);
-    pop_i = 1;
+    #(TCLK*63);
+    pop_i = 2'b01;
+    #(TCLK);
+    pop_i = 0;
+    #(TCLK*63);
+    pop_i = 2'b10;
     #(TCLK);
 end
 
 wire signed [23:0] data_s = uut.data_o;
-always @(posedge uut.ack_o) begin
+always @(posedge uut.ack_o[TESTCH]) begin
     #(TCLK/2);
 `ifndef NODUMP
     $display("out data: %d", data_s >>> 16);
