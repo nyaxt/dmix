@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+//`define USE_IP
 
 module mpemu_t;
 
@@ -8,9 +9,22 @@ reg clk;
 reg signed [23:0] mpcand_i;
 reg signed [15:0] mplier_i;
 
+// outs
+wire signed [23:0] mprod_o;
+
+`ifdef USE_IP
+mp uut (
+  .clk(clk), // input clk
+  .a(mpcand_i), // input [23 : 0] a
+  .b(mplier_i), // input [15 : 0] b
+  .p(mprod_o) // output [23 : 0] p
+);
+`else
 mpemu uut(
     .clk(clk),
-    .mpcand_i(mpcand_i), .mplier_i(mplier_i));
+    .mpcand_i(mpcand_i), .mplier_i(mplier_i),
+    .mprod_o(mprod_o));
+`endif
 
 parameter TCLK = 41.0; // ~40.69ns (24.576Mhz)
 
@@ -55,7 +69,7 @@ always #(TCLK/2) clk = ~clk;
 
 always begin
     #TCLK;
-    $display("%d", uut.mprod_o);
+    $display("%d", mprod_o);
 end
 
 endmodule
