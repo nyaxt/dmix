@@ -1,5 +1,4 @@
 `timescale 1ns / 1ps
-//`define USE_IP
 
 module mpemu_t;
 
@@ -12,19 +11,10 @@ reg signed [15:0] mplier_i;
 // outs
 wire signed [23:0] mprod_o;
 
-`ifdef USE_IP
-mp uut (
-  .clk(clk), // input clk
-  .a(mpcand_i), // input [23 : 0] a
-  .b(mplier_i), // input [15 : 0] b
-  .p(mprod_o) // output [23 : 0] p
-);
-`else
 mpemu uut(
     .clk(clk),
     .mpcand_i(mpcand_i), .mplier_i(mplier_i),
     .mprod_o(mprod_o));
-`endif
 
 parameter TCLK = 41.0; // ~40.69ns (24.576Mhz)
 
