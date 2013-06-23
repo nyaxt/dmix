@@ -11,7 +11,8 @@ module mpemu(
 reg signed [23:0] delay[4:0];
 assign mprod_o = delay[4];
 
-wire [23:0] prod = (mpcand_i * mplier_i) >>> 16;
+wire [39:0] prod_full = mpcand_i * mplier_i;
+wire [23:0] prod = prod_full >>> 16;
 always @(posedge clk) begin
     delay[0] <= prod;
     delay[1] <= delay[0];

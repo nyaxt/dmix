@@ -55,7 +55,7 @@ initial begin
     #TCLK;
 
     mpcand_i = -24'h20000;
-    mplier_i = -30;
+    mplier_i = 16'h7fff;
     #TCLK;
     #TCLK;
     #TCLK;

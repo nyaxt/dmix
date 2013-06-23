@@ -19,8 +19,19 @@ reg ack_i;
 // data output
 reg pop_i;
 
+// multiplier
+reg mpready;
+wire [23:0] mpcand;
+wire [15:0] mplier;
+wire [23:0] mprod;
+
+mpemu mpemu(
+    .clk(clk),
+    .mpcand_i(mpcand), .mplier_i(mplier), .mprod_o(mprod));
+
 upsample2x_1ch uut(
     .clk(clk), .rst(rst),
+    .mpready_i(mpready), .mpcand_o(mpcand), .mplier_o(mplier), .mprod_i(mprod),
     .data_i(data_i), .ack_i(ack_i),
     .pop_i(pop_i));
 
@@ -40,6 +51,7 @@ initial begin
 
 	data_i = 24'h0;
     ack_i = 0;
+    mpready = 1;
 
 	rst = 1'b0;
 	#(TCLK*6);
@@ -49,8 +61,8 @@ initial begin
 	#TCLK;
 
 `ifndef NODUMP
-    #1_000_000
-    $finish(2)
+    #1_000_000;
+    $finish(2);
 `endif
 end
 
@@ -60,7 +72,7 @@ always @(posedge uut.pop_o) begin
     #(TCLK);
     data_i = {testdata[testdata_iter], 8'h00};
 `ifndef NODUMP
-    $display("in data: %d", data_i);
+    $display("in data: %d", data_i >>> 16);
 `endif
     testdata_iter = testdata_iter+1;
     ack_i = 1;

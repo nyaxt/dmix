@@ -49,9 +49,9 @@ assign offset_o = depthidx_ff[(FIRDEPTH_LOG2-1):0];
 assign bank_addr_o = {firidx_ff, depthidx_ff[(FIRDEPTH_LOG2-1):0]};
 
 reg signed [23:0] sample_ff;
-wire mpcand_o = sample_ff : 0;
+wire mpcand_o = sample_ff;
 reg signed [15:0] coeff_ff;
-wire mplier_o = coeff_ff : 0;
+wire mplier_o = coeff_ff;
 
 reg signed [23:0] result_ff;
 reg pop_ff;
@@ -83,7 +83,7 @@ always @(posedge clk) begin
             depthidx_ff <= 0;
             result_ff <= 0;
 
-            if(mpready)
+            if(mpready_i)
                 state <= ST_CALC;
         end
         ST_CALC: begin
@@ -99,9 +99,9 @@ always @(posedge clk) begin
 
             // PIPELINE STAGE 6: add
             if(depthidx_ff >= PIPELINEDEPTH-1)
-                result_ff <= result_ff + mpprod;
+                result_ff <= result_ff + mprod_i;
 
-            if(depthidx_ff == FIRDEPTH+PIPELINEDEPTH)
+            if(depthidx_ff == FIRDEPTH+PIPELINEDEPTH-1)
                 state <= ST_NEXT_FIR;
             else
                 depthidx_ff <= depthidx_ff + 1;
