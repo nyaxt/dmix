@@ -13,12 +13,14 @@ module resampler_1ch
     input clk,
     input rst,
 
+    // shared resource ready
+    input shres_ready_i,
+
     // to firbank
     output [(BANK_WIDTH-1):0] bank_addr_o,
     input [15:0] bank_data_i,
 
     // to multiplier
-    input mpready_i,
     output signed [23:0] mpcand_o,
     output signed [15:0] mplier_o,
     input signed [23:0] mprod_i,
@@ -46,7 +48,8 @@ reg [(NUM_FIR_LOG2-1):0] pop_counter;
 
 reg [(FIRDEPTH_LOG2+1-1):0] depthidx_ff; // +1 is because depthidx_ff max is FIRDEPTH + PIPELINEDEPTH
 assign offset_o = depthidx_ff[(FIRDEPTH_LOG2-1):0];
-assign bank_addr_o = {firidx_ff, depthidx_ff[(FIRDEPTH_LOG2-1):0]};
+// below is to be 0 when !shres_ready_i. depthidx_ff is guaranteed to be 0 when !shres_ready_i.
+assign bank_addr_o = {(shres_ready_i & firidx_ff), depthidx_ff[(FIRDEPTH_LOG2-1):0]};
 
 reg signed [23:0] sample_ff;
 wire mpcand_o = sample_ff;
@@ -72,6 +75,7 @@ always @(posedge clk) begin
         pop_ff <= 0;
         sample_ff <= 0;
         coeff_ff <= 0;
+        depthidx_ff <= 0;
 
         case(state)
         ST_IDLE: begin
@@ -80,10 +84,9 @@ always @(posedge clk) begin
             end
         end
         ST_RESULT: begin
-            depthidx_ff <= 0;
             result_ff <= 0;
 
-            if(mpready_i)
+            if(shres_ready_i)
                 state <= ST_CALC;
         end
         ST_CALC: begin
@@ -93,7 +96,7 @@ always @(posedge clk) begin
             
             // PIPELINE STAGE 2-5: mul
 `ifdef DEBUG
-            if(!mpready_i)
+            if(!shres_ready_i)
                 $display("mp must be always ready when ST_CALC");
 `endif
 
@@ -125,11 +128,11 @@ always @(posedge clk) begin
 end
 
 assign ack_o = (state == ST_RESULT);
-assign data_o = result_ff;
+assign data_o = ack_o ? result_ff : 0;
 
 endmodule
 
-module upsample2x_1ch(
+module upsample2x(
     input clk,
     input rst,
 
@@ -140,38 +143,66 @@ module upsample2x_1ch(
     input signed [23:0] mprod_i,
 
     // data input
-    output pop_o,
+    output [1:0] pop_o,
     input [23:0] data_i,
-    input ack_i,
+    input [1:0] ack_i,
 
     // data output
-    input pop_i,
+    input [1:0] pop_i,
     output [23:0] data_o,
-    output ack_o);
+    output [1:0] ack_o);
 
-wire [5:0] fb_addr;
+reg pop_lr;
+always @(posedge clk) begin
+    if(pop_i[0])
+        pop_lr <= 0;
+    else if(pop_i[1])
+        pop_lr <= 1;
+end
+wire shres_ready [1:0];
+assign shres_ready[0] =  pop_lr & mpready_i;
+assign shres_ready[1] = ~pop_lr & mpready_i;
+
+wire [5:0] fb_addr_lr [1:0];
+wire [5:0] fb_addr = fb_addr_lr[0] | fb_addr_lr[1];
 wire [15:0] fb_data;
 
 rom_firbank_half fb(.addr(fb_addr), .data(fb_data));
 
-wire rb_pop;
-wire [4:0] rb_offset;
-wire [23:0] rb_data;
+wire signed [23:0] mpcand_lr_o [1:0];
+wire signed [15:0] mplier_lr_o [1:0];
+// shres_ready ? will take additional resource as this will be a huge OR
+// spanning multiple upsample2x
+assign mpcand_o = mpcand_lr_o[0] | mpcand_lr_o[1];
+assign mplier_o = mplier_lr_o[0] | mplier_lr_o[1];
 
-ringbuf #(
-    .LEN(64), // should work w/ 32, but buffer a little to address input jitter
-    .LEN_LOG2(6)
-) rb(
-    .clk(clk), .rst(rst),
-    .data_i(data_i), .we_i(ack_i),
-    .pop_i(rb_pop), .offset_i({1'b0, rb_offset}), .data_o(rb_data));
+wire [1:0] rb_pop;
+wire [4:0] rb_offset [1:0];
+wire [23:0] rb_data [1:0];
+
 assign pop_o = rb_pop;
 
-resampler_1ch r(
-    .clk(clk), .rst(rst),
-    .bank_addr_o(fb_addr), .bank_data_i(fb_data),
-    .mpready_i(mpready_i), .mpcand_o(mpcand_o), .mplier_o(mplier_o), .mprod_i(mprod_i),
-    .pop_o(rb_pop), .offset_o(rb_offset), .data_i(rb_data),
-    .pop_i(pop_i), .data_o(data_o), .ack_o(ack_o));
+wire signed [23:0] data_lr_o [1:0];
+
+genvar i;
+generate
+for(i = 0; i < 2; i = i + 1) begin:g
+    ringbuf #(
+        .LEN(64), // should work w/ 32, but buffer a little to address input jitter
+        .LEN_LOG2(6)
+    ) rb(
+        .clk(clk), .rst(rst),
+        .data_i(data_i), .we_i(ack_i[i]),
+        .pop_i(rb_pop[i]), .offset_i({1'b0, rb_offset[i]}), .data_o(rb_data[i]));
+
+    resampler_1ch r(
+        .clk(clk), .rst(rst),
+        .shres_ready_i(shres_ready[i]), 
+        .bank_addr_o(fb_addr_lr[i]), .bank_data_i(fb_data),
+        .mpcand_o(mpcand_lr_o[i]), .mplier_o(mplier_lr_o[i]), .mprod_i(mprod_i),
+        .pop_o(rb_pop[i]), .offset_o(rb_offset[i]), .data_i(rb_data[i]),
+        .pop_i(pop_i[i]), .data_o(data_lr_o[i]), .ack_o(ack_o[i]));
+end
+endgenerate
 
 endmodule
