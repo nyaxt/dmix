@@ -14,10 +14,10 @@ reg rst;
 
 // data input
 reg signed [23:0] data_i;
-reg ack_i;
+reg [1:0] ack_i;
 
 // data output
-reg pop_i;
+reg [1:0] pop_i;
 
 // multiplier
 reg mpready;
@@ -29,7 +29,7 @@ mpemu mpemu(
     .clk(clk),
     .mpcand_i(mpcand), .mplier_i(mplier), .mprod_o(mprod));
 
-upsample2x_1ch uut(
+upsample2x uut(
     .clk(clk), .rst(rst),
     .mpready_i(mpready), .mpcand_o(mpcand), .mplier_o(mplier), .mprod_i(mprod),
     .data_i(data_i), .ack_i(ack_i),
@@ -91,8 +91,9 @@ end
 
 wire signed [23:0] data_s = uut.data_o;
 always @(posedge uut.ack_o) begin
+    #(TCLK/2);
 `ifndef NODUMP
-    $display("out data: %d", data_s);
+    $display("out data: %d", data_s >>> 16);
 `endif
     $fwrite(outf, "%h\n", uut.data_o);
 end

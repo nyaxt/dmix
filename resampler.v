@@ -49,7 +49,7 @@ reg [(NUM_FIR_LOG2-1):0] pop_counter;
 reg [(FIRDEPTH_LOG2+1-1):0] depthidx_ff; // +1 is because depthidx_ff max is FIRDEPTH + PIPELINEDEPTH
 assign offset_o = depthidx_ff[(FIRDEPTH_LOG2-1):0];
 // below is to be 0 when !shres_ready_i. depthidx_ff is guaranteed to be 0 when !shres_ready_i.
-assign bank_addr_o = {(shres_ready_i & firidx_ff), depthidx_ff[(FIRDEPTH_LOG2-1):0]};
+assign bank_addr_o = {(shres_ready_i ? firidx_ff : 0), depthidx_ff[(FIRDEPTH_LOG2-1):0]};
 
 reg signed [23:0] sample_ff;
 wire mpcand_o = sample_ff;
@@ -160,8 +160,8 @@ always @(posedge clk) begin
         pop_lr <= 1;
 end
 wire shres_ready [1:0];
-assign shres_ready[0] =  pop_lr & mpready_i;
-assign shres_ready[1] = ~pop_lr & mpready_i;
+assign shres_ready[0] = pop_lr == 0 && mpready_i;
+assign shres_ready[1] = pop_lr == 1 && mpready_i;
 
 wire [5:0] fb_addr_lr [1:0];
 wire [5:0] fb_addr = fb_addr_lr[0] | fb_addr_lr[1];
@@ -183,6 +183,7 @@ wire [23:0] rb_data [1:0];
 assign pop_o = rb_pop;
 
 wire signed [23:0] data_lr_o [1:0];
+assign data_o = data_lr_o[0] | data_lr_o[1];
 
 genvar i;
 generate
