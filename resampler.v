@@ -37,8 +37,9 @@ module resampler_1ch
 
 parameter ST_IDLE = 0;
 parameter ST_RESULT = 1;
-parameter ST_CALC = 2;
-parameter ST_NEXT_FIR = 3;
+parameter ST_CALC_PENDING = 2;
+parameter ST_CALC = 3;
+parameter ST_NEXT_FIR = 4;
 reg [3:0] state;
 
 parameter PIPELINEDEPTH = 1 + MULT_LATENCY + 1;
@@ -86,6 +87,12 @@ always @(posedge clk) begin
         ST_RESULT: begin
             result_ff <= 0;
 
+            if(shres_ready_i)
+                state <= ST_CALC;
+            else
+                state <= ST_CALC_PENDING;
+        end
+        ST_CALC_PENDING: begin
             if(shres_ready_i)
                 state <= ST_CALC;
         end
