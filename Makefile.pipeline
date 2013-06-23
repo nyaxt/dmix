@@ -1,0 +1,12 @@
+dump: resample_pipeline_t.lxt
+	gtkwave resample_pipeline_t.lxt &
+
+runsim: resample_pipeline_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+resample_pipeline_t.vvp: resampler.v rom_firbank_half.v ringbuf.v mpemu.v resample_pipeline.v resample_pipeline_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp
