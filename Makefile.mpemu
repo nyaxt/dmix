@@ -1,0 +1,12 @@
+dump: mpemu_t.lxt
+	gtkwave mpemu_t.lxt &
+
+runsim: mpemu_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+mpemu_t.vvp: mpemu.v mpemu_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp
