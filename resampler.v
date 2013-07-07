@@ -122,11 +122,11 @@ always @(posedge clk) begin
             else
                 firidx_ff <= firidx_ff + 1;
 
-            if(pop_counter >= NUM_FIR - 1) begin
-                pop_counter <= pop_counter + 1 - NUM_FIR;
+            if(pop_counter >= NUM_FIR - DECIM) begin
+                pop_counter <= pop_counter + DECIM - NUM_FIR;
                 pop_ff <= 1;
             end else
-                pop_counter <= pop_counter + 1;
+                pop_counter <= pop_counter + DECIM;
 
             state <= ST_IDLE;
         end
@@ -206,6 +206,88 @@ for(i = 0; i < 2; i = i + 1) begin:g
     resampler_1ch r(
         .clk(clk), .rst(rst),
         .shres_ready_i(shres_ready[i]), 
+        .bank_addr_o(fb_addr_lr[i]), .bank_data_i(fb_data),
+        .mpcand_o(mpcand_lr_o[i]), .mplier_o(mplier_lr_o[i]), .mprod_i(mprod_i),
+        .pop_o(rb_pop[i]), .offset_o(rb_offset[i]), .data_i(rb_data[i]),
+        .pop_i(pop_i[i]), .data_o(data_lr_o[i]), .ack_o(ack_o[i]));
+end
+endgenerate
+
+endmodule
+
+module resample441_48(
+    input clk,
+    input rst,
+
+    // external multiplier module
+    input mpready_i,
+    output signed [23:0] mpcand_o,
+    output signed [15:0] mplier_o,
+    input signed [23:0] mprod_i,
+
+    // data input
+    output [1:0] pop_o,
+    input [23:0] data_i,
+    input [1:0] ack_i,
+
+    // data output
+    input [1:0] pop_i,
+    output [23:0] data_o,
+    output [1:0] ack_o);
+
+reg pop_lr;
+always @(posedge clk) begin
+    if(pop_i[0])
+        pop_lr <= 0;
+    else if(pop_i[1])
+        pop_lr <= 1;
+end
+wire shres_ready [1:0];
+assign shres_ready[0] = pop_lr == 0 && mpready_i;
+assign shres_ready[1] = pop_lr == 1 && mpready_i;
+
+wire [11:0] fb_addr_lr [1:0];
+wire [11:0] fb_addr = fb_addr_lr[0] | fb_addr_lr[1];
+wire [15:0] fb_data;
+
+rom_firbank_441_480 fb(.addr(fb_addr), .data(fb_data));
+
+wire signed [23:0] mpcand_lr_o [1:0];
+wire signed [15:0] mplier_lr_o [1:0];
+// shres_ready ? will take additional resource as this will be a huge OR
+// spanning multiple upsample*
+assign mpcand_o = mpcand_lr_o[0] | mpcand_lr_o[1];
+assign mplier_o = mplier_lr_o[0] | mplier_lr_o[1];
+
+wire [1:0] rb_pop;
+wire [3:0] rb_offset [1:0];
+wire [23:0] rb_data [1:0];
+
+assign pop_o = rb_pop;
+
+wire signed [23:0] data_lr_o [1:0];
+assign data_o = data_lr_o[0] | data_lr_o[1];
+
+genvar i;
+generate
+for(i = 0; i < 2; i = i + 1) begin:g
+    ringbuf #(
+        .LEN(64), // should work w/ 32, but buffer a little to address input jitter
+        .LEN_LOG2(6)
+    ) rb(
+        .clk(clk), .rst(rst),
+        .data_i(data_i), .we_i(ack_i[i]),
+        .pop_i(rb_pop[i]), .offset_i({2'b0, rb_offset[i]}), .data_o(rb_data[i]));
+
+    resampler_1ch #(
+	.FIRDEPTH(16),
+	.FIRDEPTH_LOG2(4),
+	.NUM_FIR(160),
+	.NUM_FIR_LOG2(8),
+	.DECIM(147)
+    ) r(
+        .clk(clk), .rst(rst),
+        .shres_ready_i(shres_ready[i]),
         .bank_addr_o(fb_addr_lr[i]), .bank_data_i(fb_data),
         .mpcand_o(mpcand_lr_o[i]), .mplier_o(mplier_lr_o[i]), .mprod_i(mprod_i),
         .pop_o(rb_pop[i]), .offset_o(rb_offset[i]), .data_i(rb_data[i]),

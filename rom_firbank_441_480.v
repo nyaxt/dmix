@@ -1,6 +1,6 @@
 
 module rom_firbank_441_480(
-    input [10:0] addr,
+    input [11:0] addr,
     output [15:0] data);
 reg [15:0] data_reg;
 assign data = data_reg;

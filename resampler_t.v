@@ -1,9 +1,10 @@
 `timescale 1ns / 1ps
 `define NODUMP
+`define TEST441
 
 module resampler_t;
 
-parameter DATALEN = 10000;
+parameter DATALEN = 30000;
 reg signed [15:0] testdata [DATALEN-1:0];
 reg [16:0] testdata_iter;
 integer outf;
@@ -29,36 +30,44 @@ mpemu mpemu(
     .clk(clk),
     .mpcand_i(mpcand), .mplier_i(mplier), .mprod_o(mprod));
 
+`ifdef TEST441
+resample441_48 uut(
+    .clk(clk), .rst(rst),
+    .mpready_i(mpready), .mpcand_o(mpcand), .mplier_o(mplier), .mprod_i(mprod),
+    .data_i(data_i), .ack_i(ack_i),
+    .pop_i(pop_i));
+`else
 upsample2x uut(
     .clk(clk), .rst(rst),
     .mpready_i(mpready), .mpcand_o(mpcand), .mplier_o(mplier), .mprod_i(mprod),
     .data_i(data_i), .ack_i(ack_i),
     .pop_i(pop_i));
+`endif
 
 parameter TCLK = 41.0; // ~40.69ns (24.576Mhz)
 
 initial begin
 `ifndef NODUMP
-	$dumpfile("resampler_t.lxt");
-	$dumpvars(0, resampler_t);
+    $dumpfile("resampler_t.lxt");
+    $dumpvars(0, resampler_t);
 `endif
 
-    $readmemh("filterpy/test.hex", testdata);
+    $readmemh("filterpy/sample441.hex", testdata);
     testdata_iter = 0;
-    outf = $fopen("filterpy/out.hex", "w");
-	
-	clk = 1'b0;
+    outf = $fopen("filterpy/out48.hex", "w");
+    
+    clk = 1'b0;
 
-	data_i = 24'h0;
+    data_i = 24'h0;
     ack_i = 0;
     mpready = 1;
 
-	rst = 1'b0;
-	#(TCLK*6);
-	rst = 1'b1;
-	#TCLK;
-	rst = 1'b0;
-	#TCLK;
+    rst = 1'b0;
+    #(TCLK*6);
+    rst = 1'b1;
+    #TCLK;
+    rst = 1'b0;
+    #TCLK;
 
 `ifndef NODUMP
     #1_000_000;
@@ -91,7 +100,6 @@ always @(posedge uut.pop_o[1-TESTCH]) begin
     #(TCLK);
     ack_i[1-TESTCH] = 0;
 end
-
 
 always begin
     pop_i = 0;
