@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-// `define NODUMP
+`define NODUMP
 
 module resample_pipeline_t;
 
@@ -42,7 +42,7 @@ initial begin
 
     clk = 1'b0;
 
-	rate_i = 1 << uut.RATE_96;
+	rate_i = 1 << uut.RATE_441;
     data_i = 24'h0;
     ack_i = 0;
 

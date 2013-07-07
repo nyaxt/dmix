@@ -20,7 +20,7 @@ parameter RATE_48 = 1;
 parameter RATE_96 = 2;
 parameter RATE_192 = 3;
 
-parameter SCHED_SLOT = 64; //40;
+parameter SCHED_SLOT = 40;
 reg [2:0] mpready_shift;
 reg [6:0] mpsched_counter;
 always @(posedge clk) begin
