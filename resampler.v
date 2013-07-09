@@ -53,9 +53,9 @@ assign offset_o = depthidx_ff[(FIRDEPTH_LOG2-1):0];
 assign bank_addr_o = {(shres_ready_i ? firidx_ff : 0), depthidx_ff[(FIRDEPTH_LOG2-1):0]};
 
 reg signed [23:0] sample_ff;
-wire mpcand_o = sample_ff;
+assign mpcand_o = sample_ff;
 reg signed [15:0] coeff_ff;
-wire mplier_o = coeff_ff;
+assign mplier_o = coeff_ff;
 
 reg signed [23:0] result_ff;
 reg pop_ff;
