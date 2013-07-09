@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 `define NODUMP
-`define TEST441
+// `define TEST441
 
 module resampler_t;
 
@@ -54,7 +54,11 @@ initial begin
 
     $readmemh("filterpy/sample441.hex", testdata);
     testdata_iter = 0;
+`ifdef TEST441
     outf = $fopen("filterpy/out48.hex", "w");
+`else
+    outf = $fopen("filterpy/out96.hex", "w");
+`endif
     
     clk = 1'b0;
 

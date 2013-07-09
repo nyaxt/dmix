@@ -179,7 +179,7 @@ wire [5:0] fb_addr_lr [1:0];
 wire [5:0] fb_addr = fb_addr_lr[0] | fb_addr_lr[1];
 wire [15:0] fb_data;
 
-rom_firbank_half fb(.addr(fb_addr), .data(fb_data));
+rom_firbank_half fb(.clk(clk), .addr(fb_addr), .data(fb_data));
 
 wire signed [23:0] mpcand_lr_o [1:0];
 wire signed [15:0] mplier_lr_o [1:0];
