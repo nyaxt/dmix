@@ -42,7 +42,7 @@ parameter ST_CALC = 3;
 parameter ST_NEXT_FIR = 4;
 reg [3:0] state;
 
-parameter PIPELINEDEPTH = 1 + MULT_LATENCY + 1;
+parameter PIPELINEDEPTH = 2 + MULT_LATENCY + 1;
 
 reg [(NUM_FIR_LOG2-1):0] firidx_ff;
 reg [(NUM_FIR_LOG2-1):0] pop_counter;
@@ -87,16 +87,21 @@ always @(posedge clk) begin
         ST_RESULT: begin
             result_ff <= 0;
 
-            if(shres_ready_i)
+            if(shres_ready_i) begin
+                depthidx_ff <= 1;
                 state <= ST_CALC;
-            else
+            end else
                 state <= ST_CALC_PENDING;
         end
         ST_CALC_PENDING: begin
-            if(shres_ready_i)
+            if(shres_ready_i) begin
+                depthidx_ff <= 1;
                 state <= ST_CALC;
+            end
         end
         ST_CALC: begin
+            // PIPELINE STAGE 0: set load addr
+
             // PIPELINE STAGE 1: load sample / filter coeff
             sample_ff <= data_i;
             coeff_ff <= bank_data_i;
@@ -250,7 +255,7 @@ wire [11:0] fb_addr_lr [1:0];
 wire [11:0] fb_addr = fb_addr_lr[0] | fb_addr_lr[1];
 wire [15:0] fb_data;
 
-rom_firbank_441_480 fb(.addr(fb_addr), .data(fb_data));
+rom_firbank_441_480 fb(.clk(clk), .addr(fb_addr), .data(fb_data));
 
 wire signed [23:0] mpcand_lr_o [1:0];
 wire signed [15:0] mplier_lr_o [1:0];
