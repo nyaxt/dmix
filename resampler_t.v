@@ -46,7 +46,15 @@ upsample2x uut(
 
 parameter TCLK = 41.0; // ~40.69ns (24.576Mhz)
 
+reg signed [25:0] ca = 24'h12345;
+reg signed [25:0] cb = 24'hffffff;
+reg signed [25:0] cc = -24'hffffff;
+
 initial begin
+    $display("clamp %d -> %d", ca, uut.g[0].r.clamp(ca));
+    $display("clamp %d -> %d", cb, uut.g[0].r.clamp(cb));
+    $display("clamp %d -> %d", cc, uut.g[0].r.clamp(cc));
+
 `ifndef NODUMP
     $dumpfile("resampler_t.lxt");
     $dumpvars(0, resampler_t);

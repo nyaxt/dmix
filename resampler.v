@@ -57,9 +57,20 @@ assign mpcand_o = sample_ff;
 reg signed [15:0] coeff_ff;
 assign mplier_o = coeff_ff;
 
-reg signed [23:0] result_ff;
+reg signed [25:0] sum_ff;
+reg signed [23:0] data_ff;
 reg pop_ff;
 assign pop_o = pop_ff;
+
+function signed [23:0] clamp(
+    input signed [25:0] in);
+    if(in > 26'sh7fffff)
+        clamp = 24'sh7fffff;
+    else if(in < -26'sh7fffff)
+        clamp = -24'sh7fffff;
+    else
+        clamp = in; 
+endfunction
 
 always @(posedge clk) begin
     if(rst) begin
@@ -67,7 +78,7 @@ always @(posedge clk) begin
 
         sample_ff <= 0;
         coeff_ff <= 0;
-        result_ff <= 0;
+        sum_ff <= 0;
 
         depthidx_ff <= 0;
         firidx_ff <= 0;
@@ -85,7 +96,7 @@ always @(posedge clk) begin
             end
         end
         ST_RESULT: begin
-            result_ff <= 0;
+            sum_ff <= 0;
 
             if(shres_ready_i) begin
                 depthidx_ff <= 1;
@@ -114,7 +125,7 @@ always @(posedge clk) begin
 
             // PIPELINE STAGE 6: add
             if(depthidx_ff >= PIPELINEDEPTH-1)
-                result_ff <= result_ff + mprod_i;
+                sum_ff <= sum_ff + mprod_i;
 
             if(depthidx_ff == FIRDEPTH+PIPELINEDEPTH-1)
                 state <= ST_NEXT_FIR;
@@ -133,6 +144,7 @@ always @(posedge clk) begin
             end else
                 pop_counter <= pop_counter + DECIM;
 
+            data_ff <= clamp(sum_ff);
             state <= ST_IDLE;
         end
         endcase
@@ -140,7 +152,7 @@ always @(posedge clk) begin
 end
 
 assign ack_o = (state == ST_RESULT);
-assign data_o = ack_o ? result_ff : 0;
+assign data_o = ack_o ? data_ff : 0;
 
 endmodule
 
