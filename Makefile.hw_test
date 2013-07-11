@@ -1,0 +1,12 @@
+dump: hw_test_t.lxt
+	gtkwave hw_test_t.lxt &
+
+runsim: hw_test_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+hw_test_t.vvp: hw_test.v synth.v dac_drv.v hw_test_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp

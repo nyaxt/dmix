@@ -30,12 +30,7 @@ wire [4:0] bck_counter = clk_counter[5:1];
 
 // generate lrck = 64x clk = 192kHz
 reg lrck_ff;
-assign lrck_o = lrck_ff;
-always @(posedge clk)
-    if(rst || (clk_counter == 7'h01))
-        lrck_ff <= 0;
-    else if(clk_counter == 7'h41)
-        lrck_ff <= 1;
+assign lrck_o = clk_counter[6];
 
 // generate data
 reg [23:0] data_i_ff [1:0];
@@ -47,23 +42,18 @@ always @(posedge clk) begin
         data_i_ff[lrck_i] <= data_i;
     end
 end
+
+reg [31:0] data_o_ff;
+assign data_o = data_o_ff[31];
+
 wire chsel = clk_counter[6];
-
-reg data_o_ff;
-assign data_o = data_o_ff;
-
 always @(posedge clk) begin
-    if(rst) begin
-        data_o_ff <= 0;
-    end else if(bck_o == 1'b1) begin
-        if(bck_counter < 5'd24) begin
-            data_o_ff <= data_i_ff[chsel][23];
-            data_i_ff[chsel] <= {data_i_ff[chsel][22:0], 1'b0};
-        end else
-            data_o_ff <= 0;
-    end
+    if(clk_counter[5:0] == 6'h3f)
+        data_o_ff <= {8'b0, data_i_ff[chsel]};
+    else if(clk_counter[0] == 1'b1)
+        data_o_ff <= {data_o_ff[30:0], 1'b0};
 end
 
-wire pop_o = (clk_counter == (32+24)*2);
+wire pop_o = (clk_counter == 64);
 
 endmodule
