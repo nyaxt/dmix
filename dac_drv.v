@@ -28,7 +28,7 @@ always @(posedge clk)
 assign bck_o = clk_counter[0];
 
 // generate lrck = 64x clk = 192kHz
-assign lrck_o = clk_counter[6];
+assign lrck_o = ~clk_counter[6];
 
 // generate data
 reg [23:0] data_i_ff [1:0];
