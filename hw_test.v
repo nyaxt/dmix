@@ -37,9 +37,10 @@ always @(posedge clk24576) begin
         lrck_d <= 0;
     end else if(pop_s[0]) begin
         pop_s <= 2'b10;
-        lrck_d <= 1;
+        lrck_d <= 0;
     end else begin
         pop_s <= 2'b00;
+        lrck_d <= 1;
     end
 end
 
