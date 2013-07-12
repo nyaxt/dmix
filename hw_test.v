@@ -1,13 +1,22 @@
 `timescale 1ns / 1ps
 
 module hw_test(
-    input clk24576,
+    input clk50000,
     input rst,
 
 	output sck_o,
 	output bck_o,
 	output data_o,
 	output lrck_o);
+
+reg [7:0] clk_counter;
+always @(posedge clk50000)
+  if(rst)
+    clk_counter <= 0;
+  else
+    clk_counter <= clk_counter + 1;
+
+assign clk24576 = clk_counter[1];
 
 reg [1:0] pop_s;
 wire [1:0] ack;

@@ -26,10 +26,8 @@ always @(posedge clk)
 
 // generate bck = 2x clk = 64fs * 192kHz = 12.28Mhz
 assign bck_o = clk_counter[0];
-wire [4:0] bck_counter = clk_counter[5:1];
 
 // generate lrck = 64x clk = 192kHz
-reg lrck_ff;
 assign lrck_o = clk_counter[6];
 
 // generate data
@@ -54,6 +52,6 @@ always @(posedge clk) begin
         data_o_ff <= {data_o_ff[30:0], 1'b0};
 end
 
-wire pop_o = (clk_counter == 64);
+assign pop_o = (clk_counter == 64);
 
 endmodule

@@ -8,8 +8,8 @@ module synth(
 );
 
 reg [23:0] data_ff;
-assign data_o = ack_ff ? data_ff : 0;
 reg ack_ff;
+assign data_o = ack_ff ? data_ff : 0;
 assign ack_o = ack_ff;
 
 parameter STEP = 16;

@@ -44,14 +44,15 @@ initial begin
     mplier_i = 20;
     #TCLK;
 
-    mpcand_i = -24'h20000;
-    mplier_i = 16'h7fff;
+    mpcand_i = -24'sh20000;
+    mplier_i = 16'sh7fff;
     #TCLK;
     #TCLK;
     #TCLK;
     #TCLK;
     #TCLK;
-
+    #TCLK;
+    
 	$finish(2);
 end
 
