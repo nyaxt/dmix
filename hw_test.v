@@ -16,7 +16,7 @@ always @(posedge clk50000)
   else
     clk_counter <= clk_counter + 1;
 
-assign clk24576 = clk_counter[1];
+assign clk24576 = clk_counter[0];
 
 reg [1:0] pop_s;
 wire [1:0] ack;
@@ -28,7 +28,7 @@ synth r(
 	.clk(clk24576), .rst(rst),
     .pop_i(pop_s[1]), .ack_o(ack[1]), .data_o(data[1]));
 
-wire [23:0] data_d = data[0] | data[1];
+wire [23:0] data_d = 24'h800000; //data[0] | data[1];
 wire ack_d = |ack;
 reg lrck_d;
 wire pop_d;
