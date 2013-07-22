@@ -1,9 +1,6 @@
-// FIXME: stop using curr_ and load at next clk instead. will cause more
-// latency fore sure
-
 module spdif_dai #(
-parameter CLK_PER_BIT = 4,
-parameter SUBFRAME_WIDTH = 28
+	parameter CLK_PER_BIT = 8,
+	parameter CLK_PER_BIT_LOG2 = 3
 )(
     input clk,
     input rst,
@@ -11,149 +8,153 @@ parameter SUBFRAME_WIDTH = 28
     input signal,
 
     output [23:0] data_o,
-    output we_o,
+    output ack_o,
     output locked,
-    output lrck
-);
+    output lrck);
 
-parameter PHASE_SAMELVL_END = CLK_PER_BIT/2*3 - 1;
-parameter PHASE_SYNC_CODE_END = CLK_PER_BIT/2*8 - 1;
-parameter PHASE_AUDIODATA_END = CLK_PER_BIT*(4+24) - 1;
-parameter PHASE_FETCH_UDATA = CLK_PER_BIT*30 - 1;
-parameter PHASE_FETCH_CDATA = CLK_PER_BIT*31 - 1;
-parameter PHASE_SUBFRAME_END = CLK_PER_BIT*32 - 1;
-
-parameter SYNC_BLK_B1 = 6'b010111;
-parameter SYNC_BLK_W1 = 6'b011011;
-parameter SYNC_BLK_M1 = 6'b011101;
-parameter SYNC_BLK_B2 = ~SYNC_BLK_B1;
-parameter SYNC_BLK_W2 = ~SYNC_BLK_W1;
-parameter SYNC_BLK_M2 = ~SYNC_BLK_M1;
-
-parameter ST_FIND_START = 0;
-parameter ST_FIND_B = 1;
-parameter ST_LOCKED = 2;
-reg [2:0] state;
-assign locked = (state == ST_LOCKED);
-
-reg [10:0] phase_counter;
-
-reg sync_start_lvl_ff;
-reg [10:0] sync_code_ff;
-
-reg [CLK_PER_BIT:0] recent_lvl_hist_ff;
-wire [(CLK_PER_BIT+1):0] recent_lvl = {recent_lvl_hist_ff, signal};
-
-// a bit in syncblk. only valid when syncblk_bit_valid
-wire syncblk_bit = recent_lvl[1:0] == 2'b11; // FIXME: support variable CLK_PER_BIT
-wire syncblk_bit_valid = (phase_counter & (CLK_PER_BIT/2-1)) == (CLK_PER_BIT/2-1);
-reg [4:0] prev_syncblk_ff;
-wire [5:0] curr_syncblk = {prev_syncblk_ff, syncblk_bit};
-
-reg lrck_ff;
-wire lrck = lrck_ff;
-
-reg [(SUBFRAME_WIDTH-1):0] data_ff;
-assign data_o = data_ff[23:0];
-assign we_o = (phase_counter == PHASE_AUDIODATA_END+1) & locked;
-
-// FIXME: support variable CLK_PER_BIT
-function bmcdecode(
-    input [3:0] lvl,
-    input last);
-reg [3:0] plvl;
-
-begin
-    plvl = last ? ~lvl : lvl;
-    case(plvl)
-        4'b1100, 4'b0110, 4'b1000, 4'b0011, 4'b0001,
-        4'b0011, 4'b0100, 4'b1001: bmcdecode = 1; 
-        4'b1111, 4'b1110, 4'b1101, 4'b1011, 4'b0111,
-        4'b0000, 4'b0001, 4'b0010: bmcdecode = 0;
-    endcase
+parameter SAMELVL_SYNC_COUNT = 3 * CLK_PER_BIT/2;
+parameter SAMELVL_SYNC_COUNT_LOG2 = 2 + CLK_PER_BIT_LOG2-1;
+reg [(SAMELVL_SYNC_COUNT_LOG2-1):0] samelvl_counter;
+reg lastlvl;
+always @(posedge clk) begin
+	lastlvl <= signal;
+	if(lastlvl != signal)
+		samelvl_counter <= 0;
+	else
+		samelvl_counter <= samelvl_counter + 1;
 end
-endfunction
+wire samelvl_sync = (samelvl_counter == SAMELVL_SYNC_COUNT);
 
-wire bmcdecode_bit = bmcdecode(recent_lvl[3:0], recent_lvl[5]);
-wire bmcdecode_bit_valid = (phase_counter & (CLK_PER_BIT-1)) == (CLK_PER_BIT-1);
+reg clk_counter_rst_ff;
+reg [(CLK_PER_BIT_LOG2-1-1):0] clk_counter;
+always @(posedge clk) begin
+	if(clk_counter_rst_ff)
+		clk_counter <= 0;
+	else
+		clk_counter <= clk_counter + 1;
+end
 
-reg [191:0] u_data_ff;
-reg [191:0] c_data_ff;
+wire subbit_ready = (clk_counter == CLK_PER_BIT/2-1);
+reg [(CLK_PER_BIT/2-1):0] subbit_high_counter;
+always @(posedge clk) begin
+	if(subbit_ready)
+		subbit_high_counter <= signal; // start gathering count for next subbit
+	else
+		subbit_high_counter <= subbit_high_counter + signal;
+end
+wire subbit = (subbit_high_counter >= CLK_PER_BIT/2/2);
+
+reg [5:0] subbit_hist_ff;
+always @(posedge clk) begin
+	if(subbit_ready)
+		subbit_hist_ff <= {subbit_hist_ff[4:0], subbit};
+end
+
+reg [5:0] subbit_counter;
+always @(posedge clk) begin
+	if(clk_counter_rst_ff)
+		subbit_counter <= 0;
+	else if(subbit_ready)
+		subbit_counter <= subbit_counter + 1;
+end
+wire fullbit_ready = (subbit_counter[0] == 1'b0);
+wire synccode_ready = (subbit_counter == 5);
+wire audiodata_ready = (subbit_counter == 5+24*2);
+
+reg bmcdecode_bit_reg;
+always @(subbit_hist_ff[2:0]) begin
+	case(subbit_hist_ff[2:0])
+	3'b010, 3'b101: 
+		bmcdecode_bit_reg = 1;
+	3'b011, 3'b100:
+		bmcdecode_bit_reg = 0;
+	endcase
+end
+
+reg [23:0] bit_hist_ff;
+always @(posedge clk) begin
+	if(fullbit_ready)
+		bit_hist_ff <= {bit_hist_ff[22:0], bmcdecode_bit_reg};
+end
+
+// phase FSM
+parameter PHASE_SAMELVL = 0;
+parameter PHASE_SYNCCODE = 1;
+parameter PHASE_AUDIODATA = 2;
+reg [2:0] phase;
+
+parameter SYNCCODE_B1 = 6'b010111;
+parameter SYNCCODE_W1 = 6'b011011;
+parameter SYNCCODE_M1 = 6'b011101;
+parameter SYNCCODE_B2 = ~SYNCCODE_B1;
+parameter SYNCCODE_W2 = ~SYNCCODE_W1;
+parameter SYNCCODE_M2 = ~SYNCCODE_M1;
+reg lrck_ff;
 
 always @(posedge clk) begin
-    if(rst) begin
-        phase_counter <= 0;
-        lrck_ff <= 0;
-        data_ff <= 0;
-        u_data_ff <= 0;
-        c_data_ff <= 0;
+	if(rst) begin
+		phase <= PHASE_SAMELVL;
+	end else begin
+		// transition regardless of phase
+		if(samelvl_sync) begin
+			// sync clk_counter at end of samelvl
+			clk_counter_rst_ff <= 1;
+			phase <= PHASE_SYNCCODE;
+		end else
+			clk_counter_rst_ff <= 0;
 
-        state <= ST_FIND_START;
-    end else begin
-        recent_lvl_hist_ff <= recent_lvl[CLK_PER_BIT:0];
-
-        if(phase_counter == PHASE_SUBFRAME_END)
-            phase_counter <= 0;
-        else
-            phase_counter <= phase_counter + 1;
-
-        // audio / control data
-        if(bmcdecode_bit_valid)
-            data_ff <= {data_ff[(SUBFRAME_WIDTH-2):0], bmcdecode_bit};
-
-        if(phase_counter == 0)
-            prev_syncblk_ff <= {4'b0, signal};
-        else if(phase_counter <= PHASE_SAMELVL_END) begin
-            // verify that still at same lvl
-            if(state == ST_FIND_START && signal != prev_syncblk_ff[0]) begin
-                prev_syncblk_ff <= {4'b0, signal};
-                phase_counter <= 1;
-                state <= ST_FIND_START;
-            end
-        end else if (phase_counter <= PHASE_SYNC_CODE_END) begin
-            if(syncblk_bit_valid)
-                prev_syncblk_ff <= curr_syncblk[4:0];
-
-            // FIXME: check B/M/W?
-            if(phase_counter == PHASE_SYNC_CODE_END &&
-               curr_syncblk[5] == curr_syncblk[4]) begin
-                phase_counter <= 0;
-                state <= ST_FIND_START;
-            end
-        end else begin
-            // handle control data
-            if(phase_counter == PHASE_FETCH_UDATA)
-                u_data_ff <= {u_data_ff[190:0], bmcdecode_bit};
-            if(phase_counter == PHASE_FETCH_CDATA)
-                c_data_ff <= {c_data_ff[190:0], bmcdecode_bit};
-        end
-                    
-        case(state)
-            ST_FIND_START: begin
-                if(signal == prev_syncblk_ff[0] && phase_counter == PHASE_SAMELVL_END)
-                    state <= ST_FIND_B;
-            end
-            ST_FIND_B: begin
-                if(phase_counter == PHASE_SYNC_CODE_END) begin
-                    if(curr_syncblk == SYNC_BLK_B1 ||
-                       curr_syncblk == SYNC_BLK_B2) begin
-                        state <= ST_LOCKED;
-                    end
-                end
-            end
-            ST_LOCKED: begin
-                if(phase_counter == PHASE_SYNC_CODE_END) begin
-                    if(curr_syncblk == SYNC_BLK_W1 ||
-                       curr_syncblk == SYNC_BLK_W2) begin
-                        lrck_ff <= 1;
-                    end else begin
-                        lrck_ff <= 0;
-                    end
-                end
-            end
-            default: state <= ST_FIND_START;
-        endcase
-    end
+		// phase transition
+		case(phase)
+		PHASE_SAMELVL: begin
+			// NOP
+		end
+		PHASE_SYNCCODE: begin
+			if(synccode_ready) begin
+				case(subbit_hist_ff[5:0])
+				SYNCCODE_B1, SYNCCODE_B2: begin
+					// FIXME: reset subframe counter
+					lrck_ff <= 0;
+					phase <= PHASE_AUDIODATA;
+				end
+				SYNCCODE_W1, SYNCCODE_W2: begin
+					lrck_ff <= 1;
+					phase <= PHASE_AUDIODATA;
+				end
+				SYNCCODE_M1, SYNCCODE_M2: begin
+					lrck_ff <= 0;
+					phase <= PHASE_AUDIODATA;
+				end
+				default:
+					$display("unknown synccode");
+					phase <= PHASE_SYNCCODE;
+				endcase
+			end
+		end
+		PHASE_AUDIODATA: begin
+			// FIXME: does this really NEED to be in PHASE_AUDIODATA?
+			// audiodata_ready isn't enough???
+			if(audiodata_ready) begin
+				data_ff <= bit_hist_ff[23:0];
+				phase <= PHASE_EXTRADATA;
+			end
+		end
+		default:
+			phase <= PHASE_SAMELVL;
+		endcase
+	end
 end
+
+reg [23:0] data_ff;
+always @(posedge clk) begin
+	if(phase == PHASE_AUDIODATA && audiodata_ready) begin
+		data_ff <= bit_hist_ff[23:0];
+		ack_ff <= 1;
+	end else
+		ack_ff <= 0;
+end
+assign data_o = data_ff;
+assign ack_o = ack_ff;
+assign lrck = lrck_ff;
+
 
 endmodule
