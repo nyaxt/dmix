@@ -10,7 +10,9 @@ module spdif_dai #(
     output [23:0] data_o,
     output ack_o,
     output locked_o,
-    output lrck_o);
+    output lrck_o,
+    output [191:0] udata_o,
+    output [191:0] cdata_o);
 
 parameter SAMELVL_SYNC_COUNT = 3 * CLK_PER_BIT/2;
 parameter SAMELVL_SYNC_COUNT_LOG2 = 2 + CLK_PER_BIT_LOG2-1;
@@ -87,35 +89,45 @@ parameter SYNCCODE_M1 = 6'b011101;
 parameter SYNCCODE_B2 = ~SYNCCODE_B1;
 parameter SYNCCODE_W2 = ~SYNCCODE_W1;
 parameter SYNCCODE_M2 = ~SYNCCODE_M1;
+reg startframe_ff;
 reg locked_ff;
+reg clk_counter_rst_ff;
 reg lrck_ff;
 
 always @(posedge clk) begin
-    if(rst)
+    startframe_ff <= 0;
+
+    if(rst) begin
         locked_ff <= 0;
-    else if(samelvl_sync)
-        locked_ff <= 1;
-    else if(synccode_ready) begin
+
+        clk_counter_rst_ff <= 1;
+    end else if(samelvl_sync) begin
+        // sync clk_counter at end of samelvl
+        clk_counter_rst_ff <= 0;
+    end else if(synccode_ready) begin
         case(synccode)
         SYNCCODE_B1, SYNCCODE_B2: begin
-            // FIXME: reset subframe counter
+            locked_ff <= 1;
+            startframe_ff <= 1;
             lrck_ff <= 0;
         end
         SYNCCODE_W1, SYNCCODE_W2: begin
+            locked_ff <= 1;
             lrck_ff <= 1;
         end
         SYNCCODE_M1, SYNCCODE_M2: begin
+            locked_ff <= 1;
             lrck_ff <= 0;
         end
         default: begin
             // $display("unknown synccode");
             locked_ff <= 0;
+            clk_counter_rst_ff <= 1;
         end
         endcase
     end
 end
-// sync clk_counter at end of samelvl
-assign clk_counter_rst = ~locked_ff;
+assign clk_counter_rst = clk_counter_rst_ff;
 
 // output locked status / lrck
 assign locked_o = locked_ff;
@@ -134,5 +146,26 @@ always @(posedge clk) begin
 end
 assign data_o = data_ff;
 assign ack_o = ack_ff;
+
+// output {u,c}data
+wire extradata_ready = (subbit_counter == 0) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
+reg [191:0] udata_shiftreg;
+reg [191:0] cdata_shiftreg;
+always @(posedge clk) begin
+	if(extradata_ready) begin
+        udata_shiftreg <= {udata_shiftreg[190:0], bit_hist_ff[2]};
+        cdata_shiftreg <= {cdata_shiftreg[190:0], bit_hist_ff[1]};
+    end
+end
+reg [191:0] udata_ff;
+reg [191:0] cdata_ff;
+always @(posedge clk) begin
+    if(startframe_ff) begin
+        udata_ff <= udata_shiftreg;
+        cdata_ff <= cdata_shiftreg;
+    end
+end
+assign udata_o = udata_ff;
+assign cdata_o = cdata_ff;
 
 endmodule
