@@ -5,30 +5,30 @@ module spdif_dai #(
     input clk,
     input rst,
 
-    input signal,
+    input signal_i,
 
     output [23:0] data_o,
     output ack_o,
-    output locked,
-    output lrck);
+    output locked_o,
+    output lrck_o);
 
 parameter SAMELVL_SYNC_COUNT = 3 * CLK_PER_BIT/2;
 parameter SAMELVL_SYNC_COUNT_LOG2 = 2 + CLK_PER_BIT_LOG2-1;
 reg [(SAMELVL_SYNC_COUNT_LOG2-1):0] samelvl_counter;
 reg lastlvl;
 always @(posedge clk) begin
-	lastlvl <= signal;
-	if(lastlvl != signal)
+	lastlvl <= signal_i;
+	if(lastlvl != signal_i)
 		samelvl_counter <= 0;
 	else
 		samelvl_counter <= samelvl_counter + 1;
 end
-wire samelvl_sync = (samelvl_counter == SAMELVL_SYNC_COUNT);
+wire samelvl_sync = (samelvl_counter == SAMELVL_SYNC_COUNT-1);
 
-reg clk_counter_rst_ff;
+wire clk_counter_rst;
 reg [(CLK_PER_BIT_LOG2-1-1):0] clk_counter;
 always @(posedge clk) begin
-	if(clk_counter_rst_ff)
+	if(clk_counter_rst)
 		clk_counter <= 0;
 	else
 		clk_counter <= clk_counter + 1;
@@ -37,10 +37,10 @@ end
 wire subbit_ready = (clk_counter == CLK_PER_BIT/2-1);
 reg [(CLK_PER_BIT/2-1):0] subbit_high_counter;
 always @(posedge clk) begin
-	if(subbit_ready)
-		subbit_high_counter <= signal; // start gathering count for next subbit
+	if(subbit_ready || samelvl_sync)
+		subbit_high_counter <= signal_i; // start gathering count for next subbit
 	else
-		subbit_high_counter <= subbit_high_counter + signal;
+		subbit_high_counter <= subbit_high_counter + signal_i;
 end
 wire subbit = (subbit_high_counter >= CLK_PER_BIT/2/2);
 
@@ -48,18 +48,21 @@ reg [5:0] subbit_hist_ff;
 always @(posedge clk) begin
 	if(subbit_ready)
 		subbit_hist_ff <= {subbit_hist_ff[4:0], subbit};
+    else if(!subbit_ready && samelvl_sync)
+		subbit_hist_ff <= {subbit_hist_ff[4:0], lastlvl};
 end
 
 reg [5:0] subbit_counter;
 always @(posedge clk) begin
-	if(clk_counter_rst_ff)
+	if(clk_counter_rst)
 		subbit_counter <= 0;
 	else if(subbit_ready)
 		subbit_counter <= subbit_counter + 1;
 end
-wire fullbit_ready = (subbit_counter[0] == 1'b0);
+wire fullbit_ready = (subbit_counter[0] == 1'b0) && (clk_counter == 0);
+
+wire [5:0] synccode = subbit_hist_ff;
 wire synccode_ready = (subbit_counter == 5);
-wire audiodata_ready = (subbit_counter == 5+24*2);
 
 reg bmcdecode_bit_reg;
 always @(subbit_hist_ff[2:0]) begin
@@ -77,76 +80,53 @@ always @(posedge clk) begin
 		bit_hist_ff <= {bit_hist_ff[22:0], bmcdecode_bit_reg};
 end
 
-// phase FSM
-parameter PHASE_SAMELVL = 0;
-parameter PHASE_SYNCCODE = 1;
-parameter PHASE_AUDIODATA = 2;
-reg [2:0] phase;
-
+// sync using synccode
 parameter SYNCCODE_B1 = 6'b010111;
 parameter SYNCCODE_W1 = 6'b011011;
 parameter SYNCCODE_M1 = 6'b011101;
 parameter SYNCCODE_B2 = ~SYNCCODE_B1;
 parameter SYNCCODE_W2 = ~SYNCCODE_W1;
 parameter SYNCCODE_M2 = ~SYNCCODE_M1;
+reg locked_ff;
 reg lrck_ff;
 
 always @(posedge clk) begin
-	if(rst) begin
-		phase <= PHASE_SAMELVL;
-	end else begin
-		// transition regardless of phase
-		if(samelvl_sync) begin
-			// sync clk_counter at end of samelvl
-			clk_counter_rst_ff <= 1;
-			phase <= PHASE_SYNCCODE;
-		end else
-			clk_counter_rst_ff <= 0;
-
-		// phase transition
-		case(phase)
-		PHASE_SAMELVL: begin
-			// NOP
-		end
-		PHASE_SYNCCODE: begin
-			if(synccode_ready) begin
-				case(subbit_hist_ff[5:0])
-				SYNCCODE_B1, SYNCCODE_B2: begin
-					// FIXME: reset subframe counter
-					lrck_ff <= 0;
-					phase <= PHASE_AUDIODATA;
-				end
-				SYNCCODE_W1, SYNCCODE_W2: begin
-					lrck_ff <= 1;
-					phase <= PHASE_AUDIODATA;
-				end
-				SYNCCODE_M1, SYNCCODE_M2: begin
-					lrck_ff <= 0;
-					phase <= PHASE_AUDIODATA;
-				end
-				default:
-					$display("unknown synccode");
-					phase <= PHASE_SYNCCODE;
-				endcase
-			end
-		end
-		PHASE_AUDIODATA: begin
-			// FIXME: does this really NEED to be in PHASE_AUDIODATA?
-			// audiodata_ready isn't enough???
-			if(audiodata_ready) begin
-				data_ff <= bit_hist_ff[23:0];
-				phase <= PHASE_EXTRADATA;
-			end
-		end
-		default:
-			phase <= PHASE_SAMELVL;
-		endcase
-	end
+    if(rst)
+        locked_ff <= 0;
+    else if(samelvl_sync)
+        locked_ff <= 1;
+    else if(synccode_ready) begin
+        case(synccode)
+        SYNCCODE_B1, SYNCCODE_B2: begin
+            // FIXME: reset subframe counter
+            lrck_ff <= 0;
+        end
+        SYNCCODE_W1, SYNCCODE_W2: begin
+            lrck_ff <= 1;
+        end
+        SYNCCODE_M1, SYNCCODE_M2: begin
+            lrck_ff <= 0;
+        end
+        default: begin
+            // $display("unknown synccode");
+            locked_ff <= 0;
+        end
+        endcase
+    end
 end
+// sync clk_counter at end of samelvl
+assign clk_counter_rst = ~locked_ff;
 
+// output locked status / lrck
+assign locked_o = locked_ff;
+assign lrck_o = lrck_ff;
+
+// output data
+wire audiodata_ready = (subbit_counter == 5+24*2+1) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
 reg [23:0] data_ff;
+reg ack_ff;
 always @(posedge clk) begin
-	if(phase == PHASE_AUDIODATA && audiodata_ready) begin
+	if(audiodata_ready) begin
 		data_ff <= bit_hist_ff[23:0];
 		ack_ff <= 1;
 	end else
@@ -154,7 +134,5 @@ always @(posedge clk) begin
 end
 assign data_o = data_ff;
 assign ack_o = ack_ff;
-assign lrck = lrck_ff;
-
 
 endmodule

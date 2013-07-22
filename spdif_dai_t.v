@@ -9,7 +9,7 @@ reg rst;
 reg signal;
 
 spdif_dai uut(
-	.clk(clk), .rst(rst), .signal(signal)
+	.clk(clk), .rst(rst), .signal_i(signal)
 );
 
 parameter TCLK_SPDIF = 40.69; // 24.576Mhz
@@ -187,7 +187,7 @@ end
 always #(TCLK/2) clk = ~clk;
 
 always @(posedge clk) begin
-    if(uut.we_o) begin
+    if(uut.ack_o) begin
         $display("data_o: %x", uut.data_o);
     end
 end
