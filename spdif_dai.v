@@ -46,12 +46,10 @@ always @(posedge clk) begin
 end
 wire subbit = (subbit_high_counter >= CLK_PER_BIT/2/2);
 
-reg [5:0] subbit_hist_ff;
+reg [4:0] subbit_hist_ff;
 always @(posedge clk) begin
 	if(subbit_ready)
-		subbit_hist_ff <= {subbit_hist_ff[4:0], subbit};
-    else if(!subbit_ready && samelvl_sync)
-		subbit_hist_ff <= {subbit_hist_ff[4:0], lastlvl};
+		subbit_hist_ff <= {subbit_hist_ff[3:0], subbit};
 end
 
 reg [5:0] subbit_counter;
@@ -63,7 +61,12 @@ always @(posedge clk) begin
 end
 wire fullbit_ready = (subbit_counter[0] == 1'b0) && (clk_counter == 0);
 
-wire [5:0] synccode = subbit_hist_ff;
+reg synccode_start_lvl_ff;
+always @(posedge clk) begin
+    if(clk_counter_rst || subbit_counter == 6'h3f)
+        synccode_start_lvl_ff <= lastlvl;
+end
+wire [5:0] synccode = {synccode_start_lvl_ff, subbit_hist_ff};
 wire synccode_ready = (subbit_counter == 5);
 
 reg bmcdecode_bit_reg;

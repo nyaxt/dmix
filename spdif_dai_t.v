@@ -141,6 +141,17 @@ task recv_bmcctl;
     end
 endtask
 
+task recv_subframe;
+    input [23:0] data;
+    begin
+        recv_bmcbyte(data[23:16]);
+        recv_bmcbyte(data[15:8]);
+        recv_bmcbyte(data[7:0]);
+        recv_bmcctl();
+    end
+endtask
+
+reg [23:0] counter;
 initial begin
 	$dumpfile("spdif_dai_t.lxt");
 	$dumpvars(0, spdif_dai_t);
@@ -179,8 +190,37 @@ initial begin
     recv_bmcbyte(8'hab);
     recv_bmcctl();
 
-	#(TCLK*100000);
-	// #(1000_000_00);
+    counter <= 0;
+    recv_B();
+    recv_subframe(counter);
+    counter = counter + 1;
+    recv_W();
+    recv_subframe(counter);
+    counter = counter + 1;
+    repeat(63) begin
+        recv_M();
+        recv_subframe(counter);
+        counter = counter + 1;
+        recv_W();
+        recv_subframe(counter);
+        counter = counter + 1;
+    end
+    recv_B();
+    recv_subframe(counter);
+    counter = counter + 1;
+    recv_W();
+    recv_subframe(counter);
+    counter = counter + 1;
+    repeat(63) begin
+        recv_M();
+        recv_subframe(counter);
+        counter = counter + 1;
+        recv_W();
+        recv_subframe(counter);
+        counter = counter + 1;
+    end
+
+	#(TCLK*32);
 	$finish(2);
 end
 

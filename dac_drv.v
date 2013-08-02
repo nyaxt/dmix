@@ -9,10 +9,9 @@ module dac_drv(
 	output data_o,
 	output lrck_o,
 
+    input [1:0] ack_i,
 	input [23:0] data_i,
-    input lrck_i,
-    input ack_i,
-    output pop_o
+    output [1:0] pop_o
 	);
 
 assign sck_o = clk; // 128fs * 192kHz = 24.57Mhz
@@ -36,10 +35,13 @@ always @(posedge clk) begin
     if(rst) begin
         data_i_ff[0] <= 0;
         data_i_ff[1] <= 0;
-    end else if(ack_i) begin
-        data_i_ff[lrck_i] <= data_i;
-    end
+    end else if(ack_i[0])
+        data_i_ff[0] <= data_i;
+    else if (ack_i[1])
+        data_i_ff[1] <= data_i;
 end
+assign pop_o[1] = (clk_counter == 7'b0000000);
+assign pop_o[0] = (clk_counter == 7'b1000000);
 
 reg [31:0] data_o_ff;
 assign data_o = data_o_ff[31];
@@ -51,7 +53,5 @@ always @(posedge clk) begin
     else if(clk_counter[0] == 1'b1)
         data_o_ff <= {data_o_ff[30:0], 1'b0};
 end
-
-assign pop_o = (clk_counter == 64);
 
 endmodule
