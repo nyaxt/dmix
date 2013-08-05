@@ -197,7 +197,7 @@ initial begin
     recv_W();
     recv_subframe(counter);
     counter = counter + 1;
-    repeat(63) begin
+    repeat(95) begin
         recv_M();
         recv_subframe(counter);
         counter = counter + 1;
@@ -211,7 +211,7 @@ initial begin
     recv_W();
     recv_subframe(counter);
     counter = counter + 1;
-    repeat(63) begin
+    repeat(95) begin
         recv_M();
         recv_subframe(counter);
         counter = counter + 1;

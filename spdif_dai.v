@@ -30,7 +30,7 @@ wire samelvl_sync = (samelvl_counter == SAMELVL_SYNC_COUNT-1);
 wire clk_counter_rst;
 reg [(CLK_PER_BIT_LOG2-1-1):0] clk_counter;
 always @(posedge clk) begin
-	if(clk_counter_rst)
+	if(clk_counter_rst || samelvl_sync)
 		clk_counter <= 0;
 	else
 		clk_counter <= clk_counter + 1;
@@ -46,10 +46,10 @@ always @(posedge clk) begin
 end
 wire subbit = (subbit_high_counter >= CLK_PER_BIT/2/2);
 
-reg [4:0] subbit_hist_ff;
+reg [5:0] subbit_hist_ff;
 always @(posedge clk) begin
 	if(subbit_ready)
-		subbit_hist_ff <= {subbit_hist_ff[3:0], subbit};
+		subbit_hist_ff <= {subbit_hist_ff[4:0], subbit};
 end
 
 reg [5:0] subbit_counter;
@@ -66,7 +66,7 @@ always @(posedge clk) begin
     if(clk_counter_rst || subbit_counter == 6'h3f)
         synccode_start_lvl_ff <= lastlvl;
 end
-wire [5:0] synccode = {synccode_start_lvl_ff, subbit_hist_ff};
+wire [5:0] synccode = subbit_hist_ff;
 wire synccode_ready = (subbit_counter == 5);
 
 reg bmcdecode_bit_reg;
