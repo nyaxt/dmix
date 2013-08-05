@@ -27,10 +27,9 @@ always @(posedge clk) begin
 end
 wire samelvl_sync = (samelvl_counter == SAMELVL_SYNC_COUNT-1);
 
-wire clk_counter_rst;
 reg [(CLK_PER_BIT_LOG2-1-1):0] clk_counter;
 always @(posedge clk) begin
-	if(clk_counter_rst || samelvl_sync)
+	if(samelvl_sync)
 		clk_counter <= 0;
 	else
 		clk_counter <= clk_counter + 1;
@@ -46,28 +45,22 @@ always @(posedge clk) begin
 end
 wire subbit = (subbit_high_counter >= CLK_PER_BIT/2/2);
 
-reg [5:0] subbit_hist_ff;
+reg [7:0] subbit_hist_ff;
 always @(posedge clk) begin
 	if(subbit_ready)
-		subbit_hist_ff <= {subbit_hist_ff[4:0], subbit};
+		subbit_hist_ff <= {subbit_hist_ff[7:0], subbit};
 end
+wire [7:0] synccode = subbit_hist_ff;
 
+wire subbit_counter_rst;
 reg [5:0] subbit_counter;
 always @(posedge clk) begin
-	if(clk_counter_rst)
+	if(subbit_counter_rst)
 		subbit_counter <= 0;
 	else if(subbit_ready)
 		subbit_counter <= subbit_counter + 1;
 end
 wire fullbit_ready = (subbit_counter[0] == 1'b0) && (clk_counter == 0);
-
-reg synccode_start_lvl_ff;
-always @(posedge clk) begin
-    if(clk_counter_rst || subbit_counter == 6'h3f)
-        synccode_start_lvl_ff <= lastlvl;
-end
-wire [5:0] synccode = subbit_hist_ff;
-wire synccode_ready = (subbit_counter == 5);
 
 reg bmcdecode_bit_reg;
 always @(subbit_hist_ff[2:0]) begin
@@ -86,64 +79,55 @@ always @(posedge clk) begin
 end
 
 // sync using synccode
-parameter SYNCCODE_B1 = 6'b010111;
-parameter SYNCCODE_W1 = 6'b011011;
-parameter SYNCCODE_M1 = 6'b011101;
+parameter SYNCCODE_B1 = 8'b00010111;
+parameter SYNCCODE_W1 = 8'b00011011;
+parameter SYNCCODE_M1 = 8'b00011101;
 parameter SYNCCODE_B2 = ~SYNCCODE_B1;
 parameter SYNCCODE_W2 = ~SYNCCODE_W1;
 parameter SYNCCODE_M2 = ~SYNCCODE_M1;
 reg startframe_ff;
-reg locked_ff;
-reg clk_counter_rst_ff;
+reg subbit_counter_rst_ff;
 reg lrck_ff;
 
 always @(posedge clk) begin
     startframe_ff <= 0;
+    subbit_counter_rst_ff <= 0;
 
     if(rst) begin
-        locked_ff <= 0;
-
-        clk_counter_rst_ff <= 1;
-    end else if(samelvl_sync) begin
-        // sync clk_counter at end of samelvl
-        clk_counter_rst_ff <= 0;
-    end else if(synccode_ready) begin
+        subbit_counter_rst_ff <= 1;
+    end else if(subbit_ready) begin
         case(synccode)
         SYNCCODE_B1, SYNCCODE_B2: begin
-            locked_ff <= 1;
             startframe_ff <= 1;
             lrck_ff <= 0;
+            subbit_counter_rst_ff <= 1;
         end
         SYNCCODE_W1, SYNCCODE_W2: begin
-            locked_ff <= 1;
             lrck_ff <= 1;
+            subbit_counter_rst_ff <= 1;
         end
         SYNCCODE_M1, SYNCCODE_M2: begin
-            locked_ff <= 1;
             lrck_ff <= 0;
+            subbit_counter_rst_ff <= 1;
         end
-        default: begin
-            // $display("unknown synccode");
-            locked_ff <= 0;
-            clk_counter_rst_ff <= 1;
-        end
+        // default: begin end
         endcase
     end
 end
-assign clk_counter_rst = clk_counter_rst_ff;
+assign subbit_counter_rst = subbit_counter_rst_ff;
 
 // output locked status / lrck
-assign locked_o = locked_ff;
+assign locked_o = 1; // FIXME: locked_ff;
 assign lrck_o = lrck_ff;
 
 // output data
-wire audiodata_ready = (subbit_counter == 5+24*2+1) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
+wire audiodata_ready = (subbit_counter == 24*2+1) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
 reg [23:0] data_ff;
 reg ack_ff;
 always @(posedge clk) begin
 	if(audiodata_ready) begin
 		data_ff <= bit_hist_ff[23:0];
-		ack_ff <= 1;
+		ack_ff <= locked_o; // only ack if locked
 	end else
 		ack_ff <= 0;
 end
@@ -151,7 +135,7 @@ assign data_o = data_ff;
 assign ack_o = ack_ff;
 
 // output {u,c}data
-wire extradata_ready = (subbit_counter == 0) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
+wire extradata_ready = (subbit_counter == (24+4)*2+1) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
 reg [191:0] udata_shiftreg;
 reg [191:0] cdata_shiftreg;
 always @(posedge clk) begin
