@@ -1,0 +1,15 @@
+TARGET=dmix
+DEPS=dmix.v spdif_dai_varclk.v spdif_dai.v posedge_latch.v resample_pipeline.v resampler.v mixer.v dac_drv.v mpemu.v rom_*.v ringbuf.v
+
+dump: $(TARGET)_t.lxt
+	gtkwave $(TARGET)_t.lxt &
+
+runsim: $(TARGET)_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+$(TARGET)_t.vvp: $(TARGET)_t.v $(DEPS)
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp
