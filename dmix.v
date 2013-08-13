@@ -94,7 +94,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 end
 endgenerate
 
-wire [(NUM_CH*2*16-1):0] vol = {16'hffff, 16'hffff, 16'h0, 16'h0, 16'h0, 16'h0};
+wire [(NUM_CH*2*16-1):0] vol = {2{16'h00ff}};
 wire [1:0] mix_pop_i;
 wire [23:0] mix_data_o;
 wire [1:0] mix_ack_o;

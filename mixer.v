@@ -29,10 +29,10 @@ end
 reg [(NUM_CH*2-1):0] pop_ff;
 assign pop_o = pop_ff;
 always @(posedge clk) begin
-    if(phase_counter < NUM_CH*2)
-        pop_ff <= 1 << phase_counter;
+    if(phase_counter == 7'h7e)
+        pop_ff <= 1;
     else
-        pop_ff <= 0;
+        pop_ff <= {pop_ff[(NUM_CH*2-2):0], 1'b0};
 end
 
 // PIPELINE STAGE 1: mux data/vol
@@ -54,10 +54,10 @@ endgenerate
 reg [23:0] data_mux_ff;
 reg [15:0] vol_mux_ff;
 
-wire [(NUM_CH_LOG2-1):0] muxsel = (phase_counter-1) & (NUM_CH*2-1);
+wire [(NUM_CH_LOG2-1):0] muxsel = phase_counter & (NUM_CH*2-1);
 
 always @(posedge clk) begin
-    if(0 < phase_counter && phase_counter < NUM_CH*2+1) begin
+    if(phase_counter < NUM_CH*2) begin
         data_mux_ff <= data_array[muxsel/2];
         vol_mux_ff <= vol_array[muxsel];
     end else begin
@@ -68,30 +68,33 @@ end
 
 // PIPELINE STAGE 2-5: multiply
 wire [23:0] mul_result;
-mpemu mp(.clk(clk), .mpcand_i(data_mux_ff), .mplier_i(vol_mux_ff), .mprod_o(mul_result));
-
-reg [23:0] mul_result_ff;
-always @(posedge clk) begin
-    mul_result_ff <= (data_mux_ff * vol_mux_ff) >> 16;
-end
+mpemu_scale mp(.clk(clk), .mpcand_i(data_mux_ff), .scale_i(vol_mux_ff), .mprod_o(mul_result));
 
 // PIPELINE STAGE 6: add
-reg [23:0] mixed_ff [1:0];
-wire mixed_ch = (phase_counter - 6) & 1;
+reg [23:0] mac_ff [1:0];
+wire mac_ch = (phase_counter - 6) & 1;
 
 always @(posedge clk) begin
     if(phase_counter == 0) begin
-        mixed_ff[0] <= 0;
-        mixed_ff[1] <= 0;
+        mac_ff[0] <= 0;
+        mac_ff[1] <= 0;
     end else begin
-        mixed_ff[mixed_ch] <= mixed_ff[mixed_ch] + mul_result_ff;
+        mac_ff[mac_ch] <= mac_ff[mac_ch] + mul_result;
     end
 end
 
 // OUTPUT
+reg [23:0] data_ff [1:0];
+always @(posedge clk) begin
+    if(phase_counter == 7'h7f) begin
+        data_ff[0] <= mac_ff[0];
+        data_ff[1] <= mac_ff[1];
+    end
+end
+
 reg chsel_ff;
 reg [1:0] ack_ff;
-assign data_o = mixed_ff[chsel_ff];
+assign data_o = data_ff[chsel_ff];
 assign ack_o = ack_ff;
 always @(posedge clk) begin
     ack_ff <= 2'b00;
@@ -106,33 +109,3 @@ always @(posedge clk) begin
 end
 
 endmodule
-
-/*
-// OUTPUT control
-parameter FS2 = FS/2;
-parameter OUTPUT_LCH = FS2-1;
-parameter OUTPUT_RCH = FS-1;
-
-wire phase_output_lch = (phase_counter == OUTPUT_LCH);
-wire phase_output_rch = (phase_counter == OUTPUT_RCH);
-
-wire we_o = (phase_output_lch | phase_output_rch);
-
-reg lrck_ff;
-reg data_ff;
-assign lrck_o = lrck_ff;
-assign data_o = data_ff;
-always @(posedge clk) begin
-    if(rst) begin
-        lrck_ff <= 0;
-    end else begin
-        if(phase_output_lch) begin
-            lrck_ff <= 0;
-            data_ff <= mixed[0];
-        end else if(phase_output_rch) begin
-            lrck_ff <= 1;
-            data_ff <= mixed[1];
-        end
-    end
-end
-*/

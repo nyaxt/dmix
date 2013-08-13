@@ -209,8 +209,8 @@ initial begin
         counter = counter + 1;
     end
 
-	#(TCLK*32);
-	// #(1000_000_00);
+	// #(TCLK*32);
+	#(1_000_000);
 	$finish(2);
 end
 
