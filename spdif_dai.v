@@ -60,10 +60,10 @@ always @(posedge clk) begin
 	else if(subbit_ready)
 		subbit_counter <= subbit_counter + 1;
 end
-wire fullbit_ready = (subbit_counter[0] == 1'b0) && (clk_counter == 0);
+wire fullbit_ready = (subbit_counter[0] == 1'b1) && (clk_counter == 0);
 
 reg bmcdecode_bit_reg;
-always @(subbit_hist_ff[2:0]) begin
+always @(subbit_hist_ff[1:0]) begin
 	case(subbit_hist_ff[1:0])
 	2'b10, 2'b01: 
 		bmcdecode_bit_reg = 1;
@@ -121,7 +121,7 @@ assign locked_o = 1; // FIXME: locked_ff;
 assign lrck_o = lrck_ff;
 
 // output data
-wire audiodata_ready = (subbit_counter == 24*2+1) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
+wire audiodata_ready = (subbit_counter == 24*2) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
 reg [23:0] data_ff;
 reg ack_ff;
 always @(posedge clk) begin
@@ -135,7 +135,7 @@ assign data_o = data_ff;
 assign ack_o = ack_ff;
 
 // output {u,c}data
-wire extradata_ready = (subbit_counter == (24+4)*2+1) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
+wire extradata_ready = (subbit_counter == (24+4)*2) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
 reg [191:0] udata_shiftreg;
 reg [191:0] cdata_shiftreg;
 always @(posedge clk) begin
