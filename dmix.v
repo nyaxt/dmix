@@ -3,7 +3,7 @@ module dmix_top #(
     parameter NUM_CH = NUM_SPDIF_IN
 )(
     input clk112896,
-    input clk245760,
+    input clk245760_pad,
     input rst,
 
     input [0:(NUM_SPDIF_IN-1)] spdif_i,
@@ -32,13 +32,22 @@ module dmix_top #(
     output led_o // T3
     );
 
-assign led_o = spdif_i[0];
-
-wire clk903200; // =  44.1kHz * 64 bits * 32 clk/bit = 90.320Mhz
-wire clk983040; // =  48.0kHz * 64 bits * 32 clk/bit = 98.304Mhz
-                // =  96.0kHz * 64 bits * 16 clk/bit = 98.304Mhz
-                // = 192.0kHz * 64 bits *  8 clk/bit = 98.304Mhz
-
+wire rst_dcm;
+wire clk245760;
+wire clk903168; // =  44.1kHz * 64 bits * 32 clk/bit = 90.3168Mhz
+wire clk983040; // =  48.0kHz * 64 bits * 32 clk/bit = 98.3040Mhz
+                // =  96.0kHz * 64 bits * 16 clk/bit = 98.3040Mhz
+                // = 192.0kHz * 64 bits *  8 clk/bit = 98.3040Mhz
+dcm_90320 dcm_90320 (
+    .CLKIN_IN(clk112896),
+    .USER_RST_IN(rst_dcm), 
+    .CLKFX_OUT(clk903168));
+dcm_983040 dcm_983040 (
+    .CLKIN_IN(clk245760_pad), 
+    .CLK0_OUT(clk245760),
+    .USER_RST_IN(rst_dcm), 
+    .CLKFX_OUT(clk983040));
+    
 genvar ig;
 generate
 for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
@@ -51,7 +60,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [3:0] dai_rate;
 
     spdif_dai_varclk dai(
-        .clk903200(clk903200), .clk983040(clk983040),
+        .clk903168(clk903168), .clk983040(clk983040),
         .rst(rst),
         .signal_i(spdif_i[ig]),
 
@@ -94,6 +103,8 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 end
 endgenerate
 
+assign led_o = g[0].dai_locked;
+
 wire [(NUM_CH*2*16-1):0] vol = {2{16'h00ff}};
 wire [1:0] mix_pop_i;
 wire [23:0] mix_data_o;
@@ -114,7 +125,7 @@ mixer #(
     .pop_i(mix_pop_i),
     .data_o(mix_data_o),
     .ack_o(mix_ack_o));
-
+/*  
 dac_drv dac_drv(
     .clk(clk245760),
     .rst(rst),
@@ -127,5 +138,22 @@ dac_drv dac_drv(
     .ack_i(mix_ack_o),
     .data_i(mix_data_o),
     .pop_o(mix_pop_i));
+*/
+
+wire [1:0] pop;
+wire [1:0] ack;
+assign ack[1] = 0;
+wire [23:0] data;
+synth l(
+	.clk(clk245760), .rst(rst),
+    .pop_i(pop[0]), .ack_o(ack[0]), .data_o(data));
+    
+dac_drv d(
+	.clk(clk245760), .rst(rst),
+    .sck_o(dac_sck_o),
+    .bck_o(dac_bck_o),
+    .lrck_o(dac_lrck_o),
+    .data_o(dac_data_o),
+    .data_i(data), .ack_i(ack), .pop_o(pop));
 
 endmodule

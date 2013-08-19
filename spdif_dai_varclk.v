@@ -2,7 +2,7 @@ module spdif_dai_varclk #(
 	parameter CLK_PER_BIT = 8,
 	parameter CLK_PER_BIT_LOG2 = 3
 )(
-    input clk903200,
+    input clk903168,
     input clk983040,
     input rst,
 
@@ -39,6 +39,6 @@ spdif_dai dai(
     .lrck_o(lrck_o),
     .udata_o(udata_o),
     .cdata_o(cdata_o));
-wire rate_o = 4'b0010; // 48k
+assign rate_o = 4'b0010; // 48k
 
 endmodule

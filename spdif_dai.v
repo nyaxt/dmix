@@ -64,10 +64,10 @@ wire fullbit_ready = (subbit_counter[0] == 1'b0) && (clk_counter == 0);
 
 reg bmcdecode_bit_reg;
 always @(subbit_hist_ff[2:0]) begin
-	case(subbit_hist_ff[2:0])
-	3'b010, 3'b101: 
+	case(subbit_hist_ff[1:0])
+	2'b10, 2'b01: 
 		bmcdecode_bit_reg = 1;
-	3'b011, 3'b100:
+	2'b11, 2'b00:
 		bmcdecode_bit_reg = 0;
 	endcase
 end
@@ -139,7 +139,10 @@ wire extradata_ready = (subbit_counter == (24+4)*2+1) && subbit_ready; // subbit
 reg [191:0] udata_shiftreg;
 reg [191:0] cdata_shiftreg;
 always @(posedge clk) begin
-	if(extradata_ready) begin
+	if(rst) begin
+        udata_shiftreg <= 0;
+        cdata_shiftreg <= 0;
+    end else if(extradata_ready) begin
         udata_shiftreg <= {udata_shiftreg[190:0], bit_hist_ff[2]};
         cdata_shiftreg <= {cdata_shiftreg[190:0], bit_hist_ff[1]};
     end
