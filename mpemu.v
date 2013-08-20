@@ -40,7 +40,7 @@ module mpemu_scale(
     output signed [23:0] mprod_o);
 
 
-`ifdef USE_IP
+`ifdef USE_IP____
 mp_scale mp(
   .clk(clk),
   .a(mpcand_i),
@@ -52,7 +52,7 @@ reg signed [23:0] delay[4:0];
 assign mprod_o = delay[4];
 
 wire [39:0] prod_full = mpcand_i * mplier_i;
-wire [23:0] prod = prod_full >>> 8;
+wire [23:0] prod = mpcand_i;
 always @(posedge clk) begin
     delay[0] <= prod;
     delay[1] <= delay[0];

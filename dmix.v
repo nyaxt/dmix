@@ -60,7 +60,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [3:0] dai_rate;
 
     spdif_dai_varclk dai(
-        .clk903168(clk903168), .clk983040(clk983040),
+        .clk903168(clk903168), .clk983040(clk245760),
         .rst(rst),
         .signal_i(spdif_i[ig]),
 
