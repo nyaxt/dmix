@@ -12,7 +12,7 @@ reg ack_ff;
 assign data_o = ack_ff ? data_ff : 0;
 assign ack_o = ack_ff;
 
-parameter STEP = 1600;
+parameter STEP = 160000;
 parameter PHASE = 16'd139;
 
 reg [15:0] clk_counter;

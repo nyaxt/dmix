@@ -40,14 +40,14 @@ wire clk983040; // =  48.0kHz * 64 bits * 32 clk/bit = 98.3040Mhz
                 // = 192.0kHz * 64 bits *  8 clk/bit = 98.3040Mhz
 dcm_90320 dcm_90320 (
     .CLKIN_IN(clk112896),
-    .USER_RST_IN(rst_dcm), 
+    .USER_RST_IN(rst_dcm),
     .CLKFX_OUT(clk903168));
 dcm_983040 dcm_983040 (
     .CLKIN_IN(clk245760_pad), 
-    .CLK0_OUT(clk245760),
+    .CLKIN_IBUFG_OUT(clk245760),
     .USER_RST_IN(rst_dcm), 
     .CLKFX_OUT(clk983040));
-    
+
 genvar ig;
 generate
 for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
@@ -103,8 +103,6 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 end
 endgenerate
 
-assign led_o = g[0].dai_locked;
-
 wire [(NUM_CH*2*16-1):0] vol = {2{16'h00ff}};
 wire [1:0] mix_pop_i;
 wire [23:0] mix_data_o;
@@ -125,7 +123,7 @@ mixer #(
     .pop_i(mix_pop_i),
     .data_o(mix_data_o),
     .ack_o(mix_ack_o));
-/*  
+
 dac_drv dac_drv(
     .clk(clk245760),
     .rst(rst),
@@ -138,8 +136,8 @@ dac_drv dac_drv(
     .ack_i(mix_ack_o),
     .data_i(mix_data_o),
     .pop_o(mix_pop_i));
-*/
 
+/*
 wire [1:0] pop;
 wire [1:0] ack;
 assign ack[1] = 0;
@@ -155,5 +153,7 @@ dac_drv d(
     .lrck_o(dac_lrck_o),
     .data_o(dac_data_o),
     .data_i(data), .ack_i(ack), .pop_o(pop));
+*/
+assign led_o = ~dac_data_o;
 
 endmodule
