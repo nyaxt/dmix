@@ -4,13 +4,12 @@ module dmix_t;
 
 // ins
 reg rst;
-reg rst_dcm;
 
 reg signal;
 
 parameter Tclk112896 = 88.577; // 11.2896Mhz
 parameter Tclk245760 = 40.69; // 24.576Mhz
-parameter TclkSPDIF = Tclk245760;
+parameter TclkSPDIF = Tclk245760 * 4;
 parameter Tclk903200 = 11.07;
 parameter Tclk983040 = 10.17;
 parameter TCLK = Tclk245760;
@@ -33,7 +32,7 @@ end
 dmix_top uut(.clk112896(clk112896), .clk245760_pad(clk245760), .rst(rst), .spdif_i(signal));
 // assign uut.clk903200 = clk903200;
 // assign uut.clk983040 = clk983040;
-assign uut.rst_dcm = rst_dcm;
+// assign uut.rst_dcm = rst_dcm;
 
 task recv_rawbit;
     input b;
@@ -177,17 +176,14 @@ initial begin
 	// $dumpvars(0, dmix_t);
 
 	rst = 1'b0;
-    rst_dcm = 1'b0;
     signal = 0;
 
-	#(TCLK*300);
-	rst_dcm = 1'b1;
 	#(TCLK*10);
-	rst_dcm = 1'b0;
-	#(TCLK*3);
-    rst = 1'b1;
-    #(TCLK*3);
-    rst = 1'b0;
+	rst = 1'b1;
+	#(TCLK);
+	rst = 1'b0;
+	#(TCLK*100);
+    //#(10_000_000);
 
     counter <= 0;
     recv_B();
@@ -219,7 +215,6 @@ initial begin
         counter = counter + 1;
     end
 
-	// #(TCLK*32);
 	#(1_000_000);
 	$finish(2);
 end

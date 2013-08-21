@@ -20,7 +20,7 @@ wire ack;
 reg [3:0] pulse_counter;
 always @(posedge clk983040) begin
     if(ack) begin
-        pulse_counter <= 4'hf;
+        pulse_counter <= 4'h4;
     end else if(pulse_counter > 0) begin
         pulse_counter <= pulse_counter - 1;
     end

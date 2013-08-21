@@ -73,9 +73,12 @@ always @(subbit_hist_ff[1:0]) begin
 end
 
 reg [23:0] bit_hist_ff;
+reg [23:0] bit_hist_ff2;
 always @(posedge clk) begin
-	if(fullbit_ready)
+	if(fullbit_ready) begin
 		bit_hist_ff <= {bit_hist_ff[22:0], bmcdecode_bit_reg};
+   		bit_hist_ff2 <= {bmcdecode_bit_reg, bit_hist_ff2[23:1]};
+    end
 end
 
 // sync using synccode
@@ -126,7 +129,7 @@ reg [23:0] data_ff;
 reg ack_ff;
 always @(posedge clk) begin
 	if(audiodata_ready) begin
-		data_ff <= bit_hist_ff[23:0];
+		data_ff <= bit_hist_ff2[23:0];
 		ack_ff <= locked_o; // only ack if locked
 	end else
 		ack_ff <= 0;
