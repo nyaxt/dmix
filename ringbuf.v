@@ -37,7 +37,7 @@ assign data_o = data_ff;
 
 always @(posedge clk) begin
     if(rst)
-        riter <= LEN - 1;
+        riter <= LEN >> 1;
     else begin
         if(pop_i)
             riter <= riter + 1;
