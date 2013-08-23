@@ -121,14 +121,14 @@ endtask
 task recv_bmcbyte;
     input [7:0] byte;
     begin
-        recv_bmcbit(byte[7]);
-        recv_bmcbit(byte[6]);
-        recv_bmcbit(byte[5]);
-        recv_bmcbit(byte[4]);
-        recv_bmcbit(byte[3]);
-        recv_bmcbit(byte[2]);
-        recv_bmcbit(byte[1]);
         recv_bmcbit(byte[0]);
+        recv_bmcbit(byte[1]);
+        recv_bmcbit(byte[2]);
+        recv_bmcbit(byte[3]);
+        recv_bmcbit(byte[4]);
+        recv_bmcbit(byte[5]);
+        recv_bmcbit(byte[6]);
+        recv_bmcbit(byte[7]);
     end
 endtask
 
@@ -144,9 +144,9 @@ endtask
 task recv_subframe;
     input [23:0] data;
     begin
-        recv_bmcbyte(data[23:16]);
-        recv_bmcbyte(data[15:8]);
         recv_bmcbyte(data[7:0]);
+        recv_bmcbyte(data[15:8]);
+        recv_bmcbyte(data[23:16]);
         recv_bmcctl();
     end
 endtask

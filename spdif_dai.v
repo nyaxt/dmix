@@ -54,10 +54,11 @@ wire [7:0] synccode = subbit_hist_ff;
 
 wire subbit_counter_rst;
 reg [5:0] subbit_counter;
+parameter SUBBIT_COUNTER_UNLOCKED = 6'h3f;
 always @(posedge clk) begin
 	if(subbit_counter_rst)
 		subbit_counter <= 0;
-	else if(subbit_ready)
+	else if(subbit_ready && subbit_counter != SUBBIT_COUNTER_UNLOCKED)
 		subbit_counter <= subbit_counter + 1;
 end
 wire fullbit_ready = (subbit_counter[0] == 1'b1) && (clk_counter == 0);
@@ -73,11 +74,9 @@ always @(subbit_hist_ff[1:0]) begin
 end
 
 reg [23:0] bit_hist_ff;
-reg [23:0] bit_hist_ff2;
 always @(posedge clk) begin
 	if(fullbit_ready) begin
-		bit_hist_ff <= {bit_hist_ff[22:0], bmcdecode_bit_reg};
-   		bit_hist_ff2 <= {bmcdecode_bit_reg, bit_hist_ff2[23:1]};
+   		bit_hist_ff <= {bmcdecode_bit_reg, bit_hist_ff[23:1]};
     end
 end
 
@@ -120,7 +119,15 @@ end
 assign subbit_counter_rst = subbit_counter_rst_ff;
 
 // output locked status / lrck
-assign locked_o = 1; // FIXME: locked_ff;
+reg [2:0] unlock_tolerance_counter;
+parameter UNLOCK_TOLERANCE = 6;
+always @(posedge clk) begin
+	if(subbit_counter != SUBBIT_COUNTER_UNLOCKED)
+		unlock_tolerance_counter <= 0;
+	else if (unlock_tolerance_counter != UNLOCK_TOLERANCE)
+		unlock_tolerance_counter <= unlock_tolerance_counter + 1;
+	end
+assign locked_o = (unlock_tolerance_counter != UNLOCK_TOLERANCE);
 assign lrck_o = lrck_ff;
 
 // output data
@@ -129,7 +136,7 @@ reg [23:0] data_ff;
 reg ack_ff;
 always @(posedge clk) begin
 	if(audiodata_ready) begin
-		data_ff <= bit_hist_ff2[23:0];
+		data_ff <= bit_hist_ff[23:0];
 		ack_ff <= locked_o; // only ack if locked
 	end else
 		ack_ff <= 0;
@@ -146,8 +153,8 @@ always @(posedge clk) begin
         udata_shiftreg <= 0;
         cdata_shiftreg <= 0;
     end else if(extradata_ready) begin
-        udata_shiftreg <= {udata_shiftreg[190:0], bit_hist_ff[2]};
-        cdata_shiftreg <= {cdata_shiftreg[190:0], bit_hist_ff[1]};
+        udata_shiftreg <= {udata_shiftreg[190:0], bit_hist_ff[22]};
+        cdata_shiftreg <= {cdata_shiftreg[190:0], bit_hist_ff[21]};
     end
 end
 reg [191:0] udata_ff;
