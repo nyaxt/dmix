@@ -61,7 +61,13 @@ always @(posedge clk) begin
 	else if(subbit_ready && subbit_counter != SUBBIT_COUNTER_UNLOCKED)
 		subbit_counter <= subbit_counter + 1;
 end
-wire fullbit_ready = (subbit_counter[0] == 1'b1) && (clk_counter == 0);
+
+wire fullbit_signal = (subbit_counter[0] == 1'b1);
+reg fullbit_signal_prev;
+always @(posedge clk) begin
+    fullbit_signal_prev <= fullbit_signal;
+end
+wire fullbit_ready = fullbit_signal && !fullbit_signal_prev;
 
 reg bmcdecode_bit_reg;
 always @(subbit_hist_ff[1:0]) begin
