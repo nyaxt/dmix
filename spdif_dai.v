@@ -14,10 +14,6 @@ module spdif_dai #(
     output [191:0] udata_o,
     output [191:0] cdata_o);
 
-parameter SAMELVL_SYNC_COUNT = 3 * CLK_PER_BIT/2;
-parameter SAMELVL_SYNC_COUNT_LOG2 = 2 + CLK_PER_BIT_LOG2-1;
-reg [(SAMELVL_SYNC_COUNT_LOG2-1):0] samelvl_counter;
-
 parameter HIST_LEN = 4;
 reg [(HIST_LEN-1):0] lvl_history_ff;
 always @(posedge clk)
@@ -32,14 +28,15 @@ always @(posedge clk) begin
 	else
 		clk_counter <= clk_counter + 1;
 end
-wire subbit_ready = (clk_counter == 3) || lvl_change;
+wire subbit_ready = (clk_counter == 4) || lvl_change;
 
+wire subbit_needle = lvl_history_ff[1];
 reg [(CLK_PER_BIT/2-1):0] subbit_high_counter;
 always @(posedge clk) begin
 	if(subbit_ready)
-		subbit_high_counter <= lvl_history_ff[2]; // start gathering count for next subbit
+		subbit_high_counter <= subbit_needle; // start gathering count for next subbit
 	else
-		subbit_high_counter <= subbit_high_counter + lvl_history_ff[2];
+		subbit_high_counter <= subbit_high_counter + subbit_needle;
 end
 wire subbit = (subbit_high_counter >= CLK_PER_BIT/2/2);
 
