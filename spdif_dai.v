@@ -120,8 +120,8 @@ end
 assign subbit_counter_rst = subbit_counter_rst_ff;
 
 // output locked status / lrck
-reg [2:0] unlock_tolerance_counter;
-parameter UNLOCK_TOLERANCE = 6;
+reg [3:0] unlock_tolerance_counter;
+parameter UNLOCK_TOLERANCE = 15;
 always @(posedge clk) begin
     if(subbit_counter != SUBBIT_COUNTER_UNLOCKED)
         unlock_tolerance_counter <= 0;
