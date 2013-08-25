@@ -17,31 +17,29 @@ module spdif_dai #(
 parameter SAMELVL_SYNC_COUNT = 3 * CLK_PER_BIT/2;
 parameter SAMELVL_SYNC_COUNT_LOG2 = 2 + CLK_PER_BIT_LOG2-1;
 reg [(SAMELVL_SYNC_COUNT_LOG2-1):0] samelvl_counter;
-reg lastlvl;
-always @(posedge clk) begin
-	lastlvl <= signal_i;
-	if(lastlvl != signal_i)
-		samelvl_counter <= 0;
-	else
-		samelvl_counter <= samelvl_counter + 1;
-end
-wire samelvl_sync = (samelvl_counter == SAMELVL_SYNC_COUNT-1);
 
-reg [(CLK_PER_BIT_LOG2-1-1):0] clk_counter;
+parameter HIST_LEN = 4;
+reg [(HIST_LEN-1):0] lvl_history_ff;
+always @(posedge clk)
+	lvl_history_ff <= {lvl_history_ff[(HIST_LEN-2):0], signal_i};
+
+wire lvl_change = lvl_history_ff[3:0] == 4'b1100 || lvl_history_ff[3:0] == 4'b0011;
+
+reg [(CLK_PER_BIT_LOG2-1):0] clk_counter;
 always @(posedge clk) begin
-	if(samelvl_sync)
+	if(subbit_ready)
 		clk_counter <= 0;
 	else
 		clk_counter <= clk_counter + 1;
 end
+wire subbit_ready = (clk_counter == 3) || lvl_change;
 
-wire subbit_ready = (clk_counter == CLK_PER_BIT/2-1);
 reg [(CLK_PER_BIT/2-1):0] subbit_high_counter;
 always @(posedge clk) begin
-	if(subbit_ready || samelvl_sync)
-		subbit_high_counter <= signal_i; // start gathering count for next subbit
+	if(subbit_ready)
+		subbit_high_counter <= lvl_history_ff[2]; // start gathering count for next subbit
 	else
-		subbit_high_counter <= subbit_high_counter + signal_i;
+		subbit_high_counter <= subbit_high_counter + lvl_history_ff[2];
 end
 wire subbit = (subbit_high_counter >= CLK_PER_BIT/2/2);
 

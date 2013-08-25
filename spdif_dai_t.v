@@ -13,7 +13,7 @@ spdif_dai uut(
 );
 
 parameter TCLK_SPDIF = 40.69; // 24.576Mhz
-parameter TCLK = TCLK_SPDIF / 4;// + 0.1;
+parameter TCLK = TCLK_SPDIF / 4 + 0.1;
 
 task recv_rawbit;
     input b;
