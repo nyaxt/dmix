@@ -17,6 +17,7 @@ module spdif_dai_varclk #(
     output [191:0] cdata_o,
     output [3:0] rate_o);
 
+wire [(MAX_CLK_PER_HALFBIT_LOG2-1):0] clk_per_halfbit;
 wire locked;
 spdif_dai #(
 	.MAX_CLK_PER_HALFBIT_LOG2(MAX_CLK_PER_HALFBIT_LOG2)
@@ -50,16 +51,17 @@ always @(posedge clk) begin
 		unlocked_duration_counter <= unlocked_duration_counter + 1;
 end
 
-reg [(MAX_CLK_PER_HALFBIT_LOG2-1):0] clk_per_halfbit;
+reg [(MAX_CLK_PER_HALFBIT_LOG2-1):0] clk_per_halfbit_ff;
 always @(posedge clk) begin
 	if(rst)
-		clk_per_halfbit <= MIN_CLK_PER_HALFBIT;
+		clk_per_halfbit_ff <= MIN_CLK_PER_HALFBIT;
 	else if(unlocked_for_longtime || (last_locked_ff && !locked)) begin
-		if(clk_per_halfbit == MAX_CLK_PER_HALFBIT-1)
-			clk_per_halfbit <= MIN_CLK_PER_HALFBIT;
+		if(clk_per_halfbit_ff == MAX_CLK_PER_HALFBIT-1)
+			clk_per_halfbit_ff <= MIN_CLK_PER_HALFBIT;
 		else
-			clk_per_halfbit <= clk_per_halfbit + 1;
+			clk_per_halfbit_ff <= clk_per_halfbit + 1;
 	end
 end
+assign clk_per_halfbit = 4;//clk_per_halfbit_ff;
 
 endmodule

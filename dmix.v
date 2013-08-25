@@ -64,19 +64,21 @@ generate
 for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [23:0] dai_data;
     wire dai_locked;
-    wire dai_wpulse;
+    wire dai_rst;
+    wire dai_ack;
     wire dai_lrck;
     wire [191:0] dai_udata;
     wire [191:0] dai_cdata;
     wire [3:0] dai_rate;
 
     spdif_dai_varclk dai(
-        .clk903168(clk903168), .clk983040(clk245760),
+        .clk(clk245760),
         .rst(rst_ip),
         .signal_i(spdif_i[ig]),
 
         .data_o(dai_data),
-        .wpulse_o(dai_wpulse),
+        .ack_o(dai_ack),
+        .rst_o(dai_rst),
         .locked_o(dai_locked),
         .lrck_o(dai_lrck),
         .udata_o(dai_udata),
@@ -84,17 +86,12 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     
         .rate_o(dai_rate));
 
-    wire latch_ack_o;
-    posedge_latch latch(
-        .clk(clk245760),
-        .wpulse_i(dai_wpulse),
-        .ack_o(latch_ack_o));
-
-    wire [1:0] resampler_ack_i = {dai_wpulse & dai_lrck, dai_wpulse & ~dai_lrck};
+    wire [1:0] resampler_ack_i = {dai_ack & dai_lrck, dai_ack & ~dai_lrck};
 
     wire [1:0] resampled_pop_i;
     wire [23:0] resampled_data_o;
 
+//`define asdf
 `ifdef asdf
     wire [1:0] resampled_ack_o;
 
@@ -114,6 +111,16 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
         .data_o(resampled_data_o),
         .ack_o(resampled_ack_o));
 `else
+    reg [3:0] pulse_counter;
+    always @(posedge clk245760) begin
+        if(dai_ack) begin
+            pulse_counter <= 4'h4;
+        end else if(pulse_counter > 0) begin
+            pulse_counter <= pulse_counter - 1;
+        end
+    end
+    wire wpulse_o = pulse_counter > 0;
+
     reg [1:0] resampled_ack_o;
 
     wire [23:0] datal;
@@ -123,7 +130,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 
         // data input
         .data_i(dai_data),
-        .we_i(resampler_ack_i[0]),
+        .we_i(wpulse_o & dai_lrck),
 
         // out
         .pop_i(resampled_pop_i[0]),
@@ -137,7 +144,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 
         // data input
         .data_i(dai_data),
-        .we_i(resampler_ack_i[1]),
+        .we_i(wpulse_o & ~dai_lrck),
 
         // out
         .pop_i(resampled_pop_i[1]),
@@ -191,6 +198,6 @@ dac_drv dac_drv(
     .data_i(mix_data_o),
     .pop_o(mix_pop_i));
 
-assign led_o = ~dac_data_o;
+assign led_o = g[0].dai_locked;
 
 endmodule
