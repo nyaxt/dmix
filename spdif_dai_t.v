@@ -8,13 +8,22 @@ reg rst;
 
 reg signal;
 
+`define VARCLK
+
+`ifdef VARCLK
+spdif_dai_varclk uut(
+    .clk(clk), .rst(rst),
+    .signal_i(signal)
+);
+`else
 spdif_dai uut(
     .clk(clk), .rst(rst),
     .clk_per_halfbit(4),
     .signal_i(signal)
 );
+`endif
 
-parameter TCLK_SPDIF = 40.69; // 24.576Mhz
+parameter TCLK_SPDIF = 2*40.69; // 24.576Mhz
 parameter TCLK = 40.69 / 4;
 
 task recv_rawbit;

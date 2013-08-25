@@ -1,10 +1,10 @@
 module spdif_dai #(
-    parameter MAX_CLK_PER_BIT_LOG2 = 5 // 32 max
+    parameter MAX_CLK_PER_HALFBIT_LOG2 = 5 // 32 max
 )(
     input clk,
     input rst,
 
-    input [(MAX_CLK_PER_BIT_LOG2-1):0] clk_per_halfbit,
+    input [(MAX_CLK_PER_HALFBIT_LOG2-1):0] clk_per_halfbit,
     input signal_i,
 
     output [23:0] data_o,
@@ -21,7 +21,7 @@ always @(posedge clk)
 
 wire lvl_change = lvl_history_ff[3:0] == 4'b1100 || lvl_history_ff[3:0] == 4'b0011;
 
-reg [(MAX_CLK_PER_BIT_LOG2-1):0] clk_counter;
+reg [(MAX_CLK_PER_HALFBIT_LOG2-1):0] clk_counter;
 always @(posedge clk) begin
     if(subbit_ready)
         clk_counter <= 0;
@@ -31,7 +31,7 @@ end
 wire subbit_ready = (clk_counter == clk_per_halfbit) || lvl_change;
 
 wire subbit_needle = lvl_history_ff[1];
-reg [(MAX_CLK_PER_BIT_LOG2-1):0] subbit_high_counter;
+reg [(MAX_CLK_PER_HALFBIT_LOG2-1):0] subbit_high_counter;
 always @(posedge clk) begin
     if(subbit_ready)
         subbit_high_counter <= subbit_needle; // start gathering count for next subbit
