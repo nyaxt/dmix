@@ -9,7 +9,9 @@ reg rst;
 reg signal;
 
 spdif_dai uut(
-	.clk(clk), .rst(rst), .signal_i(signal)
+    .clk(clk), .rst(rst),
+    .clk_per_halfbit(4),
+    .signal_i(signal)
 );
 
 parameter TCLK_SPDIF = 40.69; // 24.576Mhz
@@ -153,18 +155,18 @@ endtask
 
 reg [23:0] counter;
 initial begin
-	$dumpfile("spdif_dai_t.lxt");
-	$dumpvars(0, spdif_dai_t);
+    $dumpfile("spdif_dai_t.lxt");
+    $dumpvars(0, spdif_dai_t);
 
-	clk = 1'b0;
-	rst = 1'b0;
+    clk = 1'b0;
+    rst = 1'b0;
     signal = 0;
 
-	#(TCLK*3);
-	rst = 1'b1;
-	#TCLK;
-	rst = 1'b0;
-	#(TCLK*3);
+    #(TCLK*3);
+    rst = 1'b1;
+    #TCLK;
+    rst = 1'b0;
+    #(TCLK*3);
 
     recv_B();
     recv_bmcbyte(8'hde);
@@ -220,8 +222,8 @@ initial begin
         counter = counter + 1;
     end
 
-	#(TCLK*32);
-	$finish(2);
+    #(TCLK*32);
+    $finish(2);
 end
 
 always #(TCLK/2) clk = ~clk;

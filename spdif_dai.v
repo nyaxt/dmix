@@ -1,10 +1,10 @@
 module spdif_dai #(
-	parameter CLK_PER_BIT = 8,
-	parameter CLK_PER_BIT_LOG2 = 3
+    parameter MAX_CLK_PER_BIT_LOG2 = 5 // 32 max
 )(
     input clk,
     input rst,
 
+    input [(MAX_CLK_PER_BIT_LOG2-1):0] clk_per_halfbit,
     input signal_i,
 
     output [23:0] data_o,
@@ -17,33 +17,33 @@ module spdif_dai #(
 parameter HIST_LEN = 4;
 reg [(HIST_LEN-1):0] lvl_history_ff;
 always @(posedge clk)
-	lvl_history_ff <= {lvl_history_ff[(HIST_LEN-2):0], signal_i};
+    lvl_history_ff <= {lvl_history_ff[(HIST_LEN-2):0], signal_i};
 
 wire lvl_change = lvl_history_ff[3:0] == 4'b1100 || lvl_history_ff[3:0] == 4'b0011;
 
-reg [(CLK_PER_BIT_LOG2-1):0] clk_counter;
+reg [(MAX_CLK_PER_BIT_LOG2-1):0] clk_counter;
 always @(posedge clk) begin
-	if(subbit_ready)
-		clk_counter <= 0;
-	else
-		clk_counter <= clk_counter + 1;
+    if(subbit_ready)
+        clk_counter <= 0;
+    else
+        clk_counter <= clk_counter + 1;
 end
-wire subbit_ready = (clk_counter == 4) || lvl_change;
+wire subbit_ready = (clk_counter == clk_per_halfbit) || lvl_change;
 
 wire subbit_needle = lvl_history_ff[1];
-reg [(CLK_PER_BIT/2-1):0] subbit_high_counter;
+reg [(MAX_CLK_PER_BIT_LOG2-1):0] subbit_high_counter;
 always @(posedge clk) begin
-	if(subbit_ready)
-		subbit_high_counter <= subbit_needle; // start gathering count for next subbit
-	else
-		subbit_high_counter <= subbit_high_counter + subbit_needle;
+    if(subbit_ready)
+        subbit_high_counter <= subbit_needle; // start gathering count for next subbit
+    else
+        subbit_high_counter <= subbit_high_counter + subbit_needle;
 end
-wire subbit = (subbit_high_counter >= CLK_PER_BIT/2/2);
+wire subbit = (subbit_high_counter >= clk_per_halfbit/2);
 
 reg [7:0] subbit_hist_ff;
 always @(posedge clk) begin
-	if(subbit_ready)
-		subbit_hist_ff <= {subbit_hist_ff[7:0], subbit};
+    if(subbit_ready)
+        subbit_hist_ff <= {subbit_hist_ff[7:0], subbit};
 end
 wire [7:0] synccode = subbit_hist_ff;
 
@@ -51,10 +51,10 @@ wire subbit_counter_rst;
 reg [5:0] subbit_counter;
 parameter SUBBIT_COUNTER_UNLOCKED = 6'h3f;
 always @(posedge clk) begin
-	if(subbit_counter_rst)
-		subbit_counter <= 0;
-	else if(subbit_ready && subbit_counter != SUBBIT_COUNTER_UNLOCKED)
-		subbit_counter <= subbit_counter + 1;
+    if(subbit_counter_rst)
+        subbit_counter <= 0;
+    else if(subbit_ready && subbit_counter != SUBBIT_COUNTER_UNLOCKED)
+        subbit_counter <= subbit_counter + 1;
 end
 
 wire fullbit_signal = (subbit_counter[0] == 1'b1);
@@ -66,18 +66,18 @@ wire fullbit_ready = fullbit_signal && !fullbit_signal_prev;
 
 reg bmcdecode_bit_reg;
 always @(subbit_hist_ff[1:0]) begin
-	case(subbit_hist_ff[1:0])
-	2'b10, 2'b01: 
-		bmcdecode_bit_reg = 1;
-	2'b11, 2'b00:
-		bmcdecode_bit_reg = 0;
-	endcase
+    case(subbit_hist_ff[1:0])
+    2'b10, 2'b01: 
+        bmcdecode_bit_reg = 1;
+    2'b11, 2'b00:
+        bmcdecode_bit_reg = 0;
+    endcase
 end
 
 reg [23:0] bit_hist_ff;
 always @(posedge clk) begin
-	if(fullbit_ready) begin
-   		bit_hist_ff <= {bmcdecode_bit_reg, bit_hist_ff[23:1]};
+    if(fullbit_ready) begin
+           bit_hist_ff <= {bmcdecode_bit_reg, bit_hist_ff[23:1]};
     end
 end
 
@@ -123,11 +123,11 @@ assign subbit_counter_rst = subbit_counter_rst_ff;
 reg [2:0] unlock_tolerance_counter;
 parameter UNLOCK_TOLERANCE = 6;
 always @(posedge clk) begin
-	if(subbit_counter != SUBBIT_COUNTER_UNLOCKED)
-		unlock_tolerance_counter <= 0;
-	else if (unlock_tolerance_counter != UNLOCK_TOLERANCE)
-		unlock_tolerance_counter <= unlock_tolerance_counter + 1;
-	end
+    if(subbit_counter != SUBBIT_COUNTER_UNLOCKED)
+        unlock_tolerance_counter <= 0;
+    else if (unlock_tolerance_counter != UNLOCK_TOLERANCE)
+        unlock_tolerance_counter <= unlock_tolerance_counter + 1;
+    end
 assign locked_o = (unlock_tolerance_counter != UNLOCK_TOLERANCE);
 assign lrck_o = lrck_ff;
 
@@ -136,11 +136,11 @@ wire audiodata_ready = (subbit_counter == 24*2) && subbit_ready; // subbit_ready
 reg [23:0] data_ff;
 reg ack_ff;
 always @(posedge clk) begin
-	if(audiodata_ready) begin
-		data_ff <= bit_hist_ff[23:0];
-		ack_ff <= locked_o; // only ack if locked
-	end else
-		ack_ff <= 0;
+    if(audiodata_ready) begin
+        data_ff <= bit_hist_ff[23:0];
+        ack_ff <= locked_o; // only ack if locked
+    end else
+        ack_ff <= 0;
 end
 assign data_o = data_ff;
 assign ack_o = ack_ff;
@@ -150,7 +150,7 @@ wire extradata_ready = (subbit_counter == (24+4)*2) && subbit_ready; // subbit_r
 reg [191:0] udata_shiftreg;
 reg [191:0] cdata_shiftreg;
 always @(posedge clk) begin
-	if(rst) begin
+    if(rst) begin
         udata_shiftreg <= 0;
         cdata_shiftreg <= 0;
     end else if(extradata_ready) begin
