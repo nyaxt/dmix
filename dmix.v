@@ -2,7 +2,6 @@ module dmix_top #(
     parameter NUM_SPDIF_IN = 1,
     parameter NUM_CH = NUM_SPDIF_IN
 )(
-    input clk112896,
     input clk245760_pad,
     input rst,
 
@@ -35,7 +34,9 @@ module dmix_top #(
 wire rst_ip;
 wire rst_dcm;
 
-wire clk245760;
+wire clk245760 = clk245760_pad;
+//wire hoge = clk112896;
+/*
 wire clk903168; // =  44.1kHz * 64 bits * 32 clk/bit = 90.3168Mhz
 wire clk983040; // =  48.0kHz * 64 bits * 32 clk/bit = 98.3040Mhz
                 // =  96.0kHz * 64 bits * 16 clk/bit = 98.3040Mhz
@@ -49,6 +50,7 @@ dcm_983040 dcm_983040 (
     .CLKIN_IBUFG_OUT(clk245760),
     .USER_RST_IN(rst_dcm), 
     .CLKFX_OUT(clk983040));
+*/
 
 reg [19:0] rst_counter;
 always @(posedge clk245760)
