@@ -2,6 +2,19 @@
 
 module spdif_dai_t;
 
+`define USE_CAPTURE
+`ifdef USE_CAPTURE
+reg [31:0] capture [262143:0];
+integer capture_iter;
+initial $readmemh("spdif_capture3", capture);
+initial capture_iter = 0;
+always begin
+    signal = capture[capture_iter][2];
+    capture_iter = capture_iter + 1;
+    #(10);
+end
+`endif
+
 // ins
 reg clk;
 reg rst;
@@ -23,8 +36,8 @@ spdif_dai uut(
 );
 `endif
 
-parameter TCLK_SPDIF = 40.69 * 3; // 24.576Mhz
-parameter TCLK = 40.69 / 4;
+parameter TCLK_SPDIF = 40.69; // 24.576Mhz
+parameter TCLK = 40.69;// / 4;
 
 task recv_rawbit;
     input b;
@@ -177,6 +190,9 @@ initial begin
     rst = 1'b0;
     #(TCLK*3);
 
+`ifdef USE_CAPTURE
+    #(3000000);
+`else
     recv_B();
     recv_bmcbyte(8'hde);
     recv_bmcbyte(8'had);
@@ -230,7 +246,7 @@ initial begin
         recv_subframe(counter);
         counter = counter + 1;
     end
-
+`endif
     #(TCLK*32);
     $finish(2);
 end
