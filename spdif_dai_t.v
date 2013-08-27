@@ -2,7 +2,7 @@
 
 module spdif_dai_t;
 
-`define USE_CAPTURE
+//`define USE_CAPTURE
 `ifdef USE_CAPTURE
 reg [31:0] capture [262143:0];
 integer capture_iter;
@@ -36,7 +36,7 @@ spdif_dai uut(
 );
 `endif
 
-parameter TCLK_SPDIF = 40.69; // 24.576Mhz
+parameter TCLK_SPDIF = 40.69 * 4; // 24.576Mhz
 parameter TCLK = 40.69;// / 4;
 
 task recv_rawbit;

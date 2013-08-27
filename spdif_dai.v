@@ -14,38 +14,31 @@ module spdif_dai #(
     output [191:0] udata_o,
     output [191:0] cdata_o);
 
-parameter HIST_LEN = 8;
+parameter HIST_LEN = 2;
 reg [(HIST_LEN-1):0] lvl_history_ff;
 always @(posedge clk)
     lvl_history_ff <= {lvl_history_ff[(HIST_LEN-2):0], signal_i};
 
-wire [3:0] lvl_change_p = {lvl_history_ff[3:2], lvl_history_ff[1:0]};
-wire lvl_change = lvl_change_p == 4'b1100 || lvl_change_p == 4'b0011;
-
-reg [(MAX_CLK_PER_HALFBIT_LOG2-1):0] clk_counter;
-wire subbit_ready = (clk_counter == clk_per_halfbit) || lvl_change;
-always @(posedge clk) begin
-    if(subbit_ready)
-        clk_counter <= 0;
-    else
-        clk_counter <= clk_counter + 1;
-end
-
-wire subbit_needle = lvl_history_ff[1];
-reg [(MAX_CLK_PER_HALFBIT_LOG2-1):0] subbit_high_counter;
-always @(posedge clk) begin
-    if(subbit_ready)
-        subbit_high_counter <= subbit_needle; // start gathering count for next subbit
-    else
-        subbit_high_counter <= subbit_high_counter + subbit_needle;
-end
-wire subbit = (subbit_high_counter >= clk_per_halfbit/2);
+wire lvl_probe = lvl_history_ff[0];
+wire last_lvl = lvl_history_ff[1];
 
 reg [7:0] subbit_hist_ff;
+reg subbit_ready_ff;
+reg signed [MAX_CLK_PER_HALFBIT_LOG2:0] pulse_duration;
 always @(posedge clk) begin
-    if(subbit_ready)
-        subbit_hist_ff <= {subbit_hist_ff[7:0], subbit};
+    subbit_ready_ff <= 0;
+
+    if(rst || last_lvl != lvl_probe) begin
+        pulse_duration <= 0;
+    end else if(pulse_duration == clk_per_halfbit/2 - 1) begin
+        pulse_duration <= -clk_per_halfbit + clk_per_halfbit/2;
+        subbit_hist_ff <= {subbit_hist_ff[6:0], last_lvl};
+        subbit_ready_ff <= 1;
+    end else
+        pulse_duration <= pulse_duration + 1;
 end
+
+wire subbit_ready = subbit_ready_ff;
 wire [7:0] synccode = subbit_hist_ff;
 
 wire subbit_counter_rst;
@@ -58,7 +51,7 @@ always @(posedge clk) begin
         subbit_counter <= subbit_counter + 1;
 end
 
-wire fullbit_signal = (subbit_counter[0] == 1'b1);
+wire fullbit_signal = (subbit_counter[0] == 0'b1);
 reg fullbit_signal_prev;
 always @(posedge clk) begin
     fullbit_signal_prev <= fullbit_signal;
