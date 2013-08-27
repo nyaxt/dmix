@@ -62,6 +62,6 @@ always @(posedge clk) begin
 			clk_per_halfbit_ff <= clk_per_halfbit + 1;
 	end
 end
-assign clk_per_halfbit =4;// clk_per_halfbit_ff;
+assign clk_per_halfbit = clk_per_halfbit_ff;
 
 endmodule

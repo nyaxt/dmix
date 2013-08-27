@@ -51,7 +51,7 @@ always @(posedge clk) begin
         subbit_counter <= subbit_counter + 1;
 end
 
-wire fullbit_signal = (subbit_counter[0] == 0'b1);
+wire fullbit_signal = (subbit_counter[0] == 1'b0);
 reg fullbit_signal_prev;
 always @(posedge clk) begin
     fullbit_signal_prev <= fullbit_signal;

@@ -128,7 +128,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [23:0] datal;
     ringbuf rbl(
         .clk(clk245760),
-        .rst(rst_ip),
+        .rst(dai_rst),
 
         // data input
         .data_i(dai_data),
@@ -142,7 +142,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [23:0] datar;
     ringbuf rbr(
         .clk(clk245760),
-        .rst(rst_ip),
+        .rst(dai_rst),
 
         // data input
         .data_i(dai_data),
