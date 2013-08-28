@@ -14,16 +14,16 @@ module spdif_dai #(
     output [191:0] udata_o,
     output [191:0] cdata_o);
 
-parameter HIST_LEN = 3;
+parameter HIST_LEN = 2;
 reg [(HIST_LEN-1):0] lvl_history_ff;
 always @(posedge clk)
     lvl_history_ff <= {lvl_history_ff[(HIST_LEN-2):0], signal_i};
 
 reg lvl_probe_ff;
 always @(posedge clk)
-    if(lvl_history_ff == 3'b000)
+    if(lvl_history_ff == 2'b00)
         lvl_probe_ff <= 0;
-    else if (lvl_history_ff == 3'b111)
+    else if (lvl_history_ff == 2'b11)
         lvl_probe_ff <= 1;
 
 wire lvl_probe = lvl_probe_ff;

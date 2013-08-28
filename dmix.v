@@ -56,7 +56,7 @@ reg [19:0] rst_counter;
 always @(posedge clk245760)
     if(rst)
         rst_counter <= 0;
-    else if(rst != 20'hfffff)
+    else if(rst_counter != 20'hfffff)
         rst_counter <= rst_counter + 1;
 assign rst_dcm = (rst_counter[19:3] == 17'h00000);
 assign rst_ip = (rst_counter[19:3] == 17'h0000e);
@@ -122,6 +122,14 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
         end
     end
     wire wpulse_o = pulse_counter > 0;
+    
+    reg [7:0] rst_view;
+    always @(posedge clk245760) begin
+        if (dai_rst)
+            rst_view <= 8'hff;
+        else if(rst_view != 8'h00)
+            rst_view <= rst_view - 1;
+    end
 
     reg [1:0] resampled_ack_o;
 
@@ -200,6 +208,6 @@ dac_drv dac_drv(
     .data_i(mix_data_o),
     .pop_o(mix_pop_i));
 
-assign led_o = g[0].dai_locked;
+assign led_o = g[0].rst_view == 0;
 
 endmodule
