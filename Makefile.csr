@@ -1,0 +1,12 @@
+dump: csr_t.lxt
+	gtkwave csr_t.lxt &
+
+runsim: csr_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+csr_t.vvp: csr.v csr_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp
