@@ -15,16 +15,18 @@ module dmix_top #(
 
     // SPI config
     /*
-    input spi_cfg_sclk,
-    input spi_cfg_mosi,
+    input spi_cfg_sck,
+    output spi_cfg_mosi,
     input spi_cfg_miso,
+    input spi_cfg_ss,
     */
 
     /*
     // SPI peek
-    input spi_peek_sclk,
-    input spi_peek_mosi,
+    input spi_peek_sck,
+    output spi_peek_mosi,
     input spi_peek_miso,
+    input spi_peek_ss,
     */
 
     // debug

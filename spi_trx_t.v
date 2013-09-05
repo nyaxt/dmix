@@ -67,7 +67,7 @@ initial begin
 
     #(TCLK*3);
 
-    data_i = 8'hde;
+    data_i = 8'b10101011;
     ack_i = 1;
     #(TCLK);
     ack_i = 0;
@@ -83,7 +83,7 @@ initial begin
 end
 
 always @(posedge clk) begin
-    if(uut.ack_o)
+    if(uut.ack_pop_o)
         $display("uut.data_o: %x", uut.data_o);
 end
 
