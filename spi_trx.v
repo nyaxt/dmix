@@ -6,6 +6,8 @@ module spi_trx (
     input mosi,
     input ss,
 
+    output rst_o,
+
     output [7:0] data_o,
     output ack_pop_o,
 
@@ -21,6 +23,7 @@ always @(posedge clk) begin
     ss_hist_ff <= {ss_hist_ff[0], ss};
 end
 wire ss_negedge = ss_hist_ff[1:0] == 2'b10;
+wire rst_o = ss_negedge;
 wire ss_enabled = ~ss_hist_ff[0];
 
 wire sck_posedge = ss_enabled && sck_hist_ff[1:0] == 2'b01;
