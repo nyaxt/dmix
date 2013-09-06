@@ -62,6 +62,8 @@ always @(posedge clk) begin
         state <= ST_INIT;
         csr_addr_ff <= 0;
         csr_data_w_ff <= 0;
+    end else if(csr_addr_inc_ff) begin
+        csr_addr_ff <= csr_addr_ff + 1;
     end else if(spi_ack_pop_o) begin
         case(state)
             ST_INIT: begin
@@ -84,12 +86,13 @@ always @(posedge clk) begin
             ST_R_ADDR_IN: begin
                 csr_addr_ff[7:0] <= spi_data_rx[7:0];
                 spi_ack_i_ff <= 1;
+                csr_addr_inc_ff <= 1;
 
                 state <= ST_R_DATA_OUT_CONT;
             end
             ST_R_DATA_OUT_CONT: begin
-                csr_addr_inc_ff <= 1;
                 spi_ack_i_ff <= 1;
+                csr_addr_inc_ff <= 1;
             end
             default:
                 state <= ST_INIT;

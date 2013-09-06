@@ -70,9 +70,22 @@ initial begin
     rst = 1;
     #(TCLK);
     rst = 0;
+    uut.csr.vol_ff = 64'h0123456789abcdef;
 
     #(TCLK*3);
     ss = 0;
+    spi_cycle(8'h80);
+    spi_cycle(8'h03);
+    spi_cycle(8'h99);
+    ss = 1;
+
+    #(TCLK*3);
+    ss = 0;
+    spi_cycle(8'h00);
+    spi_cycle(8'h00);
+    spi_cycle(8'h00);
+    spi_cycle(8'h00);
+    spi_cycle(8'h00);
     spi_cycle(8'h00);
     spi_cycle(8'h00);
     spi_cycle(8'h00);
