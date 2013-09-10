@@ -14,12 +14,10 @@ module dmix_top #(
     output dac_data_o,
 
     // SPI config
-    /*
     input spi_cfg_sck,
-    output spi_cfg_mosi,
-    input spi_cfg_miso,
+    input spi_cfg_mosi,
+    output spi_cfg_miso,
     input spi_cfg_ss,
-    */
 
     /*
     // SPI peek
@@ -63,6 +61,15 @@ always @(posedge clk245760)
 assign rst_dcm = (rst_counter[19:3] == 17'h00000);
 assign rst_ip = (rst_counter[19:3] == 17'h0000e);
 
+wire [(NUM_CH*2*16-1):0] vol;
+wire [(NUM_CH*4-1):0] rate;
+wire [(NUM_CH*192-1):0] udata;
+wire [(NUM_CH*192-1):0] cdata;
+csr_spi #(.NUM_CH(NUM_CH)) csr_spi(
+    .clk(clk245760), .rst(rst_ip),
+    .sck(spi_cfg_sck), .mosi(spi_cfg_mosi), .miso(spi_cfg_miso), .ss(spi_cfg_ss),
+    .vol_o(vol), .rate_i(rate), .udata_i(udata), .cdata_i(cdata));
+
 genvar ig;
 generate
 for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
@@ -71,9 +78,12 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire dai_rst;
     wire dai_ack;
     wire dai_lrck;
+    wire [3:0] dai_rate;
     wire [191:0] dai_udata;
     wire [191:0] dai_cdata;
-    wire [3:0] dai_rate;
+    assign rate[(ig*4) +: 4] = dai_rate;
+    assign udata[(ig*192) +: 192] = dai_udata;
+    assign cdata[(ig*192) +: 192] = dai_cdata;
 
     spdif_dai_varclk dai(
         .clk(clk245760),
@@ -176,7 +186,6 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 end
 endgenerate
 
-wire [(NUM_CH*2*16-1):0] vol = {2{16'h00ff}};
 wire [1:0] mix_pop_i;
 wire [23:0] mix_data_o;
 wire [1:0] mix_ack_o;

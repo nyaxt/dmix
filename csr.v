@@ -30,16 +30,20 @@ wire [3:0] addr_tag = addr_i[11:8];
 wire [7:0] addr_offset = addr_i[7:0];
 
 reg [(VOL_WIDTH-1):0] vol_ff;
-wire vol_o = vol_ff;
+assign vol_o = vol_ff;
 
+integer i;
 always @(posedge clk) begin
     if(rst) begin
         vol_ff <= {(NUM_CH*2){16'h00ff}};
     end else if(ack_i) begin
         case(addr_tag)
-        4'h0:
-            vol_ff[(addr_offset*8) +: 8] <= data_i;
-        endcase 
+        4'h0: begin
+            // ISE bug workaround... :(
+            for(i = 0; i < 8; i = i + 1)
+                vol_ff[(addr_offset*8 + i)] <= data_i[i];
+        end
+        endcase
     end
 end
 
@@ -57,6 +61,6 @@ always @(posedge clk) begin
         data_o_ff <= 0;
     endcase
 end
-wire data_o = data_o_ff;
+assign data_o = data_o_ff;
 
 endmodule

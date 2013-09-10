@@ -23,20 +23,20 @@ always @(posedge clk) begin
     ss_hist_ff <= {ss_hist_ff[0], ss};
 end
 wire ss_negedge = ss_hist_ff[1:0] == 2'b10;
-wire rst_o = ss_negedge;
+assign rst_o = ss_negedge;
 wire ss_enabled = ~ss_hist_ff[0];
 
 wire sck_posedge = ss_enabled && sck_hist_ff[1:0] == 2'b01;
 
-reg [1:0] mosi_hist_ff;
+reg mosi_hist_ff;
 always @(posedge clk) begin
-    mosi_hist_ff <= {mosi_hist_ff[0], mosi};
+    mosi_hist_ff <= mosi;
 end
 
 reg [7:0] shiftreg_i;
 always @(posedge clk) begin
     if(sck_posedge)
-        shiftreg_i <= {shiftreg_i[6:0], mosi_hist_ff[0]};
+        shiftreg_i <= {shiftreg_i[6:0], mosi_hist_ff};
 end
 
 reg [2:0] posedge_counter;
@@ -64,8 +64,8 @@ always @(posedge clk) begin
         data_o_ff <= shiftreg_i;
     end
 end
-wire ack_pop_o = ack_o_ff;
-wire data_o = data_o_ff;
+assign ack_pop_o = ack_o_ff;
+assign data_o = data_o_ff;
 
 reg [7:0] data_o_latchff;
 always @(posedge clk)
@@ -80,6 +80,6 @@ always @(posedge clk) begin
         shiftreg_o <= {shiftreg_o[6:0], 1'b0};
     end
 end
-wire miso = shiftreg_o[7];
+assign miso = shiftreg_o[7];
 
 endmodule

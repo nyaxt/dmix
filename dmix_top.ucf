@@ -11,5 +11,10 @@ NET "dac_bck_o" LOC = "K15" | IOSTANDARD = LVCMOS33 | SLEW = FAST | DRIVE = 16;
 NET "dac_lrck_o" LOC = "K14" | IOSTANDARD = LVCMOS33 | SLEW = FAST | DRIVE = 16;
 NET "dac_data_o" LOC = "K12" | IOSTANDARD = LVCMOS33 | SLEW = FAST | DRIVE = 16;
 
+NET "spi_cfg_sck" LOC = "L6";
+NET "spi_cfg_mosi" LOC = "L1";
+NET "spi_cfg_miso" LOC = "L3";
+NET "spi_cfg_ss" LOC = "M4";
+
 NET "led_o" LOC="T3";
 NET "rst" LOC="D3" | PULLDOWN | TIG;
