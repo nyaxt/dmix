@@ -2,7 +2,6 @@ module dmix_top #(
     parameter NUM_SPDIF_IN = 1,
     parameter NUM_CH = NUM_SPDIF_IN
 )(
-    input clk112896,
     input clk245760_pad,
     input rst,
 
@@ -15,17 +14,17 @@ module dmix_top #(
     output dac_data_o,
 
     // SPI config
-    /*
-    input spi_cfg_sclk,
+    input spi_cfg_sck,
     input spi_cfg_mosi,
-    input spi_cfg_miso,
-    */
+    output spi_cfg_miso,
+    input spi_cfg_ss,
 
     /*
     // SPI peek
-    input spi_peek_sclk,
-    input spi_peek_mosi,
+    input spi_peek_sck,
+    output spi_peek_mosi,
     input spi_peek_miso,
+    input spi_peek_ss,
     */
 
     // debug
@@ -35,7 +34,9 @@ module dmix_top #(
 wire rst_ip;
 wire rst_dcm;
 
-wire clk245760;
+wire clk245760 = clk245760_pad;
+//wire hoge = clk112896;
+/*
 wire clk903168; // =  44.1kHz * 64 bits * 32 clk/bit = 90.3168Mhz
 wire clk983040; // =  48.0kHz * 64 bits * 32 clk/bit = 98.3040Mhz
                 // =  96.0kHz * 64 bits * 16 clk/bit = 98.3040Mhz
@@ -49,34 +50,49 @@ dcm_983040 dcm_983040 (
     .CLKIN_IBUFG_OUT(clk245760),
     .USER_RST_IN(rst_dcm), 
     .CLKFX_OUT(clk983040));
+*/
 
 reg [19:0] rst_counter;
 always @(posedge clk245760)
     if(rst)
         rst_counter <= 0;
-    else if(rst != 20'hfffff)
+    else if(rst_counter != 20'hfffff)
         rst_counter <= rst_counter + 1;
 assign rst_dcm = (rst_counter[19:3] == 17'h00000);
 assign rst_ip = (rst_counter[19:3] == 17'h0000e);
+
+wire [(NUM_CH*2*16-1):0] vol;
+wire [(NUM_CH*4-1):0] rate;
+wire [(NUM_CH*192-1):0] udata;
+wire [(NUM_CH*192-1):0] cdata;
+csr_spi #(.NUM_CH(NUM_CH)) csr_spi(
+    .clk(clk245760), .rst(rst_ip),
+    .sck(spi_cfg_sck), .mosi(spi_cfg_mosi), .miso(spi_cfg_miso), .ss(spi_cfg_ss),
+    .vol_o(vol), .rate_i(rate), .udata_i(udata), .cdata_i(cdata));
 
 genvar ig;
 generate
 for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [23:0] dai_data;
     wire dai_locked;
-    wire dai_wpulse;
+    wire dai_rst;
+    wire dai_ack;
     wire dai_lrck;
+    wire [3:0] dai_rate;
     wire [191:0] dai_udata;
     wire [191:0] dai_cdata;
-    wire [3:0] dai_rate;
+    assign rate[(ig*4) +: 4] = dai_rate;
+    assign udata[(ig*192) +: 192] = dai_udata;
+    assign cdata[(ig*192) +: 192] = dai_cdata;
 
     spdif_dai_varclk dai(
-        .clk903168(clk903168), .clk983040(clk245760),
+        .clk(clk245760),
         .rst(rst_ip),
         .signal_i(spdif_i[ig]),
 
         .data_o(dai_data),
-        .wpulse_o(dai_wpulse),
+        .ack_o(dai_ack),
+        .rst_o(dai_rst),
         .locked_o(dai_locked),
         .lrck_o(dai_lrck),
         .udata_o(dai_udata),
@@ -84,17 +100,12 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     
         .rate_o(dai_rate));
 
-    wire latch_ack_o;
-    posedge_latch latch(
-        .clk(clk245760),
-        .wpulse_i(dai_wpulse),
-        .ack_o(latch_ack_o));
-
-    wire [1:0] resampler_ack_i = {dai_wpulse & dai_lrck, dai_wpulse & ~dai_lrck};
+    wire [1:0] resampler_ack_i = {dai_ack & dai_lrck, dai_ack & ~dai_lrck};
 
     wire [1:0] resampled_pop_i;
     wire [23:0] resampled_data_o;
 
+//`define asdf
 `ifdef asdf
     wire [1:0] resampled_ack_o;
 
@@ -114,16 +125,34 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
         .data_o(resampled_data_o),
         .ack_o(resampled_ack_o));
 `else
+    reg [3:0] pulse_counter;
+    always @(posedge clk245760) begin
+        if(dai_ack) begin
+            pulse_counter <= 4'h4;
+        end else if(pulse_counter > 0) begin
+            pulse_counter <= pulse_counter - 1;
+        end
+    end
+    wire wpulse_o = pulse_counter > 0;
+    
+    reg [7:0] rst_view;
+    always @(posedge clk245760) begin
+        if (dai_rst)
+            rst_view <= 8'hff;
+        else if(rst_view != 8'h00)
+            rst_view <= rst_view - 1;
+    end
+
     reg [1:0] resampled_ack_o;
 
     wire [23:0] datal;
     ringbuf rbl(
         .clk(clk245760),
-        .rst(rst_ip),
+        .rst(dai_rst),
 
         // data input
         .data_i(dai_data),
-        .we_i(resampler_ack_i[0]),
+        .we_i(wpulse_o & dai_lrck),
 
         // out
         .pop_i(resampled_pop_i[0]),
@@ -133,11 +162,11 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [23:0] datar;
     ringbuf rbr(
         .clk(clk245760),
-        .rst(rst_ip),
+        .rst(dai_rst),
 
         // data input
         .data_i(dai_data),
-        .we_i(resampler_ack_i[1]),
+        .we_i(wpulse_o & ~dai_lrck),
 
         // out
         .pop_i(resampled_pop_i[1]),
@@ -157,7 +186,6 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 end
 endgenerate
 
-wire [(NUM_CH*2*16-1):0] vol = {2{16'h00ff}};
 wire [1:0] mix_pop_i;
 wire [23:0] mix_data_o;
 wire [1:0] mix_ack_o;
@@ -191,6 +219,6 @@ dac_drv dac_drv(
     .data_i(mix_data_o),
     .pop_o(mix_pop_i));
 
-assign led_o = ~dac_data_o;
+assign led_o = g[0].rst_view == 0;
 
 endmodule
