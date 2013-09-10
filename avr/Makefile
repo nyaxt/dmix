@@ -1,7 +1,7 @@
 MCU=atmega88p
 
 SIMAVR= -DSIMAVR -I/usr/local/include/simavr -Wl,--undefined=_mmcu,--section-start=.mmcu=0x910000 -g
-COMPILE = avr-gcc -Wall -Os -I. -mmcu=$(MCU) -DF_CPU=16000000L -DMCU=\"$(MCU)\"
+COMPILE = avr-gcc -Wall -Os -I. -mmcu=$(MCU) -DF_CPU=8000000L -DMCU=\"$(MCU)\"
 
 OBJECTS = main.o
 
@@ -32,7 +32,7 @@ bake: main.hex
 	sudo avrdude -cusbasp -pm88p -U flash:w:main.hex
 
 bakefuse:
-	sudo avrdude -cusbasp -pm88p -U lfuse:w:0xE0:m
+	sudo avrdude -cusbasp -pm88p -U lfuse:w:0xE2:m
 
 disasm:	main.bin
 	avr-objdump -d main.bin

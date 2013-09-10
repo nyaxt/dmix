@@ -24,6 +24,41 @@ volatile unsigned char g_uart_read_lines = 0;
 
 #define BAUD 57600
 
+static void hardwareInit(void)
+{
+  // PORTB
+  // PB5: SCK out
+  // PB4: MISO in
+  // PB3: MOSI out
+  // PB2: SS out
+  PORTB = 0x04;
+  DDRB = 0xef;
+
+  // PORTC
+  PORTC = 0x00;
+  DDRC = 0xff;
+
+  // PORTD
+  PORTD = 0x00;
+  DDRD = 0xfe; /* uart rx */
+
+  // UART
+  UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); /* 8bit */
+  #include <util/setbaud.h>
+  UBRR0H = UBRRH_VALUE;
+  UBRR0L = UBRRL_VALUE;
+  #if USE_2X
+  UCSR0A |= (1 << U2X0);
+  #else
+  UCSR0A &= ~(1 << U2X0);
+  #endif
+
+  UCSR0B = _BV(RXEN0) | _BV(TXEN0) | _BV(RXCIE0); /* rx/tx enable && receive by interrupt */
+
+  // SPI
+  SPCR = _BV(SPE) | _BV(MSTR) | _BV(SPR0);
+}
+
 void uart_putc(char c);
 
 ISR(USART_RX_vect)
@@ -92,32 +127,15 @@ uart_gets(char* buf)
   ++ g_uart_read_lines;
 }
 
-static void hardwareInit(void)
+inline void spi_start() { cbi(PORTB, 2); }
+inline void spi_end() { sbi(PORTB, 2); }
+
+char
+spi_sendrecv(char c)
 {
-  // PORTB
-  PORTB = 0x00;
-  DDRB = 0xff;
-
-  // PORTC
-  PORTC = 0x00;
-  DDRC = 0xff;
-
-  // PORTD
-  PORTD = 0x00;
-  DDRD = 0xfe;
-
-  // UART
-  UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); /* 8bit */
-  #include <util/setbaud.h>
-  UBRR0H = UBRRH_VALUE;
-  UBRR0L = UBRRL_VALUE;
-  #if USE_2X
-  UCSR0A |= (1 << U2X0);
-  #else
-  UCSR0A &= ~(1 << U2X0);
-  #endif
-
-  UCSR0B = _BV(RXEN0) | _BV(TXEN0) | _BV(RXCIE0); /* rx/tx enable && receive by interrupt */
+  SPDR = c;
+  loop_until_bit_is_set(SPSR, SPIF);
+  return SPDR;
 }
 
 const char*
@@ -135,13 +153,32 @@ cmd_set_vol(int ch, int val)
   uart_puts(", ");
   uart_puts(my_itoa(val));
   uart_puts("\n");
+
+  spi_start();
+  spi_sendrecv(0x80);
+  spi_sendrecv(ch*2);
+  spi_sendrecv((val >> 0) & 0xff);
+  spi_sendrecv((val >> 8) & 0xff);
+  spi_end();
 }
 
 void
 cmd_get_vol(int ch)
 {
+  spi_start();
+  spi_sendrecv(0x00);
+  spi_sendrecv(ch*2);
+  spi_sendrecv(0x00); // wait 1cyc latency
+  unsigned char lo = spi_sendrecv(0x00);
+  unsigned char hi = spi_sendrecv(0x00);
+  spi_end();
+
+  int val = ((int)(hi) << 8)|((int)lo);
+
   uart_puts("VOL ");
   uart_puts(my_itoa(ch));
+  uart_puts(", ");
+  uart_puts(my_itoa(val));
   uart_puts("\n");
 }
 
