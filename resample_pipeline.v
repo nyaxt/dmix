@@ -21,7 +21,7 @@ parameter RATE_96 = 2;
 parameter RATE_192 = 3;
 
 parameter SCHED_SLOT = 42;
-reg [2:0] mpready_shift;
+reg [5:0] mpready_shift;
 reg [6:0] mpsched_counter;
 always @(posedge clk) begin
 	if(pop_i) begin
@@ -29,13 +29,13 @@ always @(posedge clk) begin
 		mpready_shift <= 3'b001;
 	end else if(mpsched_counter == SCHED_SLOT-1) begin
 		mpsched_counter <= 0;
-		mpready_shift <= {mpready_shift[1:0], 1'b0};
+		mpready_shift <= {mpready_shift[5:0], 1'b0};
 	end else
 		mpsched_counter <= mpsched_counter + 1;
 end
-wire mpready_441to48 = mpready_shift[2];
-wire mpready_48to96 = mpready_shift[1];
-wire mpready_96to192 = mpready_shift[0];
+wire [1:0] mpready_441to48 = mpready_shift[5:4];
+wire [1:0] mpready_48to96 = mpready_shift[3:2];
+wire [1:0] mpready_96to192 = mpready_shift[1:0];
 
 // multiplier
 wire [23:0] mpcand441;
@@ -97,7 +97,7 @@ assign ack_o = rate_i[RATE_192] ? ack_i : ack_o_192;
 reg [1:0] pop_reg;
 always @(rate_i or pop_i or pop_o_96 or pop_o_48 or pop_o_441) begin
     if(rate_i[RATE_192])
-        pop_reg = pop_i;
+        pop_reg = pop_i; // FIXME: mixer assumes 1clk latency
     else if (rate_i[RATE_96])
         pop_reg = pop_o_96;
     else if (rate_i[RATE_48])

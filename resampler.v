@@ -15,7 +15,6 @@ module resampler_1ch
 
     // shared resource ready
     input shres_ready_i,
-    output shres_inuse_o,
 
     // to firbank
     output [(BANK_WIDTH-1):0] bank_addr_o,
@@ -148,11 +147,6 @@ always @(posedge clk) begin
     end
 end
 
-`ifdef DEBUG
-wire timing_failing = !shres_ready_i && state == ST_CALC;
-`endif
-assign shres_inuse_o = state == ST_CALC || state == ST_NEXT_FIR;
-
 assign ack_o = (state == ST_RESULT);
 assign data_o = ack_o ? data_ff : 0;
 
@@ -163,7 +157,7 @@ module upsample2x(
     input rst,
 
     // external multiplier module
-    input mpready_i,
+    input [1:0] mpready_i,
     output signed [23:0] mpcand_o,
     output signed [15:0] mplier_o,
     input signed [23:0] mprod_i,
@@ -177,34 +171,6 @@ module upsample2x(
     input [1:0] pop_i,
     output [23:0] data_o,
     output [1:0] ack_o);
-
-wire [1:0] shres_inuse;
-wire [1:0] shres_ready;
-reg [1:0] shres_waiting_ff;
-reg [1:0] shres_assigned_ff;
-always @(posedge clk) begin
-    if(rst) begin
-        shres_waiting_ff <= 0;
-        shres_assigned_ff <= 0;
-    end else begin
-        if(pop_i[0])
-            shres_waiting_ff[0] <= 1;
-        if(pop_i[1])
-            shres_waiting_ff[1] <= 1;
-
-        if(!mpready_i)
-            shres_assigned_ff <= 0;
-        else begin
-            if(shres_waiting_ff[0] && !shres_inuse[1]) begin
-                shres_waiting_ff[0] <= 0;
-                shres_assigned_ff[0] <= 1;
-            end else if(shres_waiting_ff[1] && !shres_inuse[0]) begin
-                shres_waiting_ff[1] <= 0;
-                shres_assigned_ff[1] <= 1;
-            end
-        end
-    end
-end
 
 wire [5:0] fb_addr_lr [1:0];
 wire [5:0] fb_addr = fb_addr_lr[0] | fb_addr_lr[1];
@@ -242,7 +208,7 @@ for(i = 0; i < 2; i = i + 1) begin:g
 
     resampler_1ch r(
         .clk(clk), .rst(rst),
-        .shres_ready_i(shres_assigned_ff[i]), .shres_inuse_o(shres_inuse[i]),
+        .shres_ready_i(mpready_i[i]),
         .bank_addr_o(fb_addr_lr[i]), .bank_data_i(fb_data),
         .mpcand_o(mpcand_lr_o[i]), .mplier_o(mplier_lr_o[i]), .mprod_i(mprod_i),
         .pop_o(rb_pop[i]), .offset_o(rb_offset[i]), .data_i(rb_data[i]),
@@ -257,7 +223,7 @@ module resample441_48(
     input rst,
 
     // external multiplier module
-    input mpready_i,
+    input [1:0] mpready_i,
     output signed [23:0] mpcand_o,
     output signed [15:0] mplier_o,
     input signed [23:0] mprod_i,
@@ -271,17 +237,6 @@ module resample441_48(
     input [1:0] pop_i,
     output [23:0] data_o,
     output [1:0] ack_o);
-
-reg pop_lr;
-always @(posedge clk) begin
-    if(pop_i[0])
-        pop_lr <= 0;
-    else if(pop_i[1])
-        pop_lr <= 1;
-end
-wire shres_ready [1:0];
-assign shres_ready[0] = pop_lr == 0 && mpready_i;
-assign shres_ready[1] = pop_lr == 1 && mpready_i;
 
 wire [11:0] fb_addr_lr [1:0];
 wire [11:0] fb_addr = fb_addr_lr[0] | fb_addr_lr[1];
@@ -324,7 +279,7 @@ for(i = 0; i < 2; i = i + 1) begin:g
 	.DECIM(147)
     ) r(
         .clk(clk), .rst(rst),
-        .shres_ready_i(shres_ready[i]),
+        .shres_ready_i(mpready_i[i]),
         .bank_addr_o(fb_addr_lr[i]), .bank_data_i(fb_data),
         .mpcand_o(mpcand_lr_o[i]), .mplier_o(mplier_lr_o[i]), .mprod_i(mprod_i),
         .pop_o(rb_pop[i]), .offset_o(rb_offset[i]), .data_i(rb_data[i]),

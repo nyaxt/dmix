@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
-`define NODUMP
+// `define NODUMP
+`define LRCONT
 
 module resample_pipeline_t;
 
@@ -42,7 +43,7 @@ initial begin
 
     clk = 1'b0;
 
-	rate_i = 1 << uut.RATE_441;
+	rate_i = 1 << uut.RATE_48;
     data_i = 24'h0;
     ack_i = 0;
 
@@ -89,6 +90,14 @@ always @(posedge uut.pop_o[1-TESTCH]) begin
 end
 
 always begin
+`ifdef LRCONT
+    pop_i = 0;
+    #(TCLK*127*2);
+    pop_i = 2'b01;
+    #(TCLK);
+    pop_i = 2'b10;
+    #(TCLK);
+`else
     pop_i = 0;
     #(TCLK*127);
     pop_i = 2'b01;
@@ -97,6 +106,7 @@ always begin
     #(TCLK*127);
     pop_i = 2'b10;
     #(TCLK);
+`endif
 end
 
 wire signed [23:0] data_s = uut.data_o;
