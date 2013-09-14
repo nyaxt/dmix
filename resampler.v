@@ -233,7 +233,8 @@ generate
 for(i = 0; i < 2; i = i + 1) begin:g
     ringbuf #(
         .LEN(64), // should work w/ 32, but buffer a little to address input jitter
-        .LEN_LOG2(6)
+        .LEN_LOG2(6),
+        .RITER_START(24)
     ) rb(
         .clk(clk), .rst(rst),
         .data_i(data_i), .we_i(ack_i[i]),

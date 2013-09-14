@@ -100,20 +100,31 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     
         .rate_o(dai_rate));
 
-    wire [1:0] resampler_ack_i = {dai_ack & dai_lrck, dai_ack & ~dai_lrck};
+    //wire [1:0] resampler_ack_i = {dai_ack & dai_lrck, dai_ack & ~dai_lrck};
 
     wire [1:0] resampled_pop_i;
     wire [23:0] resampled_data_o;
+    
+    reg [3:0] pulse_counter;
+    always @(posedge clk245760) begin
+        if(dai_ack) begin
+            pulse_counter <= 4'h1;
+        end else if(pulse_counter > 0) begin
+            pulse_counter <= pulse_counter - 1;
+        end
+    end
+    wire wpulse_o = pulse_counter > 0;
+    wire [1:0] resampler_ack_i = {dai_lrck & wpulse_o, ~dai_lrck & wpulse_o};
 
-//`define asdf
+`define asdf
 `ifdef asdf
     wire [1:0] resampled_ack_o;
 
     resample_pipeline resampler(
         .clk(clk245760),
-        .rst(rst_ip),
+        .rst(dai_rst),
 
-        .rate_i(dai_rate),
+        .rate_i(4'b0010),
 
         // data input
         // .pop_o(NOT CONNECTED),
@@ -121,20 +132,11 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
         .ack_i(resampler_ack_i),
 
         // 192k output
-        .pop_i(resampled_pop_i),
+        .pop_i(resampled_pop_i & 2'b01),
         .data_o(resampled_data_o),
         .ack_o(resampled_ack_o));
 `else
-    reg [3:0] pulse_counter;
-    always @(posedge clk245760) begin
-        if(dai_ack) begin
-            pulse_counter <= 4'h4;
-        end else if(pulse_counter > 0) begin
-            pulse_counter <= pulse_counter - 1;
-        end
-    end
-    wire wpulse_o = pulse_counter > 0;
-    
+
     reg [7:0] rst_view;
     always @(posedge clk245760) begin
         if (dai_rst)
@@ -219,6 +221,6 @@ dac_drv dac_drv(
     .data_i(mix_data_o),
     .pop_o(mix_pop_i));
 
-assign led_o = g[0].rst_view == 0;
+assign led_o = spdif_i[0];
 
 endmodule

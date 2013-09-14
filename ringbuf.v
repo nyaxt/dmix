@@ -1,7 +1,8 @@
 module ringbuf
 #(
     parameter LEN = 16,
-    parameter LEN_LOG2 = 4
+    parameter LEN_LOG2 = 4,
+    parameter RITER_START = LEN/2
 )(
     input clk,
     input rst,
@@ -37,7 +38,7 @@ assign data_o = data_ff;
 
 always @(posedge clk) begin
     if(rst)
-        riter <= LEN >> 1;
+        riter <= RITER_START;
     else begin
         if(pop_i)
             riter <= riter + 1;

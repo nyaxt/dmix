@@ -1,6 +1,6 @@
 // simulates multiplier ip core provided by xillinx
 // latency 4
-`define USE_IP
+//`define USE_IP
 
 module mpemu(
     input clk,

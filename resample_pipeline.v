@@ -106,7 +106,7 @@ always @(rate_i or pop_i or pop_o_96 or pop_o_48 or pop_o_441) begin
         pop_reg = pop_o_441;
 end
 assign pop_o = pop_reg;
-assign pop_96 = rate_i[RATE_96] ? pop_i : pop_o_96;
-assign pop_48 = rate_i[RATE_48] ? pop_i : pop_o_48;
+assign pop_96 = pop_o_96;
+assign pop_48 = pop_o_48;
 
 endmodule
