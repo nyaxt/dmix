@@ -1,6 +1,6 @@
 // simulates multiplier ip core provided by xillinx
 // latency 4
-//`define USE_IP
+`define USE_IP
 
 module mpemu(
     input clk,
@@ -40,7 +40,7 @@ module mpemu_scale(
     output signed [23:0] mprod_o);
 
 
-`ifdef USE_IP____
+`ifdef USE_IP
 mp_scale mp(
   .clk(clk),
   .a(mpcand_i),

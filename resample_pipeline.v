@@ -26,10 +26,10 @@ reg [6:0] mpsched_counter;
 always @(posedge clk) begin
 	if(pop_i) begin
 		mpsched_counter <= 0;
-		mpready_shift <= 3'b001;
+		mpready_shift <= 6'b000001;
 	end else if(mpsched_counter == SCHED_SLOT-1) begin
 		mpsched_counter <= 0;
-		mpready_shift <= {mpready_shift[5:0], 1'b0};
+		mpready_shift <= {mpready_shift[4:0], 1'b0};
 	end else
 		mpsched_counter <= mpsched_counter + 1;
 end

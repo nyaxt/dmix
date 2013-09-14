@@ -29,7 +29,7 @@ initial begin
 	clk983040 = 1'b0;
 end
 
-dmix_top uut(.clk112896(clk112896), .clk245760_pad(clk245760), .rst(rst), .spdif_i(signal));
+dmix_top uut(.clk245760_pad(clk245760), .rst(rst), .spdif_i(signal));
 // assign uut.clk903200 = clk903200;
 // assign uut.clk983040 = clk983040;
 // assign uut.rst_dcm = rst_dcm;

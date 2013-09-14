@@ -99,12 +99,10 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
         .cdata_o(dai_cdata),
     
         .rate_o(dai_rate));
-
-    //wire [1:0] resampler_ack_i = {dai_ack & dai_lrck, dai_ack & ~dai_lrck};
-
+        
     wire [1:0] resampled_pop_i;
     wire [23:0] resampled_data_o;
-    
+
     reg [3:0] pulse_counter;
     always @(posedge clk245760) begin
         if(dai_ack) begin
@@ -115,9 +113,6 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     end
     wire wpulse_o = pulse_counter > 0;
     wire [1:0] resampler_ack_i = {dai_lrck & wpulse_o, ~dai_lrck & wpulse_o};
-
-`define asdf
-`ifdef asdf
     wire [1:0] resampled_ack_o;
 
     resample_pipeline resampler(
@@ -135,56 +130,6 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
         .pop_i(resampled_pop_i & 2'b01),
         .data_o(resampled_data_o),
         .ack_o(resampled_ack_o));
-`else
-
-    reg [7:0] rst_view;
-    always @(posedge clk245760) begin
-        if (dai_rst)
-            rst_view <= 8'hff;
-        else if(rst_view != 8'h00)
-            rst_view <= rst_view - 1;
-    end
-
-    reg [1:0] resampled_ack_o;
-
-    wire [23:0] datal;
-    ringbuf rbl(
-        .clk(clk245760),
-        .rst(dai_rst),
-
-        // data input
-        .data_i(dai_data),
-        .we_i(wpulse_o & dai_lrck),
-
-        // out
-        .pop_i(resampled_pop_i[0]),
-        .offset_i(0),
-        .data_o(datal));
-
-    wire [23:0] datar;
-    ringbuf rbr(
-        .clk(clk245760),
-        .rst(dai_rst),
-
-        // data input
-        .data_i(dai_data),
-        .we_i(wpulse_o & ~dai_lrck),
-
-        // out
-        .pop_i(resampled_pop_i[1]),
-        .offset_i(0),
-        .data_o(datar));
-    
-    always @(posedge clk245760) begin
-        resampled_ack_o <= 0;
-        
-        if(resampled_pop_i[0])
-            resampled_ack_o[0] <= 1;
-        if(resampled_pop_i[1])
-            resampled_ack_o[1] <= 1;       
-    end
-    assign resampled_data_o = (resampled_ack_o[0] ? datal : 0) | (resampled_ack_o[1] ? datar : 0);
-`endif
 end
 endgenerate
 
