@@ -1,37 +1,48 @@
 `timescale 1ns / 1ps
 
-module ringbuf_t;
+module conv_pulse_t;
 
 // ins
-reg clk;
-reg rst;
+reg clk_i;
+reg clk_o;
 
-reg wpulse_i;
+reg pulse_i;
 
-posedge_latch uut(.clk(clk), .wpulse_i(wpulse_i));
+conv_pulse uut(.clk_i(clk_i), .clk_o(clk_o), .pulse_i(pulse_i));
 
-parameter TCLK = 41.0; // ~40.69ns (24.576Mhz)
+parameter TCLK_I = 10;
+parameter TCLK_O = 40;
+
+always #(TCLK_I/2) clk_i = ~clk_i;
+always #(TCLK_O/2) clk_o = ~clk_o;
 
 initial begin
 	$dumpfile("posedge_latch_t.lxt");
-	$dumpvars(0, ringbuf_t);
+	$dumpvars(0, conv_pulse_t);
 	
-	clk = 1'b0;
-    wpulse_i = 0;
+	clk_i = 0;
+	clk_o = 0;
+    pulse_i = 0;
 
-    #100;
-    wpulse_i = 1;
-    #100;
-    wpulse_i = 0;
-    #100;
-    wpulse_i = 1;
-    #30;
-    wpulse_i = 0;
-    #100;
+    #(TCLK_I);
+    pulse_i = 1;
+    #(TCLK_I);
+    pulse_i = 0;
+    #(TCLK_I*10);
+
+    pulse_i = 1;
+    #(TCLK_I);
+    #(TCLK_I);
+    #(TCLK_I);
+    pulse_i = 0;
+    #(TCLK_I);
+    #(TCLK_I);
+    #(TCLK_I);
+    #(TCLK_I);
+    #(TCLK_I);
+    #(TCLK_I);
 
 	$finish(2);
 end
-
-always #(TCLK/2) clk = ~clk;
 
 endmodule
