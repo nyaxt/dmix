@@ -1,7 +1,7 @@
 module mixer #(
 parameter NUM_CH = 1,
 parameter NUM_CH_LOG2 = 1,
-parameter FS = 128
+parameter FS = 256
 )(
     input clk, // 24.576Mhz
     input rst,
@@ -15,7 +15,8 @@ parameter FS = 128
     output [23:0] data_o,
     output [1:0] ack_o);
 
-reg [6:0] phase_counter;
+reg [7:0] phase_counter;
+parameter PHASE_END = FS-1;
 
 always @(posedge clk) begin
     if(rst) begin
@@ -29,7 +30,7 @@ end
 reg [(NUM_CH*2-1):0] pop_ff;
 assign pop_o = pop_ff;
 always @(posedge clk) begin
-    if(phase_counter == 7'h7e)
+    if(phase_counter == PHASE_END)
         pop_ff <= 1;
     else
         pop_ff <= {pop_ff[(NUM_CH*2-2):0], 1'b0};
@@ -86,7 +87,7 @@ end
 // OUTPUT
 reg [23:0] data_ff [1:0];
 always @(posedge clk) begin
-    if(phase_counter == 7'h7f) begin
+    if(phase_counter == PHASE_END) begin
         data_ff[0] <= mac_ff[0];
         data_ff[1] <= mac_ff[1];
     end

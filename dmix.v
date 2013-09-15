@@ -34,15 +34,37 @@ module dmix_top #(
 wire rst_ip;
 wire rst_dcm;
 
-wire clk245760;// = clk245760_pad;
+wire clk245760 = clk245760_pad;
+wire clk491520;
 wire clk983040; // =  48.0kHz * 64 bits * 32 clk/bit = 98.3040Mhz
                 // =  96.0kHz * 64 bits * 16 clk/bit = 98.3040Mhz
                 // = 192.0kHz * 64 bits *  8 clk/bit = 98.3040Mhz
-dcm_983040 dcm_983040 (
-    .CLKIN_IN(clk245760_pad), 
-    .CLKIN_IBUFG_OUT(clk245760),
-    .USER_RST_IN(rst_dcm),
-    .CLKFX_OUT(clk983040));
+wire clk245760_unbuf;
+wire clk491520_unbuf;
+wire clk983040_unbuf;
+DCM #(
+    .CLK_FEEDBACK("1X"),
+    .CLKFX_DIVIDE(1),
+    .CLKFX_MULTIPLY(4),
+    .CLKIN_PERIOD(40.690),
+    .CLKOUT_PHASE_SHIFT("NONE"),
+    .DFS_FREQUENCY_MODE("LOW"),
+    .FACTORY_JF(16'hC080),
+    .PHASE_SHIFT(0),
+    .STARTUP_WAIT("FALSE")
+) dcm983040(
+    .CLKFB(clk245760_unbuf),
+    .CLKIN(clk245760_pad),
+    .DSSEN(0), 
+    .PSCLK(0), // phase shift
+    .PSEN(0),
+    .PSINCDEC(0),
+    .RST(rst_dcm),
+    .CLK0(clk245760_unbuf),
+    .CLK2X(clk491520_unbuf),
+    .CLKFX(clk983040_unbuf));
+BUFG buf491520(.I(clk491520_unbuf), .O(clk491520));
+BUFG buf983040(.I(clk983040_unbuf), .O(clk983040));
 
 reg [19:0] rst_counter;
 always @(posedge clk245760)
@@ -95,17 +117,17 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [1:0] resampled_pop_i;
     wire [23:0] resampled_data_o;
 
-    wire dai_ack_245760;
-    wire dai_rst_245760;
-    conv_pulse conv_ack(.clk_i(clk983040), .clk_o(clk245760), .pulse_i(dai_ack_983040), .pulse_o(dai_ack_245760));
-    conv_pulse conv_rst(.clk_i(clk983040), .clk_o(clk245760), .pulse_i(dai_rst_983040), .pulse_o(dai_rst_245760));
+    wire dai_ack_491520;
+    wire dai_rst_491520;
+    conv_pulse conv_ack(.clk_i(clk983040), .clk_o(clk491520), .pulse_i(dai_ack_983040), .pulse_o(dai_ack_491520));
+    conv_pulse conv_rst(.clk_i(clk983040), .clk_o(clk491520), .pulse_i(dai_rst_983040), .pulse_o(dai_rst_491520));
 
-    wire [1:0] resampler_ack_i = {dai_lrck & dai_ack_245760, ~dai_lrck & dai_ack_245760};
+    wire [1:0] resampler_ack_i = {dai_lrck & dai_ack_491520, ~dai_lrck & dai_ack_491520};
     wire [1:0] resampled_ack_o;
 
     resample_pipeline resampler(
-        .clk(clk245760),
-        .rst(dai_rst_245760),
+        .clk(clk491520),
+        .rst(dai_rst_491520),
 
         .rate_i(4'b0010),
 
@@ -127,9 +149,9 @@ wire [1:0] mix_ack_o;
 
 mixer #(
     .NUM_CH(1), .NUM_CH_LOG2(1),
-    .FS(128)
+    .FS(256)
 ) mixer(
-    .clk(clk245760),
+    .clk(clk491520),
     .rst(rst_ip),
 
     .pop_o({g[0].resampled_pop_i}),//, g[1].resampled_pop_i, g[2].resampled_pop_i}),
@@ -142,10 +164,9 @@ mixer #(
     .ack_o(mix_ack_o));
 
 dac_drv dac_drv(
-    .clk(clk245760),
+    .clk(clk491520),
     .rst(rst_ip),
 
-    .sck_o(dac_sck_o),
     .bck_o(dac_bck_o),
     .lrck_o(dac_lrck_o),
     .data_o(dac_data_o),
@@ -153,6 +174,7 @@ dac_drv dac_drv(
     .ack_i(mix_ack_o),
     .data_i(mix_data_o),
     .pop_o(mix_pop_i));
+assign dac_sck_o = clk245760_pad;
 
 assign led_o = g[0].dai_locked;//spdif_i[0];
 
