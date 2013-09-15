@@ -20,3 +20,24 @@ always @(posedge clk) begin
 end
 
 endmodule
+
+module conv_pulse(
+    input clk_in,
+    input clk_out,
+    
+    input pulse_in,
+    output pulse_out);
+
+reg [3:0] wpulse_counter;
+always @(posedge clk_in) begin
+    if(pulse_in) begin
+        wpulse_counter <= 4'hf;
+    end else if(wpulse_counter > 0) begin
+        wpulse_counter <= wpulse_counter - 1;
+    end
+end
+wire wpulse = wpulse_counter > 0;
+
+posedge_latch latch(.clk(clk_out), .wpulse_i(wpulse), .ack_o(pulse_out));
+
+endmodule

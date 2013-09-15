@@ -34,23 +34,15 @@ module dmix_top #(
 wire rst_ip;
 wire rst_dcm;
 
-wire clk245760 = clk245760_pad;
-//wire hoge = clk112896;
-/*
-wire clk903168; // =  44.1kHz * 64 bits * 32 clk/bit = 90.3168Mhz
+wire clk245760;// = clk245760_pad;
 wire clk983040; // =  48.0kHz * 64 bits * 32 clk/bit = 98.3040Mhz
                 // =  96.0kHz * 64 bits * 16 clk/bit = 98.3040Mhz
                 // = 192.0kHz * 64 bits *  8 clk/bit = 98.3040Mhz
-dcm_90320 dcm_90320 (
-    .CLKIN_IN(clk112896),
-    .USER_RST_IN(rst_dcm),
-    .CLKFX_OUT(clk903168));
 dcm_983040 dcm_983040 (
     .CLKIN_IN(clk245760_pad), 
     .CLKIN_IBUFG_OUT(clk245760),
-    .USER_RST_IN(rst_dcm), 
+    .USER_RST_IN(rst_dcm),
     .CLKFX_OUT(clk983040));
-*/
 
 reg [19:0] rst_counter;
 always @(posedge clk245760)
@@ -75,8 +67,8 @@ generate
 for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [23:0] dai_data;
     wire dai_locked;
-    wire dai_rst;
-    wire dai_ack;
+    wire dai_rst_983040;
+    wire dai_ack_983040;
     wire dai_lrck;
     wire [3:0] dai_rate;
     wire [191:0] dai_udata;
@@ -86,13 +78,13 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     assign cdata[(ig*192) +: 192] = dai_cdata;
 
     spdif_dai_varclk dai(
-        .clk(clk245760),
+        .clk(clk983040),
         .rst(rst_ip),
         .signal_i(spdif_i[ig]),
 
         .data_o(dai_data),
-        .ack_o(dai_ack),
-        .rst_o(dai_rst),
+        .ack_o(dai_ack_983040),
+        .rst_o(dai_rst_983040),
         .locked_o(dai_locked),
         .lrck_o(dai_lrck),
         .udata_o(dai_udata),
@@ -103,21 +95,17 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [1:0] resampled_pop_i;
     wire [23:0] resampled_data_o;
 
-    reg [3:0] pulse_counter;
-    always @(posedge clk245760) begin
-        if(dai_ack) begin
-            pulse_counter <= 4'h1;
-        end else if(pulse_counter > 0) begin
-            pulse_counter <= pulse_counter - 1;
-        end
-    end
-    wire wpulse_o = pulse_counter > 0;
-    wire [1:0] resampler_ack_i = {dai_lrck & wpulse_o, ~dai_lrck & wpulse_o};
+    wire dai_ack_245760;
+    wire dai_rst_245760;
+    conv_pulse conv_ack(.clk_in(clk983040), .clk_out(clk245760), .pulse_in(dai_ack_983040), .pulse_out(dai_ack_245760));
+    conv_pulse conv_rst(.clk_in(clk983040), .clk_out(clk245760), .pulse_in(dai_rst_983040), .pulse_out(dai_rst_245760));
+
+    wire [1:0] resampler_ack_i = {dai_lrck & dai_ack_245760, ~dai_lrck & dai_ack_245760};
     wire [1:0] resampled_ack_o;
 
     resample_pipeline resampler(
         .clk(clk245760),
-        .rst(dai_rst),
+        .rst(dai_rst_245760),
 
         .rate_i(4'b0010),
 
