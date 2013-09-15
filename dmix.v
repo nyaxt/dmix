@@ -97,8 +97,8 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 
     wire dai_ack_245760;
     wire dai_rst_245760;
-    conv_pulse conv_ack(.clk_in(clk983040), .clk_out(clk245760), .pulse_in(dai_ack_983040), .pulse_out(dai_ack_245760));
-    conv_pulse conv_rst(.clk_in(clk983040), .clk_out(clk245760), .pulse_in(dai_rst_983040), .pulse_out(dai_rst_245760));
+    conv_pulse conv_ack(.clk_i(clk983040), .clk_o(clk245760), .pulse_i(dai_ack_983040), .pulse_o(dai_ack_245760));
+    conv_pulse conv_rst(.clk_i(clk983040), .clk_o(clk245760), .pulse_i(dai_rst_983040), .pulse_o(dai_rst_245760));
 
     wire [1:0] resampler_ack_i = {dai_lrck & dai_ack_245760, ~dai_lrck & dai_ack_245760};
     wire [1:0] resampled_ack_o;
@@ -154,6 +154,6 @@ dac_drv dac_drv(
     .data_i(mix_data_o),
     .pop_o(mix_pop_i));
 
-assign led_o = spdif_i[0];
+assign led_o = g[0].dai_locked;//spdif_i[0];
 
 endmodule
