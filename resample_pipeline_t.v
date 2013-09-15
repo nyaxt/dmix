@@ -55,7 +55,7 @@ initial begin
     #TCLK;
 
 `ifndef NODUMP
-    #10_000_000;
+    #5_000_000;
     $finish(2);
 `endif
 end
@@ -64,8 +64,14 @@ always #(TCLK/2) clk = ~clk;
 
 reg TESTCH = 1'b1;
 
+`define IGNORE_POP
+`ifdef IGNORE_POP
+always begin
+    #(TCLK*128*4);
+`else
 always @(posedge uut.pop_o[TESTCH]) begin
     #(TCLK);
+`endif
     data_i = {testdata[testdata_iter], 8'h00};
 `ifndef NODUMP
     $display("in data: %d", data_i >>> 16);
@@ -79,9 +85,18 @@ always @(posedge uut.pop_o[TESTCH]) begin
     ack_i[TESTCH] = 0;
     if(testdata_iter == DATALEN-1)
         $finish(2);
+`ifdef IGNORE_POP
+    #(TCLK*128*4-1);
+`endif
 end
 
+`ifdef IGNORE_POP
+always begin
+    #(TCLK*256*4-1);
+`else
 always @(posedge uut.pop_o[1-TESTCH]) begin
+    #(TCLK);
+`endif
     #(TCLK);
     data_i = -{testdata_iter, 16'h00};
     ack_i[1-TESTCH] = 1;
