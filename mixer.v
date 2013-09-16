@@ -30,7 +30,7 @@ end
 reg [(NUM_CH*2-1):0] pop_ff;
 assign pop_o = pop_ff;
 always @(posedge clk) begin
-    if(phase_counter == PHASE_END)
+    if(phase_counter == PHASE_END-1)
         pop_ff <= 1;
     else
         pop_ff <= {pop_ff[(NUM_CH*2-2):0], 1'b0};

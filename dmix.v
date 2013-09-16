@@ -137,7 +137,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
         .ack_i(resampler_ack_i),
 
         // 192k output
-        .pop_i(resampled_pop_i & 2'b01),
+        .pop_i(resampled_pop_i),
         .data_o(resampled_data_o),
         .ack_o(resampled_ack_o));
 end
