@@ -1,0 +1,143 @@
+<html>
+    <body>
+        <input type='text' id='label'></input>
+        <input type='button' id='save' value='save'></input>
+        <input type='button' id='load' value='load'></input>
+        <textarea id="json"></textarea>
+        <br />
+        <canvas id="canvas" style='position: relative; cursor: none;'></canvas>
+        <img src='dmix.png' id='srcimg' style='display: none'/>
+        <script>
+var MARGIN = 16;
+var ZOOM = 4;
+var canvas = document.getElementById('canvas');
+canvas.width = 256 * ZOOM + MARGIN*2;
+canvas.height = 256 * ZOOM + MARGIN*2;
+var ctx = canvas.getContext('2d');
+
+var srcimg = document.getElementById('srcimg');
+srcimg.onload = draw;
+
+var mouseX = 0, mouseY = 0;
+var guideX = [], guideY = [];
+var currRect = {};
+var rects = {};
+
+function updateJSON() {
+    document.getElementById("json").value = JSON.stringify(rects);
+}
+
+function draw() {
+    ctx.fillStyle = 'gray';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(srcimg, MARGIN, MARGIN, 256*ZOOM, 256*ZOOM);
+
+    ctx.save();
+    ctx.translate(MARGIN, MARGIN);
+    ctx.scale(ZOOM, ZOOM);
+    ctx.lineWidth = 1.0/ZOOM;
+
+    // draw guides
+    ctx.strokeStyle = 'purple';
+    for(var i = 0; i < guideX.length; ++ i) {
+        var x = guideX[i];
+        ctx.beginPath();
+        ctx.moveTo(x, -10);
+        ctx.lineTo(x, 270);
+        ctx.stroke();
+    }
+    for(var i = 0; i < guideY.length; ++ i) {
+        var y = guideY[i];
+        ctx.beginPath();
+        ctx.moveTo(-10, y);
+        ctx.lineTo(270, y);
+        ctx.stroke();
+    }
+
+    // draw cursor
+    ctx.strokeStyle = 'gray';
+    ctx.beginPath();
+    ctx.moveTo(0, mouseY);
+    ctx.lineTo(256, mouseY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(mouseX, 0);
+    ctx.lineTo(mouseX, 256);
+    ctx.stroke();
+
+    // draw selection rect
+    ctx.strokeStyle = 'green';
+    ctx.strokeRect(currRect.x, currRect.y, currRect.w, currRect.h);
+
+    ctx.restore();
+
+    window.requestAnimationFrame(draw);
+};
+
+function updateCursor(e) {
+    var rect = canvas.getBoundingClientRect();
+    var ex = e.clientX - rect.left;
+    var ey = e.clientY - rect.top;
+    mouseX = Math.floor((ex - MARGIN) / ZOOM);
+    mouseY = Math.floor((ey - MARGIN) / ZOOM);
+}
+
+var mouseDown = false;
+canvas.addEventListener("mousedown", function(e) {
+    updateCursor(e);
+    currRect = {x: mouseX, y: mouseY, w: 1, h: 1};
+    mouseDown = true;
+});
+function updateWH() {
+    currRect.w = mouseX - currRect.x;
+    currRect.h = mouseY - currRect.y;
+}
+canvas.addEventListener("mousemove", function(e) {
+    updateCursor(e);
+    if(mouseDown) updateWH();
+});
+canvas.addEventListener("mouseup", function(e) {
+    updateCursor(e);
+    updateWH();
+    mouseDown = false;
+});
+window.addEventListener('keydown', function(e) {
+    var shift = e.shiftKey;
+
+    e.preventDefault = true;
+    if(e.keyCode == 88) { // x
+        guideX.push(mouseX);
+    } else if (e.keyCode == 89) { // y
+        guideY.push(mouseY);
+    } else if (e.keyCode == 87) { // w
+        if (!shift)
+            currRect.y -= 1;
+
+        currRect.h += 1;
+    } else if (e.keyCode == 65) { // a
+        if (!shift)
+            currRect.x -= 1;
+
+        currRect.w += 1;
+    } else if (e.keyCode == 83) { // s
+        if (!shift)
+            currRect.y += 1;
+        
+        currRect.h -= 1;
+    } else if (e.keyCode == 68) { // d
+        if (!shift)
+            currRect.x += 1;
+
+        currRect.w -= 1;
+    } else
+        e.preventDefault = false;
+});
+document.getElementById("save").addEventListener("click", function(e) {
+    var label = document.getElementById("label").value;
+    rects[label] = currRect;
+    updateJSON();
+});
+
+        </script>
+    </body>
+</html>
