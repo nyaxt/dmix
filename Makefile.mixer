@@ -1,0 +1,12 @@
+dump: mixer_t.lxt
+	gtkwave mixer_t.lxt &
+
+runsim: mixer_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+mixer_t.vvp: mixer.v mixer_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp
