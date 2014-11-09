@@ -476,22 +476,68 @@ class GLDrawUI {
  public:
   static void setUIMatrix(GLfloat mat[16], WindowSize size);
 
-  void enq(int x, int y, int sx, int sy, int w, int h) {
-    m_pos.reserve(m_pos.size() + 3 * 3);
-    m_st.reserve(m_st.size() + 2 * 3);
+  void enqSprite(int x, int y, int sx, int sy, int w, int h) {
+    m_pos.reserve(m_pos.size() + 2 * 4);
+    {
+      GLfloat t = y, l = x, b = y + h, r = x + w;
 
-    GLfloat t = x, l = y, b = y + h, r = x + w;
+      // 0tl 1tr
+      // 2bl 3br
+      m_pos.push_back(l); m_pos.push_back(t);
+      m_pos.push_back(r); m_pos.push_back(t);
+      m_pos.push_back(l); m_pos.push_back(b);
+      m_pos.push_back(r); m_pos.push_back(b);
+    }
 
-    m_pos.push_back(t); m_pos.push_back(l);
+    m_st.reserve(m_st.size() + 2 * 4);
+    {
+      GLfloat t = sy, l = sx, b = sy + h, r = sx + w;
+
+      // 0tl 1tr
+      // 2bl 3br
+      m_st.push_back(l); m_st.push_back(t);
+      m_st.push_back(r); m_st.push_back(t);
+      m_st.push_back(l); m_st.push_back(b);
+      m_st.push_back(r); m_st.push_back(b);
+    }
+
+    m_idx.reserve(m_idx.size() + 2 * 3);
+    {
+      GLushort offset = m_nQuads * 4;
+      m_idx.push_back(offset + 0);
+      m_idx.push_back(offset + 2);
+      m_idx.push_back(offset + 1);
+      m_idx.push_back(offset + 1);
+      m_idx.push_back(offset + 2);
+      m_idx.push_back(offset + 3);
+    }
+
+    ++ m_nQuads;
   }
 
   void draw() {
-  
+    // glEnableClientState(GL_VERTEX_ARRAY);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, &m_pos[0]);
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, &m_st[0]);
+
+    glDrawElements(GL_TRIANGLES, m_nQuads * 6, GL_UNSIGNED_SHORT, &m_idx[0]);
+
+    // glDisableClientState(GL_VERTEX_ARRAY);
   }
+
+  GLushort nQuads() const { return m_nQuads; }
 
  private:
   std::vector<GLfloat> m_pos;
   std::vector<GLfloat> m_st;
+  std::vector<GLushort> m_idx;
+  GLushort m_nQuads = 0;
 };
 
 
@@ -536,6 +582,8 @@ int main(int argc, char** argv) {
   GLint mvpLoc = program.getUniformLocation("mvp");
   GLfloat mat[16]; GLDrawUI::setUIMatrix(mat, win.specifiedSize());
   glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mat);
+  GLint texScaleLoc = program.getUniformLocation("texScale");
+  glUniform2f(texScaleLoc, 1.0 / 256, 1.0 / 256);
 
   PNGTexture texture("spritetool/dmix.png");
 
@@ -544,10 +592,6 @@ int main(int argc, char** argv) {
   glEnable(GL_CULL_FACE);
 
 #if 0
-  GLDrawUI draw;
-  GLfloat vertices[] = {-0.4f, -0.4f, 0.0f, 0.4f, -0.4f,
-                        0.0f,  0.0f,  0.4f, 0.0f};
-#endif
   GLfloat vertices[] = {
     0.0f,  0.0f,
     0.0f,  480.0f,
@@ -555,6 +599,12 @@ int main(int argc, char** argv) {
   GLBuffer vertexBuffer(9, vertices);
   GLfloat sts[] = {0, 0, 1, 0, 1, 1};
   GLBuffer stBuffer(6, sts);
+#else
+  GLDrawUI drawui;
+  drawui.enqSprite(300, 100, 0, 0, 256, 256);
+  drawui.enqSprite(10, 10, 0, 0, 20, 30);
+  drawui.enqSprite(100, 100, 30, 40, 100, 50);
+#endif
 
 #if USE_GLES
   for (int i = 0; i < 800; ++i)
@@ -564,6 +614,7 @@ int main(int argc, char** argv) {
   {
     glClear(GL_COLOR_BUFFER_BIT);
 
+#if 0
     glEnableVertexAttribArray(0);
     vertexBuffer.bind();
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
@@ -573,6 +624,9 @@ int main(int argc, char** argv) {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
+#else
+    drawui.draw();
+#endif
 
 #if USE_GLES
     egl.swapBuffers();
