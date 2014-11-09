@@ -428,16 +428,29 @@ class GLFWInitHelper {
   }
 };
 
+struct WindowSize { int w, h; };
+
 class GLFWWin {
   DISALLOW_COPY_AND_ASSIGN(GLFWWin);
 
  public:
-  GLFWWin() : m_impl(glfwCreateWindow(800, 480, "rnix", NULL, NULL)) {
+  GLFWWin(WindowSize size = {800, 480})
+    : m_specifiedSize(size)
+    , m_impl(glfwCreateWindow(size.w, size.h, "rnix", NULL, NULL))
+  {
     glfwMakeContextCurrent(m_impl);
     setViewport();
   }
 
   ~GLFWWin() { glfwDestroyWindow(m_impl); }
+
+  WindowSize specifiedSize() const { return m_specifiedSize; }
+
+  WindowSize size() {
+    WindowSize size;
+    glfwGetFramebufferSize(m_impl, &size.w, &size.h);
+    return size;
+  }
 
   void setViewport() {
     int width, height;
@@ -455,17 +468,21 @@ class GLFWWin {
   GLFWwindow* get() { return m_impl; }
 
  private:
+  WindowSize m_specifiedSize;
   GLFWwindow* m_impl;
 };
 
-/*
 class GLDrawUI {
  public:
+  static void setUIMatrix(GLfloat mat[16], WindowSize size);
+
   void enq(int x, int y, int sx, int sy, int w, int h) {
     m_pos.reserve(m_pos.size() + 3 * 3);
     m_st.reserve(m_st.size() + 2 * 3);
 
-    m_pos.append();
+    GLfloat t = x, l = y, b = y + h, r = x + w;
+
+    m_pos.push_back(t); m_pos.push_back(l);
   }
 
   void draw() {
@@ -476,7 +493,29 @@ class GLDrawUI {
   std::vector<GLfloat> m_pos;
   std::vector<GLfloat> m_st;
 };
-*/
+
+
+void GLDrawUI::setUIMatrix(GLfloat mat[16], WindowSize size) {
+  mat[0] = 2.0 / size.w;
+  mat[1] = 0;
+  mat[2] = 0;
+  mat[3] = 0;
+
+  mat[4] = 0;
+  mat[5] = -2.0 / size.h;
+  mat[6] = 0;
+  mat[7] = 0;
+
+  mat[8] = 0;
+  mat[9] = 0;
+  mat[10] = 1;
+  mat[11] = 0;
+
+  mat[12] = -1;
+  mat[13] = 1;
+  mat[14] = 0;
+  mat[15] = 1;
+}
 
 int main(int argc, char** argv) {
   Model model;
@@ -495,12 +534,7 @@ int main(int argc, char** argv) {
                       {"vertex", "st"});
   program.use();
   GLint mvpLoc = program.getUniformLocation("mvp");
-  GLfloat mat[16] = {
-    2.0 / 800, 0, 0, 0,
-    0, -2.0 / 480, 0, 0,
-    0, 0, 1, 0,
-    -1, 1, 0, 1,
-  };
+  GLfloat mat[16]; GLDrawUI::setUIMatrix(mat, win.specifiedSize());
   glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mat);
 
   PNGTexture texture("spritetool/dmix.png");
@@ -516,7 +550,7 @@ int main(int argc, char** argv) {
 #endif
   GLfloat vertices[] = {
     0.0f,  0.0f, 0.0f,
-    0.0f,  100.0f, 0.0f,
+    0.0f,  480.0f, 0.0f,
     100.0f, 100.0f, 0.0f};
   GLBuffer vertexBuffer(9, vertices);
   GLfloat sts[] = {0, 0, 1, 0, 1, 1};
