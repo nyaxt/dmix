@@ -3,6 +3,7 @@
 #include "third_party/picojson.h"
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 
 std::map<std::string, SpriteRect> loadSpriteJson(const std::string& filepath) {
   std::map<std::string, SpriteRect> ret;
@@ -10,6 +11,9 @@ std::map<std::string, SpriteRect> loadSpriteJson(const std::string& filepath) {
   picojson::value v;
   std::ifstream in(filepath);
   in >> v;
+
+  if (v.is<picojson::null>())
+    throw std::runtime_error("loadSpriteJson: failed to load jsonfile: " + filepath);
 
   for (const auto& kv : v.get<picojson::object>()) {
     auto rv = kv.second;

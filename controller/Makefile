@@ -6,7 +6,7 @@ CXX=clang++
 CLANG_FORMAT=~/cx/src/buildtools/mac/clang-format
 
 controller: main.o spritejson.o
-	$(CXX) $(LDFLAGS) -o $@ $<
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 .cpp.o:
 	$(CXX) $(CFLAGS) -c $<

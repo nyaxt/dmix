@@ -14,6 +14,8 @@
   Type(const Type&) = delete;          \
   void operator=(const Type&) = delete;
 
+#include "spritejson.h"
+
 #define PNG_DEBUG 3
 #include <png.h>
 
@@ -203,7 +205,6 @@ class GLSLShader {
         "#define highp\n";
 #endif
     m_src = GLES_COMPAT_HEADER + m_src;
-    std::cout << m_src << std::endl;
 
     const GLchar* psrc = m_src.data();
     GLint length = m_src.length();
@@ -452,6 +453,7 @@ class GLFWWin {
 
 int main(int argc, char** argv) {
   Model model;
+  auto spmap = loadSpriteJson("spritetool/splice.json");
 
 #ifdef USE_GLES
   EGL egl;
