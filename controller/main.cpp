@@ -428,16 +428,17 @@ class GLFWInitHelper {
   }
 };
 
-struct WindowSize { int w, h; };
+struct WindowSize {
+  int w, h;
+};
 
 class GLFWWin {
   DISALLOW_COPY_AND_ASSIGN(GLFWWin);
 
  public:
   GLFWWin(WindowSize size = {800, 480})
-    : m_specifiedSize(size)
-    , m_impl(glfwCreateWindow(size.w, size.h, "rnix", NULL, NULL))
-  {
+      : m_specifiedSize(size),
+        m_impl(glfwCreateWindow(size.w, size.h, "rnix", NULL, NULL)) {
     glfwMakeContextCurrent(m_impl);
     setViewport();
   }
@@ -483,10 +484,14 @@ class GLDrawUI {
 
       // 0tl 1tr
       // 2bl 3br
-      m_pos.push_back(l); m_pos.push_back(t);
-      m_pos.push_back(r); m_pos.push_back(t);
-      m_pos.push_back(l); m_pos.push_back(b);
-      m_pos.push_back(r); m_pos.push_back(b);
+      m_pos.push_back(l);
+      m_pos.push_back(t);
+      m_pos.push_back(r);
+      m_pos.push_back(t);
+      m_pos.push_back(l);
+      m_pos.push_back(b);
+      m_pos.push_back(r);
+      m_pos.push_back(b);
     }
 
     m_st.reserve(m_st.size() + 2 * 4);
@@ -495,10 +500,14 @@ class GLDrawUI {
 
       // 0tl 1tr
       // 2bl 3br
-      m_st.push_back(l); m_st.push_back(t);
-      m_st.push_back(r); m_st.push_back(t);
-      m_st.push_back(l); m_st.push_back(b);
-      m_st.push_back(r); m_st.push_back(b);
+      m_st.push_back(l);
+      m_st.push_back(t);
+      m_st.push_back(r);
+      m_st.push_back(t);
+      m_st.push_back(l);
+      m_st.push_back(b);
+      m_st.push_back(r);
+      m_st.push_back(b);
     }
 
     m_idx.reserve(m_idx.size() + 2 * 3);
@@ -512,7 +521,7 @@ class GLDrawUI {
       m_idx.push_back(offset + 3);
     }
 
-    ++ m_nQuads;
+    ++m_nQuads;
   }
 
   void draw() {
@@ -539,7 +548,6 @@ class GLDrawUI {
   std::vector<GLushort> m_idx;
   GLushort m_nQuads = 0;
 };
-
 
 void GLDrawUI::setUIMatrix(GLfloat mat[16], WindowSize size) {
   mat[0] = 2.0 / size.w;
@@ -580,7 +588,8 @@ int main(int argc, char** argv) {
                       {"vertex", "st"});
   program.use();
   GLint mvpLoc = program.getUniformLocation("mvp");
-  GLfloat mat[16]; GLDrawUI::setUIMatrix(mat, win.specifiedSize());
+  GLfloat mat[16];
+  GLDrawUI::setUIMatrix(mat, win.specifiedSize());
   glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mat);
   GLint texScaleLoc = program.getUniformLocation("texScale");
   glUniform2f(texScaleLoc, 1.0 / 256, 1.0 / 256);

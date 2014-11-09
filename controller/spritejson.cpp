@@ -13,7 +13,8 @@ std::map<std::string, SpriteRect> loadSpriteJson(const std::string& filepath) {
   in >> v;
 
   if (v.is<picojson::null>())
-    throw std::runtime_error("loadSpriteJson: failed to load jsonfile: " + filepath);
+    throw std::runtime_error("loadSpriteJson: failed to load jsonfile: " +
+                             filepath);
 
   for (const auto& kv : v.get<picojson::object>()) {
     auto rv = kv.second;
