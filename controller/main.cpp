@@ -549,9 +549,9 @@ int main(int argc, char** argv) {
                         0.0f,  0.0f,  0.4f, 0.0f};
 #endif
   GLfloat vertices[] = {
-    0.0f,  0.0f, 0.0f,
-    0.0f,  480.0f, 0.0f,
-    100.0f, 100.0f, 0.0f};
+    0.0f,  0.0f,
+    0.0f,  480.0f,
+    100.0f, 100.0f};
   GLBuffer vertexBuffer(9, vertices);
   GLfloat sts[] = {0, 0, 1, 0, 1, 1};
   GLBuffer stBuffer(6, sts);
@@ -566,7 +566,7 @@ int main(int argc, char** argv) {
 
     glEnableVertexAttribArray(0);
     vertexBuffer.bind();
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
     glEnableVertexAttribArray(1);
     stBuffer.bind();
