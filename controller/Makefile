@@ -4,7 +4,7 @@ LDFLAGS=-framework OpenGL -L$(GLFW_PREFIX)/lib -lglfw3 -L$(LIBPNG_PREFIX)/lib -l
 CFLAGS=-g -std=c++1y -I$(GLFW_PREFIX)/include -I$(LIBPNG_PREFIX)/include
 CXX=clang++
 
-controller: main.o
+controller: main.o spritejson.o
 	$(CXX) $(LDFLAGS) -o $@ $<
 
 .cpp.o:

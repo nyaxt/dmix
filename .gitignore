@@ -1,3 +1,5 @@
 *.lxt
 *.vvp
 .DS_Store
+*.o
+controller/controller
