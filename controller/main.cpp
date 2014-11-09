@@ -1,19 +1,31 @@
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#include <GLFW/glfw3.h>
+#else
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
 
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
+#define USE_GLES
+#endif
+
+#define DISALLOW_COPY_AND_ASSIGN(Type) \
+  Type(const Type&) = delete; \
+  void operator=(const Type&) = delete;
 
 #define PNG_DEBUG 3
 #include <png.h>
 
-#include <stdexcept>
-#include <sstream>
 #include <fstream>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <vector>
 #include <string.h>
+#include <unistd.h>
 
+#ifdef USE_GLES
 class EGLException : public std::runtime_error
 {
 public:
@@ -37,7 +49,9 @@ private:
 
 #define EGL_SAFE(c) do { if(!(c)) { EGLException::test(#c, __FILE__, __LINE__, true); } } while(0)
 #define EGL_SANITYCHECK do { EGLException::test("sanity check", __FILE__, __LINE__, false); } while(0)
+#endif
 
+#ifdef USE_X11
 class XWin
 {
 public:
@@ -100,7 +114,9 @@ private:
   XVisualInfo m_x11Visual;
   Colormap m_x11Colormap = 0;
 };
+#endif
 
+#ifdef USE_GLES
 class EGL
 {
 public:
@@ -162,6 +178,7 @@ private:
   EGLSurface m_eglSurface = 0;
   EGLContext m_eglContext = 0;
 };
+#endif
 
 class GLSLShader
 {
@@ -171,6 +188,17 @@ public:
       m_shaderType(shaderType)
   {
     m_shader = glCreateShader(m_shaderType);
+
+    static const char GLES_COMPAT_HEADER[] =
+#ifdef USE_GLES 
+      "#version 100\n";
+#else
+      "#version 120\n"
+      "#define lowp\n"
+      "#define mediump\n"
+      "#define highp\n";
+#endif
+    // m_src = GLES_COMPAT_HEADER + src;
 
     const GLchar* psrc = m_src.data();
     GLint length = m_src.length();
@@ -189,7 +217,7 @@ public:
       glGetShaderInfoLog(m_shader, msgBufLength, &msgLen, msg.get());
 
       std::stringstream err;
-      err << "shader compilation failed: " << msg.get();
+      err << shaderTypeStr() << " shader compilation failed: " << msg.get();
 
       throw std::runtime_error(err.str());
     }
@@ -200,8 +228,18 @@ public:
     glDeleteShader(m_shader);
   }
 
-  GLenum getShaderType() { return m_shaderType; }
-  GLuint getShader() { return m_shader; }
+  GLenum shaderType() { return m_shaderType; }
+  GLuint shader() { return m_shader; }
+
+  static const char* shaderTypeToStr(GLenum type) {
+    switch(type) {
+    case GL_FRAGMENT_SHADER: return "fragment";
+    case GL_VERTEX_SHADER: return "vertex";
+    default: return "<unknown>"; 
+    } 
+  }
+
+  const char* shaderTypeStr() { return shaderTypeToStr(shaderType()); }
 
 private:
   std::string m_src;
@@ -221,8 +259,8 @@ public:
     m_vertexShader(vertexShader)
   {
     m_program = glCreateProgram();
-    glAttachShader(m_program, m_fragmentShader->getShader());
-    glAttachShader(m_program, m_vertexShader->getShader());
+    glAttachShader(m_program, m_fragmentShader->shader());
+    glAttachShader(m_program, m_vertexShader->shader());
 
     {
       GLuint i;
@@ -382,7 +420,7 @@ public:
 
 private:
 
-}
+};
 
 class View
 {
@@ -406,11 +444,70 @@ private:
   Model* m_model; 
 };
 
+class GLFWInitHelper
+{
+  DISALLOW_COPY_AND_ASSIGN(GLFWInitHelper);
+public:
+  GLFWInitHelper()
+  {
+    glfwSetErrorCallback(onErr);  
+    if (!glfwInit())
+      throw std::runtime_error("glfwInit failed");
+  }
+
+  ~GLFWInitHelper()
+  {
+    glfwTerminate(); 
+  }
+
+  static void onErr(int error, const char* description)
+  {
+    fputs(description, stderr);
+  }
+};
+
+class GLFWWin
+{
+  DISALLOW_COPY_AND_ASSIGN(GLFWWin);
+public:
+  GLFWWin()
+    : m_impl(glfwCreateWindow(800, 480, "rnix", NULL, NULL))
+  {
+    glfwMakeContextCurrent(m_impl); 
+  }
+
+  ~GLFWWin()
+  {
+    glfwDestroyWindow(m_impl);
+  }
+
+  void swapBuffers()
+  {
+    glfwSwapBuffers(m_impl); 
+  }
+
+  bool handleMessages()
+  {
+    glfwPollEvents();
+    return !glfwWindowShouldClose(m_impl);
+  }
+
+  GLFWwindow* get() { return m_impl; }
+
+private:
+  GLFWwindow* m_impl;
+};
+
 int main(int argc, char **argv)
 {
   Model model;
 
+#ifdef USE_GLES
   EGL egl;
+#else
+  GLFWInitHelper glfw;
+  GLFWWin win;
+#endif
 
   View view(&model);
 
@@ -431,7 +528,11 @@ int main(int argc, char **argv)
   GLfloat sts[] = {0, 0, 1, 0, 1, 1};
   GLBuffer stBuffer(6, sts);
 
-  for(int i = 0; i < 800; ++i)
+#if USE_GLES
+  for (int i = 0; i < 800; ++i)
+#else
+  while (win.handleMessages())
+#endif
   {
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -445,9 +546,12 @@ int main(int argc, char **argv)
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
+#if USE_GLES
     egl.swapBuffers();
     egl.getXWin().handleMessages();
+#else
+    win.swapBuffers();
+#endif
   }
-
   return 0;
 }
