@@ -18,6 +18,7 @@
 #include <png.h>
 
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -198,7 +199,8 @@ public:
       "#define mediump\n"
       "#define highp\n";
 #endif
-    // m_src = GLES_COMPAT_HEADER + src;
+    m_src = GLES_COMPAT_HEADER + m_src;
+    std::cout << m_src << std::endl;
 
     const GLchar* psrc = m_src.data();
     GLint length = m_src.length();
@@ -514,7 +516,7 @@ int main(int argc, char **argv)
   GLSLProgram program(readfile("ui.frag"), readfile("ui.vert"), {"vertex", "st"});
   program.use();
 
-  PNGTexture texture("baboon.png");
+  PNGTexture texture("spritetool/dmix.png");
 
   glClearColor(0.6f, 0.8f, 1.0f, 1.0f);
 

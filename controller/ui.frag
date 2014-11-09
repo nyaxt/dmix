@@ -1,4 +1,3 @@
-#define mediump
 uniform sampler2D texture;
 varying mediump vec2 tex_st;
 
