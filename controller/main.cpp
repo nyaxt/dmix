@@ -300,7 +300,7 @@ class GLSLProgram {
 
   void use() { glUseProgram(m_program); }
 
-  int getUniformLocation(const char* name) {
+  GLint getUniformLocation(const char* name) {
     return glGetUniformLocation(m_program, name);
   }
 
@@ -434,9 +434,16 @@ class GLFWWin {
  public:
   GLFWWin() : m_impl(glfwCreateWindow(800, 480, "rnix", NULL, NULL)) {
     glfwMakeContextCurrent(m_impl);
+    setViewport();
   }
 
   ~GLFWWin() { glfwDestroyWindow(m_impl); }
+
+  void setViewport() {
+    int width, height;
+    glfwGetFramebufferSize(m_impl, &width, &height);
+    glViewport(0, 0, width, height);
+  }
 
   void swapBuffers() { glfwSwapBuffers(m_impl); }
 
@@ -450,6 +457,26 @@ class GLFWWin {
  private:
   GLFWwindow* m_impl;
 };
+
+/*
+class GLDrawUI {
+ public:
+  void enq(int x, int y, int sx, int sy, int w, int h) {
+    m_pos.reserve(m_pos.size() + 3 * 3);
+    m_st.reserve(m_st.size() + 2 * 3);
+
+    m_pos.append();
+  }
+
+  void draw() {
+  
+  }
+
+ private:
+  std::vector<GLfloat> m_pos;
+  std::vector<GLfloat> m_st;
+};
+*/
 
 int main(int argc, char** argv) {
   Model model;
@@ -467,6 +494,14 @@ int main(int argc, char** argv) {
   GLSLProgram program(readfile("ui.frag"), readfile("ui.vert"),
                       {"vertex", "st"});
   program.use();
+  GLint mvpLoc = program.getUniformLocation("mvp");
+  GLfloat mat[16] = {
+    2.0 / 800, 0, 0, 0,
+    0, -2.0 / 480, 0, 0,
+    0, 0, 1, 0,
+    -1, 1, 0, 1,
+  };
+  glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mat);
 
   PNGTexture texture("spritetool/dmix.png");
 
@@ -474,8 +509,15 @@ int main(int argc, char** argv) {
 
   glEnable(GL_CULL_FACE);
 
+#if 0
+  GLDrawUI draw;
   GLfloat vertices[] = {-0.4f, -0.4f, 0.0f, 0.4f, -0.4f,
                         0.0f,  0.0f,  0.4f, 0.0f};
+#endif
+  GLfloat vertices[] = {
+    0.0f,  0.0f, 0.0f,
+    0.0f,  100.0f, 0.0f,
+    100.0f, 100.0f, 0.0f};
   GLBuffer vertexBuffer(9, vertices);
   GLfloat sts[] = {0, 0, 1, 0, 1, 1};
   GLBuffer stBuffer(6, sts);
