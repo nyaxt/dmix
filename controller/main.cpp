@@ -11,7 +11,7 @@
 #endif
 
 #define DISALLOW_COPY_AND_ASSIGN(Type) \
-  Type(const Type&) = delete; \
+  Type(const Type&) = delete;          \
   void operator=(const Type&) = delete;
 
 #define PNG_DEBUG 3
@@ -27,80 +27,85 @@
 #include <unistd.h>
 
 #ifdef USE_GLES
-class EGLException : public std::runtime_error
-{
-public:
+class EGLException : public std::runtime_error {
+ public:
   EGLException(EGLint eglerr, const char* cond, const char* file, int line)
-  :   std::runtime_error(format(eglerr, cond, file, line)) { /* NOP */ }
-
-  static void test(const char* cond, const char* file, int line, bool mustfail)
-  {
-    EGLint eglerr = eglGetError();
-    if(mustfail || eglerr != EGL_SUCCESS) throw EGLException(eglerr, cond, file, line);
+      : std::runtime_error(format(eglerr, cond, file, line)) { /* NOP */
   }
 
-private:
-  static std::string format(EGLint eglerr, const char* cond, const char* file, int line)
-  {
+  static void test(const char* cond, const char* file, int line,
+                   bool mustfail) {
+    EGLint eglerr = eglGetError();
+    if (mustfail || eglerr != EGL_SUCCESS)
+      throw EGLException(eglerr, cond, file, line);
+  }
+
+ private:
+  static std::string format(EGLint eglerr, const char* cond, const char* file,
+                            int line) {
     std::stringstream os;
     os << file << ":" << line << " eglErr=" << eglerr << " @ " << cond;
     return os.str();
   }
 };
 
-#define EGL_SAFE(c) do { if(!(c)) { EGLException::test(#c, __FILE__, __LINE__, true); } } while(0)
-#define EGL_SANITYCHECK do { EGLException::test("sanity check", __FILE__, __LINE__, false); } while(0)
+#define EGL_SAFE(c)                                     \
+  do {                                                  \
+    if (!(c)) {                                         \
+      EGLException::test(#c, __FILE__, __LINE__, true); \
+    }                                                   \
+  } while (0)
+#define EGL_SANITYCHECK                                            \
+  do {                                                             \
+    EGLException::test("sanity check", __FILE__, __LINE__, false); \
+  } while (0)
 #endif
 
 #ifdef USE_X11
-class XWin
-{
-public:
-  XWin()
-  {
+class XWin {
+ public:
+  XWin() {
     // Initializes the display and screen
     m_x11Display = XOpenDisplay(nullptr);
-    if (!m_x11Display)
-      throw std::runtime_error("Unable to open X display");
+    if (!m_x11Display) throw std::runtime_error("Unable to open X display");
     m_x11Screen = XDefaultScreen(m_x11Display);
 
     // Gets the window parameters
     Window sRootWindow = RootWindow(m_x11Display, m_x11Screen);
     int depth = DefaultDepth(m_x11Display, m_x11Screen);
     XMatchVisualInfo(m_x11Display, m_x11Screen, depth, TrueColor, &m_x11Visual);
-    m_x11Colormap = XCreateColormap(m_x11Display, sRootWindow, m_x11Visual.visual, AllocNone);
+    m_x11Colormap = XCreateColormap(m_x11Display, sRootWindow,
+                                    m_x11Visual.visual, AllocNone);
 
     XSetWindowAttributes attrs;
     attrs.colormap = m_x11Colormap;
-    attrs.event_mask = StructureNotifyMask | ExposureMask | ButtonPressMask | ButtonReleaseMask | KeyPressMask | KeyReleaseMask;
+    attrs.event_mask = StructureNotifyMask | ExposureMask | ButtonPressMask |
+                       ButtonReleaseMask | KeyPressMask | KeyReleaseMask;
 
     // Creates the X11 window
-    m_x11Window = XCreateWindow(m_x11Display, RootWindow(m_x11Display, m_x11Screen), 0, 0, 800, 480,
-                  0, CopyFromParent, InputOutput, CopyFromParent,
-                  CWBackPixel | CWBorderPixel | CWEventMask | CWColormap, &attrs);
+    m_x11Window = XCreateWindow(
+        m_x11Display, RootWindow(m_x11Display, m_x11Screen), 0, 0, 800, 480, 0,
+        CopyFromParent, InputOutput, CopyFromParent,
+        CWBackPixel | CWBorderPixel | CWEventMask | CWColormap, &attrs);
     XMapWindow(m_x11Display, m_x11Window);
     XFlush(m_x11Display);
   }
 
-  ~XWin()
-  {
-    if(m_x11Window) XDestroyWindow(m_x11Display, m_x11Window);
-    if(m_x11Colormap) XFreeColormap(m_x11Display, m_x11Colormap);
-    if(m_x11Display) XCloseDisplay(m_x11Display);
+  ~XWin() {
+    if (m_x11Window) XDestroyWindow(m_x11Display, m_x11Window);
+    if (m_x11Colormap) XFreeColormap(m_x11Display, m_x11Colormap);
+    if (m_x11Display) XCloseDisplay(m_x11Display);
   }
 
-  void handleMessages()
-  {
+  void handleMessages() {
     int nMessages = XPending(m_x11Display);
-    for(int i = 0; i < nMessages; ++ i)
-    {
+    for (int i = 0; i < nMessages; ++i) {
       XEvent event;
       XNextEvent(m_x11Display, &event);
 
-      switch(event.type)
-      {
-      default:
-        break;
+      switch (event.type) {
+        default:
+          break;
       }
     }
   }
@@ -108,7 +113,7 @@ public:
   Window getWindow() { return m_x11Window; }
   Display* getDisplay() { return m_x11Display; }
 
-private:
+ private:
   Window m_x11Window = 0;
   Display* m_x11Display = nullptr;
   long m_x11Screen = 0;
@@ -118,15 +123,12 @@ private:
 #endif
 
 #ifdef USE_GLES
-class EGL
-{
-public:
-  EGL()
-  {
+class EGL {
+ public:
+  EGL() {
     m_eglDisplay = eglGetDisplay((EGLNativeDisplayType)m_xwin.getDisplay());
 
-    if (!eglInitialize(m_eglDisplay, nullptr, nullptr))
-    {
+    if (!eglInitialize(m_eglDisplay, nullptr, nullptr)) {
       throw std::runtime_error("Error: eglInitialize() failed.");
     }
 
@@ -135,21 +137,26 @@ public:
 
     // choose config
     {
-      static const EGLint attribs[] = {EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_NONE};
+      static const EGLint attribs[] = {EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                                       EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+                                       EGL_NONE};
 
       EGLint config;
-      if (!eglChooseConfig(m_eglDisplay, attribs, &m_eglConfig, 1, &config) || (config != 1))
-      {
+      if (!eglChooseConfig(m_eglDisplay, attribs, &m_eglConfig, 1, &config) ||
+          (config != 1)) {
         throw std::runtime_error("Error: eglChooseConfig() failed.\n");
       }
     }
 
-    m_eglSurface = eglCreateWindowSurface(m_eglDisplay, m_eglConfig, (EGLNativeWindowType)m_xwin.getWindow(), nullptr);
+    m_eglSurface = eglCreateWindowSurface(
+        m_eglDisplay, m_eglConfig, (EGLNativeWindowType)m_xwin.getWindow(),
+        nullptr);
     EGL_SANITYCHECK;
 
     {
       static const EGLint attribs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
-      m_eglContext = eglCreateContext(m_eglDisplay, m_eglConfig, nullptr, attribs);
+      m_eglContext =
+          eglCreateContext(m_eglDisplay, m_eglConfig, nullptr, attribs);
       EGL_SANITYCHECK;
     }
 
@@ -157,21 +164,20 @@ public:
     EGL_SANITYCHECK;
   }
 
-  ~EGL()
-  {
-    eglMakeCurrent(m_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) ;
+  ~EGL() {
+    eglMakeCurrent(m_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE,
+                   EGL_NO_CONTEXT);
     eglTerminate(m_eglDisplay);
   }
 
-  void swapBuffers()
-  {
+  void swapBuffers() {
     eglSwapBuffers(m_eglDisplay, m_eglSurface);
     EGL_SANITYCHECK;
   }
 
   XWin& getXWin() { return m_xwin; }
 
-private:
+ private:
   XWin m_xwin;
 
   EGLDisplay m_eglDisplay = 0;
@@ -181,23 +187,20 @@ private:
 };
 #endif
 
-class GLSLShader
-{
-public:
+class GLSLShader {
+ public:
   GLSLShader(std::string src, GLenum shaderType)
-    : m_src(std::move(src)),
-      m_shaderType(shaderType)
-  {
+      : m_src(std::move(src)), m_shaderType(shaderType) {
     m_shader = glCreateShader(m_shaderType);
 
     static const char GLES_COMPAT_HEADER[] =
-#ifdef USE_GLES 
-      "#version 100\n";
+#ifdef USE_GLES
+        "#version 100\n";
 #else
-      "#version 120\n"
-      "#define lowp\n"
-      "#define mediump\n"
-      "#define highp\n";
+        "#version 120\n"
+        "#define lowp\n"
+        "#define mediump\n"
+        "#define highp\n";
 #endif
     m_src = GLES_COMPAT_HEADER + m_src;
     std::cout << m_src << std::endl;
@@ -209,8 +212,7 @@ public:
 
     GLint shaderCompiled;
     glGetShaderiv(m_shader, GL_COMPILE_STATUS, &shaderCompiled);
-    if(! shaderCompiled)
-    {
+    if (!shaderCompiled) {
       int msgBufLength;
       glGetShaderiv(m_shader, GL_INFO_LOG_LENGTH, &msgBufLength);
 
@@ -225,56 +227,51 @@ public:
     }
   }
 
-  ~GLSLShader()
-  {
-    glDeleteShader(m_shader);
-  }
+  ~GLSLShader() { glDeleteShader(m_shader); }
 
   GLenum shaderType() { return m_shaderType; }
   GLuint shader() { return m_shader; }
 
   static const char* shaderTypeToStr(GLenum type) {
-    switch(type) {
-    case GL_FRAGMENT_SHADER: return "fragment";
-    case GL_VERTEX_SHADER: return "vertex";
-    default: return "<unknown>"; 
-    } 
+    switch (type) {
+      case GL_FRAGMENT_SHADER:
+        return "fragment";
+      case GL_VERTEX_SHADER:
+        return "vertex";
+      default:
+        return "<unknown>";
+    }
   }
 
   const char* shaderTypeStr() { return shaderTypeToStr(shaderType()); }
 
-private:
+ private:
   std::string m_src;
   GLenum m_shaderType;
 
   GLuint m_shader;
 };
 
-class GLSLProgram
-{
-public:
-  GLSLProgram(
-    std::shared_ptr<GLSLShader> fragmentShader,
-    std::shared_ptr<GLSLShader> vertexShader,
-    const std::vector<std::string>& attribs)
-  : m_fragmentShader(fragmentShader),
-    m_vertexShader(vertexShader)
-  {
+class GLSLProgram {
+ public:
+  GLSLProgram(std::shared_ptr<GLSLShader> fragmentShader,
+              std::shared_ptr<GLSLShader> vertexShader,
+              const std::vector<std::string>& attribs)
+      : m_fragmentShader(fragmentShader), m_vertexShader(vertexShader) {
     m_program = glCreateProgram();
     glAttachShader(m_program, m_fragmentShader->shader());
     glAttachShader(m_program, m_vertexShader->shader());
 
     {
       GLuint i;
-      for(const auto& attrib: attribs)
+      for (const auto& attrib : attribs)
         glBindAttribLocation(m_program, i++, attrib.c_str());
     }
 
     glLinkProgram(m_program);
     GLint bLinked;
     glGetProgramiv(m_program, GL_LINK_STATUS, &bLinked);
-    if(! bLinked)
-    {
+    if (!bLinked) {
       int msgBufLength;
       glGetProgramiv(m_program, GL_INFO_LOG_LENGTH, &msgBufLength);
 
@@ -289,74 +286,59 @@ public:
     }
   }
 
-  GLSLProgram(
-    std::string fragmentShaderSrc,
-    std::string vertexShaderSrc,
-    const std::vector<std::string>& attribs)
-  : GLSLProgram(
-      std::make_shared<GLSLShader>(std::move(fragmentShaderSrc), GL_FRAGMENT_SHADER),
-      std::make_shared<GLSLShader>(std::move(vertexShaderSrc), GL_VERTEX_SHADER),
-      attribs)
-  { /* NOP */ }
-
-  ~GLSLProgram()
-  {
-    glDeleteProgram(m_program);
+  GLSLProgram(std::string fragmentShaderSrc, std::string vertexShaderSrc,
+              const std::vector<std::string>& attribs)
+      : GLSLProgram(std::make_shared<GLSLShader>(std::move(fragmentShaderSrc),
+                                                 GL_FRAGMENT_SHADER),
+                    std::make_shared<GLSLShader>(std::move(vertexShaderSrc),
+                                                 GL_VERTEX_SHADER),
+                    attribs) { /* NOP */
   }
 
-  void use()
-  {
-    glUseProgram(m_program);
-  }
+  ~GLSLProgram() { glDeleteProgram(m_program); }
 
-  int getUniformLocation(const char* name)
-  {
+  void use() { glUseProgram(m_program); }
+
+  int getUniformLocation(const char* name) {
     return glGetUniformLocation(m_program, name);
   }
 
   GLuint getProgram() { return m_program; }
 
-private:
+ private:
   std::shared_ptr<GLSLShader> m_fragmentShader;
   std::shared_ptr<GLSLShader> m_vertexShader;
 
   GLuint m_program;
 };
 
-class GLBuffer
-{
-public:
-  GLBuffer(size_t nElem, const GLfloat* data)
-    : m_nElem(nElem)
-  {
+class GLBuffer {
+ public:
+  GLBuffer(size_t nElem, const GLfloat* data) : m_nElem(nElem) {
     glGenBuffers(1, &m_buffer);
     bind();
-    glBufferData(GL_ARRAY_BUFFER, nElem * sizeof(GLfloat), data, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, nElem * sizeof(GLfloat), data,
+                 GL_STATIC_DRAW);
   }
 
-  ~GLBuffer()
-  {
-    glDeleteBuffers(1, &m_buffer);
-  }
+  ~GLBuffer() { glDeleteBuffers(1, &m_buffer); }
 
   void bind() { glBindBuffer(GL_ARRAY_BUFFER, m_buffer); }
 
-private:
+ private:
   size_t m_nElem;
 
   GLuint m_buffer;
 };
 
-class PNGLoader
-{
-public:
-  PNGLoader(const std::string& filename)
-  {
+class PNGLoader {
+ public:
+  PNGLoader(const std::string& filename) {
     png_image png;
     memset(&png, 0, sizeof(png_image));
     png.version = PNG_IMAGE_VERSION;
 
-    if(! png_image_begin_read_from_file(&png, filename.c_str()))
+    if (!png_image_begin_read_from_file(&png, filename.c_str()))
       throw std::runtime_error("png_image_begin_read_from_file failed");
 
     png.format = PNG_FORMAT_RGBA;
@@ -365,7 +347,8 @@ public:
     m_width = png.width;
     m_height = png.height;
 
-    if(! png_image_finish_read(&png, /*bg=*/nullptr, m_buffer.get(), /*row_stride=*/0, /*colormap=*/nullptr))
+    if (!png_image_finish_read(&png, /*bg=*/nullptr, m_buffer.get(),
+                               /*row_stride=*/0, /*colormap=*/nullptr))
       throw std::runtime_error("png_image_finish_read failed");
   }
 
@@ -373,135 +356,101 @@ public:
   size_t getWidth() const { return m_width; }
   size_t getHeight() const { return m_height; }
 
-private:
+ private:
   std::unique_ptr<char[]> m_buffer;
   size_t m_width = 0;
   size_t m_height = 0;
 };
 
-class PNGTexture
-{
-public:
-  PNGTexture(const std::string& filename)
-  : m_loader(filename)
-  {
+class PNGTexture {
+ public:
+  PNGTexture(const std::string& filename) : m_loader(filename) {
     glGenTextures(1, &m_texture);
     bind();
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    glTexImage2D(GL_TEXTURE_2D, /*level=*/0, GL_RGBA, m_loader.getWidth(), m_loader.getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, m_loader.getBuffer());
+    glTexImage2D(GL_TEXTURE_2D, /*level=*/0, GL_RGBA, m_loader.getWidth(),
+                 m_loader.getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 m_loader.getBuffer());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   }
 
-  ~PNGTexture()
-  {
-    glDeleteTextures(1, &m_texture);
-  }
+  ~PNGTexture() { glDeleteTextures(1, &m_texture); }
 
   void bind() { glBindTexture(GL_TEXTURE_2D, m_texture); }
 
-private:
+ private:
   PNGLoader m_loader;
   GLuint m_texture;
 };
 
-std::string readfile(const std::string& filename)
-{
+std::string readfile(const std::string& filename) {
   std::ifstream in(filename);
-  return std::string(
-      std::istreambuf_iterator<char>(in),
-      std::istreambuf_iterator<char>());
+  return std::string(std::istreambuf_iterator<char>(in),
+                     std::istreambuf_iterator<char>());
 }
 
-class Model
-{
-public:
+class Model {
+ public:
   int getNumChannels() { return 2; }
 
-private:
-
+ private:
 };
 
-class View
-{
-public:
-  View(Model* model)
-  : m_model(model)
-  {
-  }
+class View {
+ public:
+  View(Model* model) : m_model(model) {}
 
-  void update()
-  {
-         
-  }
-  
-  void draw()
-  {
-    
-  }
+  void update() {}
 
-private:
-  Model* m_model; 
+  void draw() {}
+
+ private:
+  Model* m_model;
 };
 
-class GLFWInitHelper
-{
+class GLFWInitHelper {
   DISALLOW_COPY_AND_ASSIGN(GLFWInitHelper);
-public:
-  GLFWInitHelper()
-  {
-    glfwSetErrorCallback(onErr);  
-    if (!glfwInit())
-      throw std::runtime_error("glfwInit failed");
+
+ public:
+  GLFWInitHelper() {
+    glfwSetErrorCallback(onErr);
+    if (!glfwInit()) throw std::runtime_error("glfwInit failed");
   }
 
-  ~GLFWInitHelper()
-  {
-    glfwTerminate(); 
-  }
+  ~GLFWInitHelper() { glfwTerminate(); }
 
-  static void onErr(int error, const char* description)
-  {
+  static void onErr(int error, const char* description) {
     fputs(description, stderr);
   }
 };
 
-class GLFWWin
-{
+class GLFWWin {
   DISALLOW_COPY_AND_ASSIGN(GLFWWin);
-public:
-  GLFWWin()
-    : m_impl(glfwCreateWindow(800, 480, "rnix", NULL, NULL))
-  {
-    glfwMakeContextCurrent(m_impl); 
+
+ public:
+  GLFWWin() : m_impl(glfwCreateWindow(800, 480, "rnix", NULL, NULL)) {
+    glfwMakeContextCurrent(m_impl);
   }
 
-  ~GLFWWin()
-  {
-    glfwDestroyWindow(m_impl);
-  }
+  ~GLFWWin() { glfwDestroyWindow(m_impl); }
 
-  void swapBuffers()
-  {
-    glfwSwapBuffers(m_impl); 
-  }
+  void swapBuffers() { glfwSwapBuffers(m_impl); }
 
-  bool handleMessages()
-  {
+  bool handleMessages() {
     glfwPollEvents();
     return !glfwWindowShouldClose(m_impl);
   }
 
   GLFWwindow* get() { return m_impl; }
 
-private:
+ private:
   GLFWwindow* m_impl;
 };
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
   Model model;
 
 #ifdef USE_GLES
@@ -513,7 +462,8 @@ int main(int argc, char **argv)
 
   View view(&model);
 
-  GLSLProgram program(readfile("ui.frag"), readfile("ui.vert"), {"vertex", "st"});
+  GLSLProgram program(readfile("ui.frag"), readfile("ui.vert"),
+                      {"vertex", "st"});
   program.use();
 
   PNGTexture texture("spritetool/dmix.png");
@@ -522,10 +472,8 @@ int main(int argc, char **argv)
 
   glEnable(GL_CULL_FACE);
 
-  GLfloat vertices[] = {
-    -0.4f,-0.4f,0.0f,
-    0.4f ,-0.4f,0.0f,
-    0.0f ,0.4f ,0.0f};
+  GLfloat vertices[] = {-0.4f, -0.4f, 0.0f, 0.4f, -0.4f,
+                        0.0f,  0.0f,  0.4f, 0.0f};
   GLBuffer vertexBuffer(9, vertices);
   GLfloat sts[] = {0, 0, 1, 0, 1, 1};
   GLBuffer stBuffer(6, sts);

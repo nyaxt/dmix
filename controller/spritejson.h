@@ -10,4 +10,4 @@ struct SpriteRect {
 
 std::map<std::string, SpriteRect> loadSpriteJson(const std::string& filepath);
 
-#endif // _spritejson_h_
+#endif  // _spritejson_h_
