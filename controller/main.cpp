@@ -601,7 +601,17 @@ void GLDrawUI::Common::setUp(SetUpPhase phase) {
   }
 }
 
-void GLDrawUI::setUp(SetUpPhase phase) { common().setUp(phase); }
+void GLDrawUI::setUp(SetUpPhase phase) {
+  switch (phase) {
+    case SetUpPhase::CompileLinkProgram:
+    case SetUpPhase::UseProgram:
+    case SetUpPhase::UpdateMVPMatrix:
+      common().setUp(phase);
+    /* FALL THROUGH */
+    default:
+      break;
+  }
+}
 
 void GLDrawUI::enqSprite(int x, int y, int sx, int sy, int w, int h) {
   m_pos.reserve(m_pos.size() + 2 * 4);
