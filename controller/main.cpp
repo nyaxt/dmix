@@ -525,8 +525,6 @@ class GLDrawUI {
   }
 
   void draw() {
-    // glEnableClientState(GL_VERTEX_ARRAY);
-
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glEnableVertexAttribArray(0);
@@ -536,8 +534,6 @@ class GLDrawUI {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, &m_st[0]);
 
     glDrawElements(GL_TRIANGLES, m_nQuads * 6, GL_UNSIGNED_SHORT, &m_idx[0]);
-
-    // glDisableClientState(GL_VERTEX_ARRAY);
   }
 
   GLushort nQuads() const { return m_nQuads; }
@@ -600,20 +596,10 @@ int main(int argc, char** argv) {
 
   glEnable(GL_CULL_FACE);
 
-#if 0
-  GLfloat vertices[] = {
-    0.0f,  0.0f,
-    0.0f,  480.0f,
-    100.0f, 100.0f};
-  GLBuffer vertexBuffer(9, vertices);
-  GLfloat sts[] = {0, 0, 1, 0, 1, 1};
-  GLBuffer stBuffer(6, sts);
-#else
   GLDrawUI drawui;
   drawui.enqSprite(300, 100, 0, 0, 256, 256);
   drawui.enqSprite(10, 10, 0, 0, 20, 30);
   drawui.enqSprite(100, 100, 30, 40, 100, 50);
-#endif
 
 #if USE_GLES
   for (int i = 0; i < 800; ++i)
@@ -623,19 +609,7 @@ int main(int argc, char** argv) {
   {
     glClear(GL_COLOR_BUFFER_BIT);
 
-#if 0
-    glEnableVertexAttribArray(0);
-    vertexBuffer.bind();
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glEnableVertexAttribArray(1);
-    stBuffer.bind();
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-#else
     drawui.draw();
-#endif
 
 #if USE_GLES
     egl.swapBuffers();
