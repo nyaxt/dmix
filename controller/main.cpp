@@ -28,6 +28,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#define NG_ASSERT(cond) \
+  if (!(cond)) throw std::runtime_error("Assertion failed: " #cond);
+
 #ifdef USE_GLES
 class EGLException : public std::runtime_error {
  public:
@@ -473,16 +476,24 @@ class GLFWWin {
   GLFWwindow* m_impl;
 };
 
+/* utils */
+void setUIMatrix(GLfloat mat[16], WindowSize size);
+
 class GLDrawUI {
  public:
-  class Common {
-   public:
-    void SetUp();
+  GLDrawUI();
+  ~GLDrawUI();
 
-   private:
-  };
-  static void setUIMatrix(GLfloat mat[16], WindowSize size);
+  static void setWindowSize(WindowSize);
+
   static void fini();
+
+  enum class SetUpPhase {
+    CompileLinkProgram,
+    UseProgram,
+    UpdateMVPMatrix,
+  };
+  void setUp(SetUpPhase);
 
   void enqSprite(int x, int y, int sx, int sy, int w, int h);
   void draw();
@@ -490,14 +501,32 @@ class GLDrawUI {
   GLushort nQuads() const { return m_nQuads; }
 
  private:
+  class Common;
   static std::unique_ptr<Common> s_common;
-  Common& common();
+  static Common& common();
 
   std::vector<GLfloat> m_pos;
   std::vector<GLfloat> m_st;
   std::vector<GLushort> m_idx;
   GLushort m_nQuads = 0;
 };
+
+class GLDrawUI::Common {
+ public:
+  void setUp(SetUpPhase);
+  void setWindowSize(WindowSize ws) { m_windowSize = ws; }
+
+ private:
+  void compileLinkProgram();
+  void useProgram();
+  void updateMVPMatrix();
+
+  WindowSize m_windowSize;
+  std::unique_ptr<GLSLProgram> m_program;
+};
+
+GLDrawUI::GLDrawUI() {}
+GLDrawUI::~GLDrawUI() {}
 
 std::unique_ptr<GLDrawUI::Common> GLDrawUI::s_common;
 
@@ -509,7 +538,21 @@ GLDrawUI::Common& GLDrawUI::common() {
   return *s_common;
 }
 
-void GLDrawUI::setUIMatrix(GLfloat mat[16], WindowSize size) {
+void GLDrawUI::setWindowSize(WindowSize ws) { common().setWindowSize(ws); }
+
+void GLDrawUI::Common::compileLinkProgram() {
+  if (m_program) return;
+
+  m_program.reset(new GLSLProgram(readfile("ui.frag"), readfile("ui.vert"),
+                                  {"vertex", "st"}));
+}
+
+void GLDrawUI::Common::useProgram() {
+  NG_ASSERT(m_program);
+  m_program->use();
+}
+
+void setUIMatrix(GLfloat mat[16], WindowSize size) {
   mat[0] = 2.0 / size.w;
   mat[1] = 0;
   mat[2] = 0;
@@ -530,6 +573,35 @@ void GLDrawUI::setUIMatrix(GLfloat mat[16], WindowSize size) {
   mat[14] = 0;
   mat[15] = 1;
 }
+
+void GLDrawUI::Common::updateMVPMatrix() {
+  GLint mvpLoc = m_program->getUniformLocation("mvp");
+  GLfloat mat[16];
+  setUIMatrix(mat, m_windowSize);
+  glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mat);
+
+  /* FIXME: move!!! */
+  GLint texScaleLoc = m_program->getUniformLocation("texScale");
+  glUniform2f(texScaleLoc, 1.0 / 256, 1.0 / 256);
+}
+
+void GLDrawUI::Common::setUp(SetUpPhase phase) {
+  switch (phase) {
+    case SetUpPhase::CompileLinkProgram:
+      compileLinkProgram();
+    /* FALL THROUGH */
+    case SetUpPhase::UseProgram:
+      useProgram();
+    /* FALL THROUGH */
+    case SetUpPhase::UpdateMVPMatrix:
+      updateMVPMatrix();
+    /* FALL THROUGH */
+    default:
+      break;
+  }
+}
+
+void GLDrawUI::setUp(SetUpPhase phase) { common().setUp(phase); }
 
 void GLDrawUI::enqSprite(int x, int y, int sx, int sy, int w, int h) {
   m_pos.reserve(m_pos.size() + 2 * 4);
@@ -603,16 +675,6 @@ int main(int argc, char** argv) {
 
   View view(&model);
 
-  GLSLProgram program(readfile("ui.frag"), readfile("ui.vert"),
-                      {"vertex", "st"});
-  program.use();
-  GLint mvpLoc = program.getUniformLocation("mvp");
-  GLfloat mat[16];
-  GLDrawUI::setUIMatrix(mat, win.specifiedSize());
-  glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mat);
-  GLint texScaleLoc = program.getUniformLocation("texScale");
-  glUniform2f(texScaleLoc, 1.0 / 256, 1.0 / 256);
-
   PNGTexture texture("spritetool/dmix.png");
 
   glClearColor(0.6f, 0.8f, 1.0f, 1.0f);
@@ -620,6 +682,8 @@ int main(int argc, char** argv) {
   glEnable(GL_CULL_FACE);
 
   GLDrawUI drawui;
+  GLDrawUI::setWindowSize(win.specifiedSize());
+  drawui.setUp(GLDrawUI::SetUpPhase::CompileLinkProgram);
   drawui.enqSprite(300, 100, 0, 0, 256, 256);
   drawui.enqSprite(10, 10, 0, 0, 20, 30);
   drawui.enqSprite(100, 100, 30, 40, 100, 50);
