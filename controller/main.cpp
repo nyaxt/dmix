@@ -475,75 +475,39 @@ class GLFWWin {
 
 class GLDrawUI {
  public:
+  class Common {
+   public:
+    void SetUp();
+
+   private:
+  };
   static void setUIMatrix(GLfloat mat[16], WindowSize size);
+  static void fini();
 
-  void enqSprite(int x, int y, int sx, int sy, int w, int h) {
-    m_pos.reserve(m_pos.size() + 2 * 4);
-    {
-      GLfloat t = y, l = x, b = y + h, r = x + w;
-
-      // 0tl 1tr
-      // 2bl 3br
-      m_pos.push_back(l);
-      m_pos.push_back(t);
-      m_pos.push_back(r);
-      m_pos.push_back(t);
-      m_pos.push_back(l);
-      m_pos.push_back(b);
-      m_pos.push_back(r);
-      m_pos.push_back(b);
-    }
-
-    m_st.reserve(m_st.size() + 2 * 4);
-    {
-      GLfloat t = sy, l = sx, b = sy + h, r = sx + w;
-
-      // 0tl 1tr
-      // 2bl 3br
-      m_st.push_back(l);
-      m_st.push_back(t);
-      m_st.push_back(r);
-      m_st.push_back(t);
-      m_st.push_back(l);
-      m_st.push_back(b);
-      m_st.push_back(r);
-      m_st.push_back(b);
-    }
-
-    m_idx.reserve(m_idx.size() + 2 * 3);
-    {
-      GLushort offset = m_nQuads * 4;
-      m_idx.push_back(offset + 0);
-      m_idx.push_back(offset + 2);
-      m_idx.push_back(offset + 1);
-      m_idx.push_back(offset + 1);
-      m_idx.push_back(offset + 2);
-      m_idx.push_back(offset + 3);
-    }
-
-    ++m_nQuads;
-  }
-
-  void draw() {
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, &m_pos[0]);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, &m_st[0]);
-
-    glDrawElements(GL_TRIANGLES, m_nQuads * 6, GL_UNSIGNED_SHORT, &m_idx[0]);
-  }
+  void enqSprite(int x, int y, int sx, int sy, int w, int h);
+  void draw();
 
   GLushort nQuads() const { return m_nQuads; }
 
  private:
+  static std::unique_ptr<Common> s_common;
+  Common& common();
+
   std::vector<GLfloat> m_pos;
   std::vector<GLfloat> m_st;
   std::vector<GLushort> m_idx;
   GLushort m_nQuads = 0;
 };
+
+std::unique_ptr<GLDrawUI::Common> GLDrawUI::s_common;
+
+void GLDrawUI::fini() { s_common.reset(); }
+
+GLDrawUI::Common& GLDrawUI::common() {
+  if (!s_common) s_common.reset(new Common);
+
+  return *s_common;
+}
 
 void GLDrawUI::setUIMatrix(GLfloat mat[16], WindowSize size) {
   mat[0] = 2.0 / size.w;
@@ -565,6 +529,65 @@ void GLDrawUI::setUIMatrix(GLfloat mat[16], WindowSize size) {
   mat[13] = 1;
   mat[14] = 0;
   mat[15] = 1;
+}
+
+void GLDrawUI::enqSprite(int x, int y, int sx, int sy, int w, int h) {
+  m_pos.reserve(m_pos.size() + 2 * 4);
+  {
+    GLfloat t = y, l = x, b = y + h, r = x + w;
+
+    // 0tl 1tr
+    // 2bl 3br
+    m_pos.push_back(l);
+    m_pos.push_back(t);
+    m_pos.push_back(r);
+    m_pos.push_back(t);
+    m_pos.push_back(l);
+    m_pos.push_back(b);
+    m_pos.push_back(r);
+    m_pos.push_back(b);
+  }
+
+  m_st.reserve(m_st.size() + 2 * 4);
+  {
+    GLfloat t = sy, l = sx, b = sy + h, r = sx + w;
+
+    // 0tl 1tr
+    // 2bl 3br
+    m_st.push_back(l);
+    m_st.push_back(t);
+    m_st.push_back(r);
+    m_st.push_back(t);
+    m_st.push_back(l);
+    m_st.push_back(b);
+    m_st.push_back(r);
+    m_st.push_back(b);
+  }
+
+  m_idx.reserve(m_idx.size() + 2 * 3);
+  {
+    GLushort offset = m_nQuads * 4;
+    m_idx.push_back(offset + 0);
+    m_idx.push_back(offset + 2);
+    m_idx.push_back(offset + 1);
+    m_idx.push_back(offset + 1);
+    m_idx.push_back(offset + 2);
+    m_idx.push_back(offset + 3);
+  }
+
+  ++m_nQuads;
+}
+
+void GLDrawUI::draw() {
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, &m_pos[0]);
+
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, &m_st[0]);
+
+  glDrawElements(GL_TRIANGLES, m_nQuads * 6, GL_UNSIGNED_SHORT, &m_idx[0]);
 }
 
 int main(int argc, char** argv) {
@@ -618,5 +641,6 @@ int main(int argc, char** argv) {
     win.swapBuffers();
 #endif
   }
+
   return 0;
 }
