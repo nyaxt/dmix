@@ -672,7 +672,8 @@ void GLDrawUI::draw() {
   glDrawElements(GL_TRIANGLES, m_nQuads * 6, GL_UNSIGNED_SHORT, &m_idx[0]);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+try {
   Model model;
   auto spmap = loadSpriteJson("spritetool/splice.json");
 
@@ -689,7 +690,7 @@ int main(int argc, char** argv) {
 
   glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-  glEnable(GL_CULL_FACE);
+  // glEnable(GL_CULL_FACE);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -701,6 +702,8 @@ int main(int argc, char** argv) {
   drawui.enqSprite(10, 10, 0, 0, 20, 30);
   drawui.enqSprite(100, 100, 30, 40, 100, 50);
 
+  std::unique_ptr<GLSLProgram> bgprogram(new GLSLProgram(readfile("bg.frag"), readfile("bg.vert"), {}));
+
 #if USE_GLES
   for (int i = 0; i < 800; ++i)
 #else
@@ -709,6 +712,15 @@ int main(int argc, char** argv) {
   {
     glClear(GL_COLOR_BUFFER_BIT);
 
+    bgprogram->use();
+
+    static const GLfloat pos[] = {-1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0};
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, &pos[0]);
+
+    static const GLushort idx[] = {0, 2, 1, 1, 2, 3};
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, &idx);
+
+    drawui.setUp(GLDrawUI::SetUpPhase::UseProgram);
     drawui.draw();
 
 #if USE_GLES
@@ -720,4 +732,8 @@ int main(int argc, char** argv) {
   }
 
   return 0;
+}
+catch(std::exception& e)
+{
+  std::cerr << e.what() << std::endl;
 }
