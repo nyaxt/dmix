@@ -687,14 +687,17 @@ int main(int argc, char** argv) {
 
   PNGTexture texture("spritetool/dmix.png");
 
-  glClearColor(0.6f, 0.8f, 1.0f, 1.0f);
+  glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
   glEnable(GL_CULL_FACE);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   GLDrawUI drawui;
   GLDrawUI::setWindowSize(win.specifiedSize());
   drawui.setUp(GLDrawUI::SetUpPhase::CompileLinkProgram);
-  drawui.enqSprite(300, 100, 0, 0, 256, 256);
+  const SpriteRect& r = spmap["COLORBAR"];
+  drawui.enqSprite(300, 100, r.x, r.y, r.w, r.h);
   drawui.enqSprite(10, 10, 0, 0, 20, 30);
   drawui.enqSprite(100, 100, 30, 40, 100, 50);
 
