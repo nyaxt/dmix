@@ -1,8 +1,15 @@
 {
   "ch": [
     {
+      "sprite": "CH",
+      "dstx": 15,
+      "dsty": 10,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
       "sprite": "1/2",
-      "dstx": 75,
+      "dstx": 80,
       "dsty": 10,
       "dstw": 0,
       "dsth": 0
@@ -16,29 +23,113 @@
     },
     {
       "sprite": "S/PDIF",
-      "dstx": 140,
+      "dstx": 145,
       "dsty": 21,
       "dstw": 0,
       "dsth": 0
     },
     {
       "sprite": "192KHZ",
-      "dstx": 142,
+      "dstx": 147,
       "dsty": 31,
       "dstw": 0,
       "dsth": 0
     },
     {
-      "sprite": "HBAR",
-      "dstx": 10,
-      "dsty": 38,
-      "dstw": 200,
+      "sprite": "KNOB",
+      "dstx": 215,
+      "dsty": 10,
+      "dstw": 0,
       "dsth": 0
     },
     {
-      "sprite": "CH",
+      "sprite": "+",
+      "dstx": 260,
+      "dsty": 28,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "1",
+      "dstx": 260,
+      "dsty": 28,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "0",
+      "dstx": 268,
+      "dsty": 28,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "dB",
+      "dstx": 280,
+      "dsty": 28,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "LR",
+      "dstx": 320,
+      "dsty": 12,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "COLORBAR",
+      "dstx": 330,
+      "dsty": 3,
+      "dstw": 460,
+      "dsth": 0
+    },
+    {
+      "sprite": "COLORBAR",
+      "dstx": 330,
+      "dsty": 21,
+      "dstw": 460,
+      "dsth": 0
+    },
+    {
+      "sprite": "HBAR_L",
       "dstx": 10,
-      "dsty": 10,
+      "dsty": 43,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "HBAR_M",
+      "dstx": 40,
+      "dsty": 43,
+      "dstw": 720,
+      "dsth": 0
+    },
+    {
+      "sprite": "HBAR_R",
+      "dstx": 760,
+      "dsty": 43,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "DOT",
+      "dstx": 20,
+      "dsty": 50,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "DOT",
+      "dstx": 20,
+      "dsty": 63,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "END",
+      "dstx": 16,
+      "dsty": 76,
       "dstw": 0,
       "dsth": 0
     }
