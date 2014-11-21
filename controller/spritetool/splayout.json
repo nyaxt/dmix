@@ -1,0 +1,46 @@
+{
+  "ch": [
+    {
+      "sprite": "1/2",
+      "dstx": 75,
+      "dsty": 10,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "3/4 ",
+      "dstx": 75,
+      "dsty": 10,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "S/PDIF",
+      "dstx": 140,
+      "dsty": 21,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "192KHZ",
+      "dstx": 142,
+      "dsty": 31,
+      "dstw": 0,
+      "dsth": 0
+    },
+    {
+      "sprite": "HBAR",
+      "dstx": 10,
+      "dsty": 38,
+      "dstw": 200,
+      "dsth": 0
+    },
+    {
+      "sprite": "CH",
+      "dstx": 10,
+      "dsty": 10,
+      "dstw": 0,
+      "dsth": 0
+    }
+  ]
+}

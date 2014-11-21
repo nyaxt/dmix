@@ -19,14 +19,15 @@
 #define PNG_DEBUG 3
 #include <png.h>
 
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
-#include <vector>
 #include <string.h>
 #include <unistd.h>
+#include <vector>
 
 #define NG_ASSERT(cond) \
   if (!(cond)) throw std::runtime_error("Assertion failed: " #cond);
@@ -495,7 +496,9 @@ class GLDrawUI {
   };
   void setUp(SetUpPhase);
 
-  void enqSprite(int x, int y, int sx, int sy, int w, int h);
+  void enqSprite(int x, int y, int w, int h, int sx, int sy, int sw, int sh);
+  void clear();
+
   void draw();
 
   GLushort nQuads() const { return m_nQuads; }
@@ -613,7 +616,7 @@ void GLDrawUI::setUp(SetUpPhase phase) {
   }
 }
 
-void GLDrawUI::enqSprite(int x, int y, int sx, int sy, int w, int h) {
+void GLDrawUI::enqSprite(int x, int y, int w, int h, int sx, int sy, int sw, int sh) {
   m_pos.reserve(m_pos.size() + 2 * 4);
   {
     GLfloat t = y, l = x, b = y + h, r = x + w;
@@ -632,7 +635,7 @@ void GLDrawUI::enqSprite(int x, int y, int sx, int sy, int w, int h) {
 
   m_st.reserve(m_st.size() + 2 * 4);
   {
-    GLfloat t = sy, l = sx, b = sy + h, r = sx + w;
+    GLfloat t = sy, l = sx, b = sy + sh, r = sx + sw;
 
     // 0tl 1tr
     // 2bl 3br
@@ -658,6 +661,13 @@ void GLDrawUI::enqSprite(int x, int y, int sx, int sy, int w, int h) {
   }
 
   ++m_nQuads;
+}
+
+void GLDrawUI::clear() {
+  m_pos.clear();
+  m_st.clear();
+  m_idx.clear();
+  m_nQuads = 0;
 }
 
 void GLDrawUI::draw() {
@@ -697,19 +707,34 @@ try {
   GLDrawUI drawui;
   GLDrawUI::setWindowSize(win.specifiedSize());
   drawui.setUp(GLDrawUI::SetUpPhase::CompileLinkProgram);
-  const SpriteRect& r = spmap["COLORBAR"];
-  drawui.enqSprite(300, 100, r.x, r.y, r.w, r.h);
-  drawui.enqSprite(10, 10, 0, 0, 20, 30);
-  drawui.enqSprite(100, 100, 30, 40, 100, 50);
 
   std::unique_ptr<GLSLProgram> bgprogram(new GLSLProgram(readfile("bg.frag"), readfile("bg.vert"), {}));
 
+  using time_point = std::chrono::time_point<std::chrono::steady_clock>;
+  time_point last_refresh;
 #if USE_GLES
   for (int i = 0; i < 800; ++i)
 #else
   while (win.handleMessages())
 #endif
   {
+    time_point now = std::chrono::steady_clock::now();
+    if (now - last_refresh > std::chrono::milliseconds{250}) {
+      drawui.clear();
+
+      auto splayoutmap = loadSpriteLayoutMapJson("spritetool/splayout.json");
+      for (const auto& placement : splayoutmap["ch"]) {
+        auto it = spmap.find(placement.spriteName);
+        if (it == spmap.end()) continue;
+        auto sp = it->second;
+        int dstw = placement.dstw ? placement.dstw : sp.w;
+        int dsth = placement.dsth ? placement.dsth : sp.h;
+        drawui.enqSprite(
+            placement.dstx, placement.dsty, dstw, dsth,
+            sp.x, sp.y, sp.w, sp.h);
+      }
+    }
+
     glClear(GL_COLOR_BUFFER_BIT);
 
     bgprogram->use();

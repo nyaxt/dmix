@@ -30,6 +30,8 @@ function updateJSON() {
 function draw() {
     ctx.fillStyle = 'gray';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(MARGIN, MARGIN, 256*ZOOM, 256*ZOOM);
     ctx.drawImage(srcimg, MARGIN, MARGIN, 256*ZOOM, 256*ZOOM);
 
     ctx.save();
