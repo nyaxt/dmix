@@ -32,6 +32,10 @@ function draw() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'black';
     ctx.fillRect(MARGIN, MARGIN, 256*ZOOM, 256*ZOOM);
+
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(srcimg, MARGIN, MARGIN, 256*ZOOM, 256*ZOOM);
 
     ctx.save();
