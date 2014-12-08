@@ -1,8 +1,11 @@
 import fractions
 import math
-from pylab import *
 import numpy
 import scipy.signal as signal
+import scipy.io.wavfile as wavfile
+import matplotlib.pyplot as plot
+import sys
+import wave
 
 from_rate = 44100.0
 to_rate = 48000.0
@@ -15,119 +18,119 @@ dec_ratio = int(samp_rate / to_rate)
 print("ups: %d, dec: %d\n" % (ups_ratio, dec_ratio))
 
 nyq_rate = samp_rate / 2.0
-
 audible_freq = 22000.0
 
 # width = 5.0/nyq_rate
-width = 1000.0/nyq_rate
-ripple_db = 60.0
+width = 200.0/nyq_rate
+ripple_db = 30.0
 
 N, beta = signal.kaiserord(ripple_db, width)
 print("suggested N: %d, beta: %d" % (N,beta))
-depth = 16
-beta = 5
+depth = 32
+beta = 6
 N = depth * ups_ratio
 print("N: %d, beta: %d" % (N,beta))
-print("polyphase depth: %d\n" % depth) 
+print("polyphase depth: %d\n" % (N/ups_ratio)) 
 
 reqmem = N * 16 / 1024.0 / 2;
 print("reqmem: %fKb\n" % reqmem)
 
-taps = signal.firwin(N, cutoff = audible_freq / nyq_rate, window = ('kaiser', beta))
-firbank = numpy.zeros(N, numpy.int64)
-scale = 0x7fff * ups_ratio
-for i in range(ups_ratio):
-  for j in range(depth):
-    firbank[i*depth + depth-1 - j] = taps[i + j*ups_ratio] * scale
-
-f = open('filter.txt', 'w')
-name = sys.argv[1]
-buswidth = math.log(firbank.size, 2) - 1
-header ="""
-module rom_firbank_%s(
-    input [%d:0] addr,
-    output [15:0] data);
-
-reg [15:0] data_reg;
-assign data = data_reg;
-always @(addr) begin
-    case(addr)
-""" % (name, buswidth)
-footer = """
-    endcase
-end
-endmodule
-"""
-f.write(header)
-for i in range(firbank.size):
-  e = firbank[i]
-  flag = "-" if (e < 0) else ""
-  f.write("        %d: data_reg = %s16'd%d;\n" % (i, flag, abs(e)))
-f.write(footer)
-f.close()
+taps = signal.firwin(N, cutoff = audible_freq, window = ('kaiser', beta), nyq = nyq_rate)
 
 if False:
   w, h = signal.freqz(taps, worN=8000)
-  h_dB = 20 * log10(abs(h))
-  plot((w/pi)*nyq_rate, h_dB, linewidth=2)
-  xlabel("freq")
-  ylabel("gain dB")
-  xlim(0, 40000)
+  h_dB = 20 * numpy.log10(abs(h))
+  plot.plot((w/math.pi)*nyq_rate, h_dB, linewidth=2)
+  plot.xlabel("freq")
+  plot.ylabel("gain dB")
+  plot.xlim(0, 40000)
   # ylim(-50, 50)
-  grid(True)
-  show()
+  plot.grid(True)
+  plot.show()
   sys.exit()
 
-import wave
-import struct
+# plot.plot(taps)
+# plot.show()
+# sys.exit()
 
-wi = wave.open("test.wav", 'r')
-n = wi.getnframes()
-# n = 50000
+def ratio_to_db(ratio):
+  return 10 * math.log10(ratio)
 
-print("%d frames" % n)
+def db_to_ratio(db):
+  return math.pow(10, db / 10)
 
-ai = frombuffer(wi.readframes(n), dtype='int16')
-ao = []
+def gen_sin(db, freq, sampling_rate, t):
+  amplitude = db_to_ratio(db)
+  n = int(t * sampling_rate)
+  ret = numpy.zeros(n)
+  for i in xrange(n):
+    theta = float(i) * freq * 2 * math.pi / sampling_rate
+    ret[i] = math.sin(theta) * amplitude
+  return ret
 
-outn = int(n * to_rate / from_rate)
-outn = 200000
-isrc = 0
-pop_counter = 0
-for i in range(outn):
-  if i % 10000 == 0:
-    print(i)
+sin1khz = gen_sin(-0.1, 1000, from_rate, 1.0)
+w = wave.open("sin48k.wav", 'r')
+n = w.getnframes()
+sin1khz_48k = numpy.frombuffer(w.readframes(n), dtype='int16').astype(numpy.float32) / 0x7fff
+print("len: %d"%len(sin1khz_48k))
 
-  firidx = i % ups_ratio
-  fboff = firidx * depth
-  
-  pop_counter += dec_ratio
-  if(pop_counter > ups_ratio):
-    isrc += 1
-    pop_counter -= ups_ratio
+def apply_filter(src, taps, ups, dec):
+  ups = int(ups)
+  dec = int(dec)
+  depth = len(taps) / ups
+  dst = []
+  firidx = 0
+  si = 0
+  while True:
+    d = 0.0
+    for j in xrange(depth):
+      s = src[si + j]
+      c = taps[ups-1-firidx + j*ups]
+      d += s * c
+    d *= ups
+    dst.append(d)
+    firidx += dec
+    if firidx >= ups:
+      firidx -= ups
+      si += 1
+      if si > len(src) - depth:
+        break
 
-  out = 0.0
-  for j in range(depth):
-    idx = isrc - j
-    if idx < 0 or idx >= n:
-      s = 0
-    else:
-      s = ai[idx]
+  return dst
 
-    out += firbank[fboff+j] * s
+def plot_waveform(d, sampling_freq):
+  t_xaxis = numpy.arange(len(d)) / sampling_freq
+  plot.plot(t_xaxis, d, marker='o')
 
-  out /= 0x7fff
+def plot_periodogram(d, sampling_freq, col='b'):
+  f, p = signal.periodogram(d, sampling_freq, scaling='spectrum')
+  db = numpy.log10(p) * 10
+  plot.ylim([-180, 0])
+  plot.xlim([0, 22000])
+  plot.xscale('log')
+  plot.plot(f, db, col)
 
-  if(out > 0x7fff):
-    out = 0x7fff
-  if(out < -0x7fff):
-    out = -0x7fff
+# plot_periodogram(sin1khz, from_rate)
+res = apply_filter(sin1khz, taps, ups_ratio, dec_ratio)
+print("done res");
+ups = apply_filter(sin1khz[0:1000], taps, ups_ratio, 1)
+print("done ups");
+n = 200
+ups_naive = numpy.zeros(n * ups_ratio)
+for i in xrange(n):
+  ups_naive[i * ups_ratio] = sin1khz[i] * ups_ratio
+ups_naive = signal.convolve(ups_naive, taps, 'valid')
+print("done naive");
 
-  ao.append(out)
+plot.subplot(211)
+# plot_waveform(res[1000:2000], to_rate)
+# plot_waveform(ups[1000:20000], samp_rate)
+plot_waveform(ups_naive, samp_rate)
 
-wo = wave.open("out.wav", 'w')
-wo.setnchannels(1)
-wo.setsampwidth(2)
-wo.setframerate(to_rate)
-wo.writeframes(struct.pack('h' * len(ao), *ao))
-wo.close()
+plot.subplot(212)
+plot_periodogram(sin1khz, from_rate, 'r')
+plot_periodogram(ups, samp_rate, 'g')
+plot_periodogram(res, to_rate)
+plot_periodogram(sin1khz_48k, to_rate, 'c')
+
+plot.show()
