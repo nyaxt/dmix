@@ -11,8 +11,7 @@ from_rate = 44100.0
 to_rate = 48000.0
 
 rategcd = fractions.gcd(from_rate, to_rate)
-srm = 1
-samp_rate = from_rate * to_rate / rategcd * srm
+samp_rate = from_rate * to_rate / rategcd
 print("upsample rate: %f kHz\n" % (samp_rate/1000))
 ups_ratio = int(samp_rate / from_rate)
 dec_ratio = int(samp_rate / to_rate)
@@ -40,22 +39,6 @@ w = ('kaiser', beta)
 w = 'blackmanharris'
 taps = signal.firwin(N, cutoff = audible_freq, window = w, nyq = nyq_rate)
 
-if False:
-  w, h = signal.freqz(taps, worN=8000)
-  h_dB = 20 * numpy.log10(abs(h))
-  plot.plot((w/math.pi)*nyq_rate, h_dB, linewidth=2)
-  plot.xlabel("freq")
-  plot.ylabel("gain dB")
-  plot.xlim(0, 40000)
-  # ylim(-50, 50)
-  plot.grid(True)
-  plot.show()
-  sys.exit()
-
-# plot.plot(taps)
-# plot.show()
-# sys.exit()
-
 def ratio_to_db(ratio):
   return 10 * math.log10(ratio)
 
@@ -70,12 +53,6 @@ def gen_sin(db, freq, sampling_rate, t):
     theta = float(i) * freq * 2 * math.pi / sampling_rate
     ret[i] = math.sin(theta) * amplitude
   return ret
-
-sin1khz = gen_sin(-0.1, 1000, from_rate, 5)
-w = wave.open("sin48k.wav", 'r')
-n = w.getnframes()
-sin1khz_48k = numpy.frombuffer(w.readframes(n), dtype='int16').astype(numpy.float32) / 0x7fff
-print("len: %d"%len(sin1khz_48k))
 
 def apply_filter(src, taps, ups, dec):
   ups = int(ups)
@@ -101,6 +78,15 @@ def apply_filter(src, taps, ups, dec):
         break
 
   return dst
+
+def plot_filterfreqresp(taps, nyq_rate):
+  w, h = signal.freqz(taps, worN=8000)
+  h_dB = 20 * numpy.log10(abs(h))
+  plot.plot((w/math.pi)*nyq_rate, h_dB)
+  plot.xlabel("freq")
+  plot.ylabel("gain dB")
+  plot.xlim(0, 40000)
+  plot.grid(True)
 
 def plot_waveform(d, sampling_freq):
   t_xaxis = numpy.arange(len(d)) / sampling_freq
@@ -130,46 +116,22 @@ def findzc(d):
 
   return d[s:e]
 
-# plot_periodogram(sin1khz, from_rate)
+sin1khz = gen_sin(-0.1, 1000, from_rate, 1)
 res = apply_filter(sin1khz, taps, ups_ratio, dec_ratio)
 print("done res");
-# ups = apply_filter(sin1khz[0:1000], taps, ups_ratio, 1)
-# print("done ups");
-# n = 200
-# ups_naive = numpy.zeros(n * ups_ratio)
-# for i in xrange(n):
-#   ups_naive[i * ups_ratio] = sin1khz[i] * ups_ratio
-# # ups_naive = signal.convolve(ups_naive, taps, 'valid')
-# for i in xrange(n):
-#   ups_naive[i * ups_ratio] = sin1khz[i]
-#   ups_naive[i * ups_ratio + 1] = (sin1khz[i] + sin1khz[i+1])/2
-# print("done naive");
 
 plot.subplot(411)
 plot.plot(taps)
 
-w, h = signal.freqz(taps, worN=8000)
-h_dB = 20 * numpy.log10(abs(h))
 plot.subplot(412)
-plot.plot((w/math.pi)*nyq_rate, h_dB, linewidth=2)
-plot.xlabel("freq")
-plot.ylabel("gain dB")
-plot.xlim(0, 40000)
-# ylim(-50, 50)
-plot.grid(True)
+plot_filterfreqresp(taps, nyq_rate)
 
 plot.subplot(413)
 # plot_waveform(sin1khz, from_rate)
-# plot_waveform(findzc(res), to_rate)
-# plot_waveform(ups[1000:20000], samp_rate)
-# plot_waveform(ups_naive, samp_rate)
-# plot_waveform(sin1khz_48k, to_rate)
+plot_waveform(res[0:300], to_rate)
 
 plot.subplot(414)
 plot_periodogram(findzc(sin1khz[1000:len(sin1khz)-1000]), from_rate, 'r')
-plot_periodogram(sin1khz_48k, to_rate, 'c')
-# plot_periodogram(ups, samp_rate, 'g')
-# plot_periodogram(ups_naive, samp_rate, 'r')
 plot_periodogram(findzc(res), to_rate)
 
 plot.show()
