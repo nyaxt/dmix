@@ -1,7 +1,8 @@
 # NKMM CPU Instruction Set
 
 ## Registers
-* R0-R6: General purpose registers ACCUM_WIDTH-bit
+* R0-R5: General purpose registers ACCUM_WIDTH-bit
+* SP: Stack pointer ADDR_WIDTH-bit
 * PC: Program counter ADDR_WIDTH-bit
 
 ## Load
@@ -19,7 +20,7 @@ REG <- REG + REG
 REG <- REG + IMM8
 
 ## Shift L/R
-REG <- REG << {1,2,4,8}
+REG <- REG << {1,2,4,8,16}
 
 ## MulAdd
 FMULADD [R1++] [R2++]
@@ -44,18 +45,63 @@ PC <- PC - IMM8
 PC <- REG
 PC <- [REG]
 
-## Instruction Encoding
+## Instruction Decoded
+- Conditional Execution 3bit
+ - EQ ==
+ - NE !=
+ - GE >=
+ - LT <
+ - GT >
+ - LE <=
+ - ALways
+ - Counter Zero?
+- Destination Register
+ - None (ST update only)
+ - GPR
+ - PC (Jump)
+- ALU Input Register ALU_A
+ - 4'h0 - 4'hD  GPR
+ - 4'hE PC
+ - 4'hF Zero
+- ALU Input Register ALU_B
+ - 4'h0 - 4'hD GPR
+ - 4'hE undef
+ - 4'hF Immediate
+- ALU Operator Selection
+ * 3'b000 Add
+ * 3'b001 Sub
+ * 3'b010 bit OR
+ * 3'b011 bit AND
+ * 3'b100 bit XOR
+ * 3'b101 bit NOT
+ * 3'b110 SHIFT
+ * 3'b111 MUL?
+- ALU Use Carry/Borrow?
+- Memory Operaton
+ - Read
+ - Write
+- Immediate Value
+- Sign Extend
+- Decrement Counter
+- HALT until INTR
+ - I/O
 
+## Processor Pipeline
+
+### IF
+I <- [PC]
+PC <- PC+4
+
+### DECODE
+{ALU_SEL, REG_SEL_A, REG_SEL_B, ...} <- DECODE(PC)
+ALU_A <- REGMUX_A(REG_SEL_A, {R...})
+ALU_B <- REGMUX_B(REG_SEL_B, {R...})
+
+### EXECUTE
+ALU_R <- ALU(ALU_A, ALU_B, IMM8)
+
+### MEM
 ```
-16 + 7bit
-
-31   30  29 28 27  26 25 24    23 22 21  20 19 18  17    15     0
-REPZ_MWR_DSEL[2:0]_ALUSEL[2:0]_ASEL[2:0]_BSEL[2:0]_IMMEN_IMM8[7:0]
-
-# EXECUTE
-ALU_R <- ALU(R_A, R_B, IMM8)
-
-# MEM
 if (MWR)
   IO_WR <- 1
   IO_DATA_O <- ALU_R
@@ -63,16 +109,19 @@ else if (MRD)
   MEM_R <- IO_DATA_R
 else
   MEM_R <- ALU_R
-
-# WRITE BACK
-R_D <- MEM_R
 ```
 
-### ALUSEL
-* 3'b000 Add
-* 3'b001 Sub
-* 3'b010 bit OR
-* 3'b011 bit AND
-* 3'b100 bit XOR
-* 3'b101 bit NOT
-* 3'b110 SHIFT 
+### WRITE BACK
+REGMUX_D <- MEM_R
+
+## FMULADD Pipeline
+
+
+
+## Instruction Encoding
+```
+16 + 7bit
+
+31   30  29 28 27  26 25 24    23 22 21  20 19 18  17    15     0
+REPZ_MWR_DSEL[2:0]_ALUSEL[2:0]_ASEL[2:0]_BSEL[2:0]_IMMEN_IMM8[7:0]
+```
