@@ -110,6 +110,20 @@ def reorder_filter(taps, ups, dec):
       ri += 1
   return r
 
+def reorder_half_filter(htaps, ups, dec):
+  ups = int(ups)
+  dec = int(dec)
+  hn = len(htaps)
+  hd = hn / ups
+  depth = hd*2
+  r = numpy.zeros(len(htaps))
+  ri = 0
+  for i in xrange(ups):
+    for j in xrange(hd):
+      r[ri] = htaps[ups-1-i + j*ups]
+      ri += 1
+  return r
+
 def apply_filter_reordered(src, taps, ups, dec):
   ups = int(ups)
   dec = int(dec)
@@ -123,6 +137,41 @@ def apply_filter_reordered(src, taps, ups, dec):
       s = src[si + j]
       c = taps[firidx*depth + j]
       d += s * c
+    d *= ups
+    dst.append(d)
+    firidx += dec
+    if firidx >= ups:
+      firidx -= ups
+      si += 1
+      if si > len(src) - depth:
+        break
+
+  return dst
+
+def apply_filter_half_reordered(src, rhtaps, ups, dec):
+  ups = int(ups)
+  dec = int(dec)
+  hn = len(rhtaps)
+  hd = hn / ups
+  depth = hd * 2
+  dst = []
+  firidx = 0
+  si = 0
+  while True:
+    d = 0.0
+
+    # L
+    for j in xrange(hd):
+      s = src[si + j]
+      c = rhtaps[hn-1 - firidx*hd - j]
+      d += s * c
+
+    # R
+    for j in xrange(hd):
+      s = src[si + j+hd]
+      c = rhtaps[firidx*hd + j]
+      d += s * c
+
     d *= ups
     dst.append(d)
     firidx += dec
@@ -243,6 +292,10 @@ htaps = half_filter(taps)
 def f2(x):
   return apply_filter_half(x, htaps, ups_ratio, dec_ratio)
 
+rhtaps = reorder_half_filter(htaps, ups_ratio, dec_ratio)
+def f3(x):
+  return apply_filter_half_reordered(x, rhtaps, ups_ratio, dec_ratio)
+
 sin1khz = gen_sin(-0.1, 1000, from_rate, 1)
-test_sin1khz(f2)
+test_sin1khz(f3)
 # test_sweep(f)
