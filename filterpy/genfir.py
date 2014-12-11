@@ -125,6 +125,57 @@ def apply_filter_half_reordered(src, rhtaps, ups, dec):
 
   return dst
 
+def float_to_fixed(l, bits):
+  scale = (1 << (bits-1)) - 1
+  return [int(x * scale) for x in l]
+
+def muladde(mcand, mplier, cross):
+  if len(mcand) != len(mplier):
+    raise ValueError('mcand and mplier len do not match!')
+  n = len(mcand)
+  
+  ret = 0
+
+  if cross:
+    for i in xrange(n):
+      ret += mcand[i] * mplier[n-1-i]
+  else:
+    for i in xrange(n):
+      ret += mcand[i] * mplier[i]
+
+  return ret
+
+
+def apply_filter_half_reordered_emu(srci, rhetaps, ups, dec):
+  ups = int(ups)
+  dec = int(dec)
+  hn = len(rhetaps)
+  hd = hn / ups
+  depth = hd * 2
+  dst = []
+  firidx = 0
+  si = 0
+  while True:
+    d = 0
+
+    # L
+    o = hn-(firidx+1)*hd
+    d += muladde(srci[si:si+hd], rhetaps[o:o+hd], True)
+
+    # R
+    o = firidx*hd
+    d += muladde(srci[si+hd:si+hd*2], rhetaps[o:o+hd], False)
+
+    dst.append(d)
+    firidx += dec
+    if firidx >= ups:
+      firidx -= ups
+      si += 1
+      if si > len(srci) - depth:
+        break
+
+  return dst
+
 def plot_filterfreqresp(taps, nyq_rate):
   w, h = signal.freqz(taps, worN=8000)
   h_dB = 20 * numpy.log10(abs(h))
@@ -229,9 +280,19 @@ def f(x):
 
 htaps = half_filter(taps)
 rhtaps = reorder_half_filter(htaps, ups_ratio, dec_ratio)
-def f3(x):
-  return apply_filter_half_reordered(x, rhtaps, ups_ratio, dec_ratio)
+
+tapsbits = 24
+rhetaps = float_to_fixed(rhtaps * ups_ratio, tapsbits)
+
+srcbits = 24
+def f2(x):
+  xi = float_to_fixed(x, srcbits)
+  resi = apply_filter_half_reordered_emu(xi, rhetaps, ups_ratio, dec_ratio)
+
+  scale = 1.0 / ((1 << (srcbits-1 + tapsbits-1)) - 1)
+  res = [float(x) * scale for x in resi] 
+  return res
 
 sin1khz = gen_sin(-0.1, 1000, from_rate, 1)
-test_sin1khz(f3)
+test_sin1khz(f2)
 # test_sweep(f)
