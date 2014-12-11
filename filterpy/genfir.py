@@ -78,6 +78,22 @@ def reorder_half_filter(htaps, ups, dec):
       ri += 1
   return r
 
+def muladd(mcand, mplier, cross):
+  if len(mcand) != len(mplier):
+    raise ValueError('mcand and mplier len do not match!')
+  n = len(mcand)
+
+  ret = 0.0
+
+  if cross:
+    for i in xrange(n):
+      ret += mcand[i] * mplier[n-1-i]
+  else:
+    for i in xrange(n):
+      ret += mcand[i] * mplier[i]
+
+  return ret
+
 def apply_filter_half_reordered(src, rhtaps, ups, dec):
   ups = int(ups)
   dec = int(dec)
@@ -91,16 +107,12 @@ def apply_filter_half_reordered(src, rhtaps, ups, dec):
     d = 0.0
 
     # L
-    for j in xrange(hd):
-      s = src[si + j]
-      c = rhtaps[hn-1 - firidx*hd - j]
-      d += s * c
+    o = hn-(firidx+1)*hd
+    d += muladd(src[si:si+hd], rhtaps[o:o+hd], True)
 
     # R
-    for j in xrange(hd):
-      s = src[si + j+hd]
-      c = rhtaps[firidx*hd + j]
-      d += s * c
+    o = firidx*hd
+    d += muladd(src[si+hd:si+hd*2], rhtaps[o:o+hd], False)
 
     d *= ups
     dst.append(d)
