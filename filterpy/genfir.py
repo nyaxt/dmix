@@ -64,52 +64,6 @@ def half_filter(taps):
   n = len(taps)
   return taps[n/2:n]
 
-def apply_filter_half(src, htaps, ups, dec):
-  ups = int(ups)
-  dec = int(dec)
-  hn = len(htaps)
-  hd = hn / ups
-  depth = hd * 2
-  dst = []
-  firidx = 0
-  si = 0
-  while True:
-    d = 0.0
-    o = ups-1-firidx
-
-    # L
-    for j in xrange(hd):
-      s = src[si + j]
-      c = htaps[hn-1 - o - j*ups]
-      d += s * c
-
-    # R
-    for j in xrange(hd):
-      s = src[si + j+hd]
-      c = htaps[o + j*ups]
-      d += s * c
-
-    d *= ups
-    dst.append(d)
-    firidx += dec
-    if firidx >= ups:
-      firidx -= ups
-      si += 1
-      if si > len(src) - depth:
-        break
-
-  return dst
-
-def reorder_filter(taps, ups, dec):
-  depth = len(taps) / ups
-  r = numpy.zeros(len(taps))
-  ri = 0
-  for i in xrange(ups):
-    for j in xrange(depth):
-      r[ri] = taps[ups-1-i + j*ups]
-      ri += 1
-  return r
-
 def reorder_half_filter(htaps, ups, dec):
   ups = int(ups)
   dec = int(dec)
@@ -123,30 +77,6 @@ def reorder_half_filter(htaps, ups, dec):
       r[ri] = htaps[ups-1-i + j*ups]
       ri += 1
   return r
-
-def apply_filter_reordered(src, taps, ups, dec):
-  ups = int(ups)
-  dec = int(dec)
-  depth = len(taps) / ups
-  dst = []
-  firidx = 0
-  si = 0
-  while True:
-    d = 0.0
-    for j in xrange(depth):
-      s = src[si + j]
-      c = taps[firidx*depth + j]
-      d += s * c
-    d *= ups
-    dst.append(d)
-    firidx += dec
-    if firidx >= ups:
-      firidx -= ups
-      si += 1
-      if si > len(src) - depth:
-        break
-
-  return dst
 
 def apply_filter_half_reordered(src, rhtaps, ups, dec):
   ups = int(ups)
@@ -285,13 +215,7 @@ taps = signal.firwin(N, cutoff = audible_freq, window = w, nyq = nyq_rate)
 def f(x):
   return apply_filter(x, taps, ups_ratio, dec_ratio)
 
-# rtaps = reorder_filter(taps, ups_ratio, dec_ratio)
-# def f2(x):
-#   return apply_filter_reordered(x, rtaps, ups_ratio, dec_ratio)
 htaps = half_filter(taps)
-def f2(x):
-  return apply_filter_half(x, htaps, ups_ratio, dec_ratio)
-
 rhtaps = reorder_half_filter(htaps, ups_ratio, dec_ratio)
 def f3(x):
   return apply_filter_half_reordered(x, rhtaps, ups_ratio, dec_ratio)
