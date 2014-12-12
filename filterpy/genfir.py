@@ -3,10 +3,10 @@ import math
 import numpy
 import scipy
 import scipy.signal as signal
-import scipy.io.wavfile as wavfile
 import matplotlib.pyplot as plot
 import sys
 import wave
+import struct
 
 from_rate = 44100.0
 to_rate = 48000.0
@@ -156,6 +156,9 @@ def apply_filter_half_reordered_emu(srci, rhetaps, ups, dec):
   firidx = 0
   si = 0
   while True:
+    if (si & (1024-1) == 0):
+      print("%d/%d" % (si, len(srci)))
+
     d = 0
 
     # L
@@ -266,7 +269,7 @@ depth = 24
 beta = 4
 N = depth * ups_ratio
 print("N: %d, beta: %d" % (N,beta))
-print("polyphase depth: %d\n" % (N/ups_ratio)) 
+print("polyphase depth: %d\n" % (N/ups_ratio))
 
 # reqmem = N * 16 / 1024.0 / 2;
 # print("reqmem: %fKb\n" % reqmem)
@@ -290,9 +293,50 @@ def f2(x):
   resi = apply_filter_half_reordered_emu(xi, rhetaps, ups_ratio, dec_ratio)
 
   scale = 1.0 / ((1 << (srcbits-1 + tapsbits-1)) - 1)
-  res = [float(x) * scale for x in resi] 
+  res = [float(x) * scale for x in resi]
   return res
 
-sin1khz = gen_sin(-0.1, 1000, from_rate, 1)
-test_sin1khz(f2)
+def readwav(wav_filepath):
+  w = wave.open(wav_filepath, 'r')
+  n = w.getnframes()
+  return numpy.frombuffer(w.readframes(n), dtype='int16')
+
+# sin1khz = gen_sin(-0.1, 1000, from_rate, 1)
+# test_sin1khz(f2)
 # test_sweep(f)
+
+def convwav(wav_filepath):
+  x = readwav(wav_filepath)
+
+  if False:
+    plot.plot(x)
+    plot.show()
+    sys.exit()
+
+  xi = [i * (1<<8) for i in x]
+
+  srcbits = 24
+  res = apply_filter_half_reordered_emu(xi, rhetaps, ups_ratio, dec_ratio)
+
+  scale = 1.0 / ((1 << (srcbits-1 + tapsbits-1)) - 1)
+  y = [i >> (8+tapsbits-1) for i in res]
+
+  wo = wave.open("out.wav", 'w')
+  wo.setnchannels(1)
+  wo.setsampwidth(2)
+  wo.setframerate(48000)
+  wo.writeframes(struct.pack('h' * len(y), *y))
+  wo.close()
+
+def export_c_header(header_filepath):
+  f = open(header_filepath, 'w')
+  f.write("int rhtaps_441_48[] = {\n")
+  for c in rhetaps:
+    f.write("  %d,\n" % c)
+  f.write("""};
+
+polyphase_filter_t filter_441_48 = {rhtaps_441_48, %d, %d, %d, %d};
+""" % (len(rhetaps), ups_ratio, dec_ratio, len(rhetaps) / ups_ratio))
+  f.close()
+
+export_c_header("../dspsw/filter.h")
