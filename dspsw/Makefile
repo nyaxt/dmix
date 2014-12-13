@@ -17,6 +17,6 @@ filter.h:
 	(cd ../filterpy; python genfir.py)
 
 clean:
-	rm -f filter.h resmaple *.dat
+	rm -rf filter.h resmaple *.dat resample.dSYM
 
 .PHONY: play clean
