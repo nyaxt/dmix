@@ -138,9 +138,11 @@ def muladde(mcand, mplier, cross):
 
   if cross:
     for i in xrange(n):
+      print("mul> %d * %d" % (mcand[i], mplier[n-1-i]))
       ret += mcand[i] * mplier[n-1-i]
   else:
     for i in xrange(n):
+      print("mul< %d * %d"%(mcand[i], mplier[i]))
       ret += mcand[i] * mplier[i]
 
   return ret
@@ -314,6 +316,7 @@ def convwav(wav_filepath):
     sys.exit()
 
   xi = [i * (1<<8) for i in x]
+  xi = x
 
   srcbits = 24
   res = apply_filter_half_reordered_emu(xi, rhetaps, ups_ratio, dec_ratio)
@@ -340,3 +343,4 @@ polyphase_filter_t filter_441_48 = {rhtaps_441_48, %d, %d, %d, %d};
   f.close()
 
 export_c_header("../dspsw/filter.h")
+# convwav("damashie.wav")

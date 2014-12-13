@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 typedef struct polyphase_filter
 {
     const int* rhtaps;
@@ -9,34 +11,36 @@ typedef struct polyphase_filter
 
 int muladdshr(const int* x, const int* c, unsigned len, int dir)
 {
-  int sum = 0;
-  for (int i = 0; i < len; ++i)
-    sum += *x++ * *c++;
-  sum >>= 24;
-  return sum;
+  long sum = 0;
+  if (dir > 0) {
+    for (int i = 0; i < len; ++i)
+      sum += (long)*x++ * (long)*c++;
+  } else {
+    for (int i = 0; i < len; ++i)
+      sum += (long)*x++ * (long)*c--;
+  }
+  sum >>= 23;
+  return (int)sum;
 }
 
 int polyphase_resample(const polyphase_filter_t* filter, int* y, const int* x, unsigned xlen)
 {
   const int* xp = x;
-  const int* const xe = x + xlen;
+  const int* const xe = x + xlen - filter->half_depth*2;
   int* yp = y;
-  const int last_filter_idx = filter->nrhtaps - filter->half_depth;
 
   int firidx = 0;
-  for (;;) {
+  while (xp != xe) {
     int offset = firidx * filter->half_depth;
-    int left = muladdshr(xp, &filter->rhtaps[last_filter_idx - offset], filter->half_depth, 1);
-    int right = muladdshr(xp + filter->half_depth, &filter->rhtaps[offset], filter->half_depth, -1);
+    int left = muladdshr(xp, &filter->rhtaps[filter->nrhtaps-1 - offset], filter->half_depth, -1);
+    int right = muladdshr(xp + filter->half_depth, &filter->rhtaps[offset], filter->half_depth, 1);
 
     *yp++ = left + right;
 
     firidx += filter->dec;
-    if (firidx > filter->ups) {
+    if (firidx >= filter->ups) {
       firidx -= filter->ups;
       xp++;
-      if (xp >= xe)
-        break;
     }
   }
 
@@ -90,7 +94,7 @@ int main(int argc, char* argv[])
 {
   polyphase_filter_t* filter = &filter_441_48;
 
-  assert(argc == 2);
+  assert(argc == 3);
   int *x;
   size_t xlen = read_samples(&x, argv[1]);
 

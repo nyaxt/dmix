@@ -4,4 +4,6 @@
 *.o
 controller/controller
 dspsw/resample
+dspsw/resample.dSYM
 *.wav
+*.dat
