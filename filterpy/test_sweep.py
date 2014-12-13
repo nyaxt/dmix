@@ -1,7 +1,7 @@
 import polyphase_resampler as pr
 
-from_rate = 44100.
+from_rate = 44100.0
 to_rate = 48000.0
 
 f = pr.PolyphaseResampler(from_rate, to_rate)
-f.export_c_header("../dspsw/filter.h")
+f.test_sweep()

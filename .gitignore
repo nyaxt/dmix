@@ -7,3 +7,4 @@ dspsw/resample
 dspsw/resample.dSYM
 *.wav
 *.dat
+*.pyc
