@@ -11,16 +11,15 @@ typedef struct polyphase_filter
 
 int muladdshr(const int* x, const int* c, unsigned len, int dir)
 {
-  long sum = 0;
+  int sum = 0;
   if (dir > 0) {
     for (int i = 0; i < len; ++i)
-      sum += (long)*x++ * (long)*c++;
+      sum += (((long)*x++ * (long)*c++) >> 23) & 0xFFFFFFFFUL;
   } else {
     for (int i = 0; i < len; ++i)
-      sum += (long)*x++ * (long)*c--;
+      sum += (((long)*x++ * (long)*c--) >> 23) & 0xFFFFFFFFUL;
   }
-  sum >>= 23;
-  return (int)sum;
+  return sum;
 }
 
 int polyphase_resample(const polyphase_filter_t* filter, int* y, const int* x, unsigned xlen)
