@@ -293,6 +293,32 @@ polyphase_filter_t filter_441_48 = {rhtaps_441_48, %d, %d, %d, %d};
 """ % (len(self.rhetaps), self.ups_ratio, self.dec_ratio, len(self.rhetaps) / self.ups_ratio))
     f.close()
 
+  def export_verilog_mem(self, header_filepath):
+    f = open(header_filepath, 'w')
+    addrbus_width = int(math.ceil(math.log(len(self.rhetaps), 2)))
+    f.write("""
+module rom_firbank_441_480(
+    input clk,
+    input [{0}:0] addr,
+    output [{1}:0] data);
+reg [{1}:0] data_ff;
+assign data = data_ff;
+always @(posedge clk) begin
+    case(addr)
+""".format(addrbus_width-1, self.tapsbits-1))
+    i = 0
+    for c in self.rhetaps:
+      flag = "" if c > 0 else "-"
+      f.write("        {0}: data_ff <= {1}{2}'d{3};\n".format(i, flag, self.tapsbits, abs(c)))
+      i += 1
+    f.write("""
+        default: data_ff <= 0;
+    endcase
+end
+endmodule
+""")
+    f.close()
+
   def test_sin1khz(self):
     sin1khz = gen_sin(-0.1, 1000, self.from_rate, 1)
     res = self.resample(sin1khz)

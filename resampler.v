@@ -33,7 +33,7 @@ module resampler_core
 
 // Latch pop_i request
 reg [(NUM_CH-1):0] pop_i_latch;
-wire [(NUM_CH-1);0] ack_pop_i;
+wire [(NUM_CH-1):0] ack_pop_i;
 always @(posedge clk) begin
     if (rst) begin
         pop_i_latch <= 0;
@@ -44,22 +44,24 @@ end
 
 // Fixed timeslice based scheduling and decide ch to process
 reg [(NUM_CH_LOG2-1):0] processing_ch_ff;
+reg rst_processing_ff;
 
 reg [(TIMESLICE_LOG2-1):0] timeslice_counter;
-wire timeslice_deadline = (timeslice_counter == TIMESLICE-1)
+wire timeslice_deadline = (timeslice_counter == TIMESLICE-1);
 
 always @(posedge clk) begin
     if (rst) begin
         timeslice_counter <= 0;
         processing_ch_ff <= 0;
-        rst_processing <= 1;
+        rst_processing_ff <= 1;
     end else begin
         timeslice_counter <= timeslice_counter + 1;
 
         if (timeslice_deadline) begin
             processing_ch_ff <= processing_ch_ff + 1;
-            rst_processing <= 1;
-        end
+            rst_processing_ff <= 1;
+        end else
+            rst_processing_ff <= 0;
     end
 end
 
@@ -73,23 +75,23 @@ parameter ST_PREP_LWING = 3; // 1 clk
 parameter ST_MULADD_LWING = 4; // MULT_LATENCY + NUM_FIR clk
 parameter ST_END_CYCLE = 5; // 1 clk
 
-reg [(NUM_CH-1);0] ack_pop_ff;
+reg [(NUM_CH-1):0] ack_pop_ff;
 assign ack_pop_i = ack_pop_ff;
 
 always @(posedge clk) begin
-    if (rst_processing) begin
+    if (rst_processing_ff) begin
         ack_pop_ff <= 1 << processing_ch_ff;
         processing_enabled_ff <= pop_i_latch[processing_ch_ff];
-        state_ff <= ST_IDLE
+        state_ff <= ST_IDLE;
     end else begin
         ack_pop_ff <= 0;
-        case (state) begin
+        case (state_ff)
             ST_IDLE: begin
                 if (processing_enabled_ff)
-                    state <= ST_BEGIN_CYCLE;
+                    state_ff <= ST_BEGIN_CYCLE;
             end
             ST_BEGIN_CYCLE:
-                state <= ST_MULADD_LWING;
+                state_ff <= ST_MULADD_LWING;
         endcase
     end
 end
@@ -101,24 +103,23 @@ reg [(NUM_FIR_LOG2-1):0] firidx_lwing_currch_ff;
 
 reg [(NUM_FIR_LOG2-1):0] firidx_mem [(NUM_CH-1):0];
 
+integer i;
 always @(posedge clk) begin
-    integer i;
-
-    firidx_lwing_currch_ff <= NUM_FIR-1 - firidx_rwing_currch;
+    firidx_lwing_currch_ff <= NUM_FIR-1 - firidx_rwing_currch_ff;
     if (rst) begin
-        for (i = 0; i < NUM_CH; ++ i)
-            firidx_lidx_mem[i] <= 0;
+        for (i = 0; i < NUM_CH; i = i + 1)
+            firidx_mem[i] <= 0;
         
         firidx_rwing_currch_ff <= 0;
     end else begin
-        case (state)
+        case (state_ff)
             ST_BEGIN_CYCLE:
-                firidx_rwing_currch_ff <= firidx_lidx_ff[processing_ch_ff];
-            ST_INC_FIRIDX: begin
+                firidx_rwing_currch_ff <= firidx_mem[processing_ch_ff];
+            ST_END_CYCLE: begin
                 if (firidx_rwing_currch_ff > NUM_FIR - DECIM) begin
-                    firidx_lidx_ff[processing_ch_ff] <= firidx_rwing_currch + DECIM - NUM_FIR;
+                    firidx_mem[processing_ch_ff] <= firidx_rwing_currch_ff + DECIM - NUM_FIR;
                 end else begin
-                    firidx_lidx_ff[processing_ch_ff] <= firidx_rwing_currch + DECIM;
+                    firidx_mem[processing_ch_ff] <= firidx_rwing_currch_ff + DECIM;
                 end
             end
         endcase
@@ -135,14 +136,14 @@ reg [(FIRDEPTH_LOG2-1):0] depthidx_ff;
 
 assign bank_addr_o = {firidx, depthidx_ff};
 always @(posedge clk) begin
-    case (state)
+    case (state_ff)
     ST_BEGIN_CYCLE:
         depthidx_ff <= NUM_FIR-1;
     ST_MULADD_RWING:
         depthidx_ff <= depthidx_ff - 1;
     ST_MULADD_LWING:
         depthidx_ff <= depthidx_ff + 1;
-    end
+endcase
 end
 
 endmodule
