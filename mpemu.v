@@ -20,7 +20,7 @@ reg signed [23:0] delay[5:0];
 assign mprod_o = delay[5];
 
 wire [39:0] prod_full = $signed(mpcand_i) * $signed(mplier_i);
-wire [23:0] prod = prod_full >> 23;
+wire [23:0] prod = $signed(prod_full) >>> 24;
 always @(posedge clk) begin
     delay[0] <= prod;
     delay[1] <= delay[0];

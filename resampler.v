@@ -23,13 +23,13 @@ module resampler_core
 
     // to ringbuf array
     output [(NUM_CH-1):0] pop_o,
-    output [(HALFDEPTH_LOG2*NUM_CH-1):0] offset_o,
+    output [((HALFDEPTH_LOG2+1)*NUM_CH-1):0] offset_o,
     input [(24*NUM_CH-1):0] data_i,
 
     // data output
     input [(NUM_CH-1):0] pop_i,
-    output [(24*NUM_CH-1):0] data_o,
-    output ack_o);
+    output [23:0] data_o,
+    output [(NUM_CH-1):0] ack_o);
 
 // Latch pop_i request
 reg [(NUM_CH-1):0] pop_i_latch;
@@ -101,7 +101,7 @@ always @(posedge clk) begin
                 muladd_wing_cycle_counter <= 0;
             end
             ST_MULADD_RWING: begin
-                if (muladd_wing_cycle_counter == MULT_LATENCY + HALFDEPTH)
+                if (muladd_wing_cycle_counter == 1 + MULT_LATENCY + HALFDEPTH)
                     state_ff <= ST_PREP_LWING;
             end
             ST_PREP_LWING: begin
@@ -109,7 +109,7 @@ always @(posedge clk) begin
                 muladd_wing_cycle_counter <= 0;
             end
             ST_MULADD_LWING: begin
-                if (muladd_wing_cycle_counter == MULT_LATENCY + HALFDEPTH)
+                if (muladd_wing_cycle_counter == 1 + MULT_LATENCY + HALFDEPTH)
                     state_ff <= ST_END_CYCLE;
             end
             ST_END_CYCLE: begin
@@ -161,7 +161,7 @@ end
 // OUTPUT:
 wire [23:0] mplier_o = bank_data_i;
 
-wire mplier_lwing_active = state_ff == ST_MULADD_LWING;
+wire mplier_lwing_active = state_ff == ST_MULADD_LWING ? 1'b1 : 1'b0;
 wire [(NUM_FIR_LOG2-1):0] firidx = mplier_lwing_active ? firidx_lwing_currch_ff : firidx_rwing_currch_ff;
 reg [(HALFDEPTH_LOG2-1):0] depthidx_ff;
 
@@ -179,14 +179,14 @@ end
 
 // Supply mpcand
 wire [23:0] mpcand_o = data_i;
-assign offset_o = muladd_wing_cycle_counter;
+assign offset_o = {~mplier_lwing_active, muladd_wing_cycle_counter[(HALFDEPTH_LOG2-1):0]};
 
 // Multiplier
 wire [23:0] mprod_i;
 mpemu mpemu(.clk(clk), .mpcand_i(mpcand_o), .mplier_i(mplier_o), .mprod_o(mprod_i));
-wire product_valid = muladd_wing_cycle_counter > MULT_LATENCY && (state_ff == ST_MULADD_LWING || state_ff == ST_MULADD_RWING);
+wire product_valid = muladd_wing_cycle_counter > MULT_LATENCY+1 && (state_ff == ST_MULADD_LWING || state_ff == ST_MULADD_RWING);
 
-// Sum
+// Adder
 reg [23:0] sum_ff;
 always @(posedge clk) begin
     if (state_ff == ST_BEGIN_CYCLE)
@@ -194,5 +194,9 @@ always @(posedge clk) begin
     else if (product_valid)
         sum_ff <= $signed(sum_ff) + $signed(mprod_i);
 end
+
+// Result
+assign data_o = sum_ff;
+assign ack_o = (state_ff == ST_END_CYCLE ? 1 : 0) << processing_ch_ff;
 
 endmodule
