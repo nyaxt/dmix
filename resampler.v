@@ -3,13 +3,13 @@ module resampler_core
     parameter NUM_CH = 8,
     parameter NUM_CH_LOG2 = 3,
 
-    parameter FIRDEPTH = 32,
-    parameter FIRDEPTH_LOG2 = 5,
+    parameter HALFDEPTH = 12,
+    parameter HALFDEPTH_LOG2 = 4,
     parameter NUM_FIR = 160,
     parameter NUM_FIR_LOG2 = 8,
     parameter DECIM = 147,
     parameter MULT_LATENCY = 4,
-    parameter BANK_WIDTH = FIRDEPTH_LOG2+NUM_FIR_LOG2,
+    parameter BANK_WIDTH = HALFDEPTH_LOG2+NUM_FIR_LOG2,
 
     parameter TIMESLICE = 48, // Not sure if this is OK.
     parameter TIMESLICE_LOG2 = 6
@@ -23,7 +23,7 @@ module resampler_core
 
     // to ringbuf array
     output [(NUM_CH-1):0] pop_o,
-    output [(FIRDEPTH_LOG2*NUM_CH-1):0] offset_o,
+    output [(HALFDEPTH_LOG2*NUM_CH-1):0] offset_o,
     input [(24*NUM_CH-1):0] data_i,
 
     // data output
@@ -58,6 +58,7 @@ always @(posedge clk) begin
         timeslice_counter <= timeslice_counter + 1;
 
         if (timeslice_deadline) begin
+            timeslice_counter <= 0;
             processing_ch_ff <= processing_ch_ff + 1;
             rst_processing_ff <= 1;
         end else
@@ -68,30 +69,53 @@ end
 // Sequence management
 reg processing_enabled_ff;
 reg [7:0] state_ff; // Note: bit width will be optimized anyway.
-parameter ST_IDLE = 0; // 1 clk
+parameter ST_READY = 0; // 1 clk
 parameter ST_BEGIN_CYCLE = 1;  // 1 clk
-parameter ST_MULADD_RWING = 2; // MULT_LATENCY + NUM_FIR clk
+parameter ST_MULADD_RWING = 2; // MULT_LATENCY + HALFDEPTH clk
 parameter ST_PREP_LWING = 3; // 1 clk
-parameter ST_MULADD_LWING = 4; // MULT_LATENCY + NUM_FIR clk
+parameter ST_MULADD_LWING = 4; // MULT_LATENCY + HALFDEPTH clk
 parameter ST_END_CYCLE = 5; // 1 clk
+parameter ST_IDLE = 6;
 
 reg [(NUM_CH-1):0] ack_pop_ff;
 assign ack_pop_i = ack_pop_ff;
+
+reg [HALFDEPTH_LOG2:0] muladd_wing_cycle_counter;
 
 always @(posedge clk) begin
     if (rst_processing_ff) begin
         ack_pop_ff <= 1 << processing_ch_ff;
         processing_enabled_ff <= pop_i_latch[processing_ch_ff];
-        state_ff <= ST_IDLE;
+        state_ff <= ST_READY;
     end else begin
+        muladd_wing_cycle_counter <= muladd_wing_cycle_counter + 1;
+
         ack_pop_ff <= 0;
         case (state_ff)
-            ST_IDLE: begin
+            ST_READY: begin
                 if (processing_enabled_ff)
                     state_ff <= ST_BEGIN_CYCLE;
             end
-            ST_BEGIN_CYCLE:
+            ST_BEGIN_CYCLE: begin
+                state_ff <= ST_MULADD_RWING;
+                muladd_wing_cycle_counter <= 0;
+            end
+            ST_MULADD_RWING: begin
+                if (muladd_wing_cycle_counter == MULT_LATENCY + HALFDEPTH)
+                    state_ff <= ST_PREP_LWING;
+            end
+            ST_PREP_LWING: begin
                 state_ff <= ST_MULADD_LWING;
+                muladd_wing_cycle_counter <= 0;
+            end
+            ST_MULADD_LWING: begin
+                if (muladd_wing_cycle_counter == MULT_LATENCY + HALFDEPTH)
+                    state_ff <= ST_END_CYCLE;
+            end
+            ST_END_CYCLE: begin
+                state_ff <= ST_IDLE;
+            end
+            ST_IDLE: begin end // NOP
         endcase
     end
 end
@@ -101,14 +125,20 @@ end
 reg [(NUM_FIR_LOG2-1):0] firidx_rwing_currch_ff;
 reg [(NUM_FIR_LOG2-1):0] firidx_lwing_currch_ff;
 
+reg [(NUM_CH-1):0] pop_o_ff;
+assign pop_o = pop_o_ff;
+
 reg [(NUM_FIR_LOG2-1):0] firidx_mem [(NUM_CH-1):0];
 
 integer i;
 always @(posedge clk) begin
     firidx_lwing_currch_ff <= NUM_FIR-1 - firidx_rwing_currch_ff;
+    pop_o_ff <= 0;
+
     if (rst) begin
-        for (i = 0; i < NUM_CH; i = i + 1)
+        for (i = 0; i < NUM_CH; i = i + 1) begin
             firidx_mem[i] <= 0;
+        end
         
         firidx_rwing_currch_ff <= 0;
     end else begin
@@ -118,6 +148,7 @@ always @(posedge clk) begin
             ST_END_CYCLE: begin
                 if (firidx_rwing_currch_ff > NUM_FIR - DECIM) begin
                     firidx_mem[processing_ch_ff] <= firidx_rwing_currch_ff + DECIM - NUM_FIR;
+                    pop_o_ff[processing_ch_ff] <= 1;
                 end else begin
                     firidx_mem[processing_ch_ff] <= firidx_rwing_currch_ff + DECIM;
                 end
@@ -131,19 +162,24 @@ end
 wire [23:0] mplier_o = bank_data_i;
 
 wire mplier_lwing_active = state_ff == ST_MULADD_LWING;
-wire firidx = mplier_lwing_active ? firidx_lwing_currch_ff : firidx_rwing_currch_ff;
-reg [(FIRDEPTH_LOG2-1):0] depthidx_ff;
+wire [(NUM_FIR_LOG2-1):0] firidx = mplier_lwing_active ? firidx_lwing_currch_ff : firidx_rwing_currch_ff;
+reg [(HALFDEPTH_LOG2-1):0] depthidx_ff;
 
-assign bank_addr_o = {firidx, depthidx_ff};
+assign bank_addr_o = {firidx, depthidx_ff}; // FIXME: HALFDEPTH must be power of 2
 always @(posedge clk) begin
     case (state_ff)
     ST_BEGIN_CYCLE:
-        depthidx_ff <= NUM_FIR-1;
+        depthidx_ff <= HALFDEPTH-1;
     ST_MULADD_RWING:
         depthidx_ff <= depthidx_ff - 1;
     ST_MULADD_LWING:
         depthidx_ff <= depthidx_ff + 1;
 endcase
 end
+
+// Supply mpcand
+wire [23:0] mcand_o = data_i;
+assign offset_o = muladd_wing_cycle_counter;
+wire product_valid = muladd_wing_cycle_counter > MULT_LATENCY && (state_ff == ST_MULADD_LWING || state_ff == ST_MULADD_RWING);
 
 endmodule
