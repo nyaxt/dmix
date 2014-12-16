@@ -233,8 +233,8 @@ class PolyphaseResampler:
     N, beta = signal.kaiserord(ripple_db, width)
     print("suggested N: %d, beta: %d" % (N,beta))
 
-    depth = 24
-    beta = 4
+    depth = 32
+    beta = 6
     N = depth * self.ups_ratio
     print("N: %d, beta: %d" % (N,beta))
     print("polyphase depth: %d\n" % (N/self.ups_ratio))
@@ -242,9 +242,9 @@ class PolyphaseResampler:
     # reqmem = N * 16 / 1024.0 / 2;
     # print("reqmem: %fKb\n" % reqmem)
 
-    # w = ('kaiser', beta)
     audible_freq = 22000.0
     w = 'blackmanharris'
+    # w = ('kaiser', beta)
     self.taps = signal.firwin(N, cutoff = audible_freq, window = w, nyq = nyq_rate)
 
     self.htaps = half_filter(self.taps)
@@ -320,7 +320,7 @@ endmodule
     f.close()
 
   def test_sin1khz(self):
-    sin1khz = gen_sin(-0.1, 1000, self.from_rate, 1)
+    sin1khz = gen_sin(-0.1, 1000, self.from_rate, 10)
     res = self.resample(sin1khz)
     print("done res")
 

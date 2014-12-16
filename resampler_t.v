@@ -9,7 +9,7 @@ parameter TCLK = 10; // 98.304Mhz ~ 100Mhz
 reg clk;
 reg rst;
 
-wire [10:0] bank_addr;
+wire [11:0] bank_addr;
 wire [23:0] bank_data;
 rom_firbank_441_480 bank(
     .clk(clk), .addr(bank_addr), .data(bank_data));
@@ -18,7 +18,7 @@ reg [(24*`NUM_CH-1):0] data_i;
 reg [(`NUM_CH-1):0] pop_i;
 resampler_core #(.NUM_CH(`NUM_CH)) uut(
     .clk(clk), .rst(rst),
-    .bank_addr_o(bank_addr_o), .bank_data_i(bank_data),
+    .bank_addr_o(bank_addr), .bank_data_i(bank_data),
     .data_i(data_i), .pop_i(pop_i));
 
 initial begin

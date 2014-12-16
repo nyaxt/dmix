@@ -1,13 +1,13 @@
-// simulates multiplier ip core provided by xillinx
+// simulates multiplier ip core provided by xilinx
 // latency 4
-`define USE_IP
+// `define USE_IP
 
 module mpemu(
     input clk,
     
-    input signed [23:0] mpcand_i,
-    input signed [15:0] mplier_i,
-    output signed [23:0] mprod_o);
+    input [23:0] mpcand_i,
+    input [23:0] mplier_i,
+    output [23:0] mprod_o);
 
 `ifdef USE_IP
 mp mp(
@@ -16,17 +16,18 @@ mp mp(
   .b(mplier_i),
   .p(mprod_o));
 `else
-reg signed [23:0] delay[4:0];
-assign mprod_o = delay[4];
+reg signed [23:0] delay[5:0];
+assign mprod_o = delay[5];
 
-wire [39:0] prod_full = mpcand_i * mplier_i;
-wire [23:0] prod = prod_full >>> 15;
+wire [39:0] prod_full = $signed(mpcand_i) * $signed(mplier_i);
+wire [23:0] prod = prod_full >> 23;
 always @(posedge clk) begin
     delay[0] <= prod;
     delay[1] <= delay[0];
     delay[2] <= delay[1];
     delay[3] <= delay[2];
     delay[4] <= delay[3];
+    delay[5] <= delay[4];
 end
 `endif
 
@@ -39,9 +40,8 @@ module mpemu_scale(
     input [15:0] scale_i,
     output signed [23:0] mprod_o);
 
-
 `ifdef USE_IP
-mp_scale mp(
+mp_scale mp_scale(
   .clk(clk),
   .a(mpcand_i),
   .b(scale_i),

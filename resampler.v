@@ -3,15 +3,15 @@ module resampler_core
     parameter NUM_CH = 8,
     parameter NUM_CH_LOG2 = 3,
 
-    parameter HALFDEPTH = 12,
+    parameter HALFDEPTH = 16,
     parameter HALFDEPTH_LOG2 = 4,
     parameter NUM_FIR = 160,
     parameter NUM_FIR_LOG2 = 8,
     parameter DECIM = 147,
-    parameter MULT_LATENCY = 4,
-    parameter BANK_WIDTH = HALFDEPTH_LOG2+NUM_FIR_LOG2,
+    parameter MULT_LATENCY = 5,
+    parameter BANK_WIDTH = NUM_FIR_LOG2+HALFDEPTH_LOG2,
 
-    parameter TIMESLICE = 48, // Not sure if this is OK.
+    parameter TIMESLICE = 64, // Not sure if this is OK.
     parameter TIMESLICE_LOG2 = 6
 )(
     input clk,
@@ -165,7 +165,7 @@ wire mplier_lwing_active = state_ff == ST_MULADD_LWING;
 wire [(NUM_FIR_LOG2-1):0] firidx = mplier_lwing_active ? firidx_lwing_currch_ff : firidx_rwing_currch_ff;
 reg [(HALFDEPTH_LOG2-1):0] depthidx_ff;
 
-assign bank_addr_o = {firidx, depthidx_ff}; // FIXME: HALFDEPTH must be power of 2
+assign bank_addr_o[(BANK_WIDTH-1):0] = {firidx, depthidx_ff}; // FIXME: HALFDEPTH must be power of 2
 always @(posedge clk) begin
     case (state_ff)
     ST_BEGIN_CYCLE:
@@ -178,8 +178,21 @@ endcase
 end
 
 // Supply mpcand
-wire [23:0] mcand_o = data_i;
+wire [23:0] mpcand_o = data_i;
 assign offset_o = muladd_wing_cycle_counter;
+
+// Multiplier
+wire [23:0] mprod_i;
+mpemu mpemu(.clk(clk), .mpcand_i(mpcand_o), .mplier_i(mplier_o), .mprod_o(mprod_i));
 wire product_valid = muladd_wing_cycle_counter > MULT_LATENCY && (state_ff == ST_MULADD_LWING || state_ff == ST_MULADD_RWING);
+
+// Sum
+reg [23:0] sum_ff;
+always @(posedge clk) begin
+    if (state_ff == ST_BEGIN_CYCLE)
+        sum_ff <= 0;
+    else if (product_valid)
+        sum_ff <= $signed(sum_ff) + $signed(mprod_i);
+end
 
 endmodule
