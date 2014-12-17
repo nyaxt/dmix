@@ -61,7 +61,7 @@ always #(TCLK/2) clk = ~clk;
 
 integer i2;
 always begin
-    #(TCLK*7);
+    #(TCLK*6);
     $display("%h should be %h", mprod_o, 24'h02468a);
     #TCLK;
     $display("%h should be %h", mprod_o, 24'h02468a);

@@ -1,5 +1,4 @@
 // simulates multiplier ip core provided by xilinx
-// latency 4
 // `define USE_IP
 
 module mpemu(
@@ -10,14 +9,18 @@ module mpemu(
     output [23:0] mprod_o);
 
 `ifdef USE_IP
+// A: signed 24 bit
+// B: signed 24 bit
+// P: Custom Output Width MSB=46 LSB=23
+// Pipeline Stages 5
 mp mp(
   .clk(clk),
   .a(mpcand_i),
   .b(mplier_i),
   .p(mprod_o));
 `else
-reg signed [23:0] delay[5:0];
-assign mprod_o = delay[5];
+reg signed [23:0] delay[4:0];
+assign mprod_o = delay[4];
 
 wire [46:0] prod_full = $signed(mpcand_i) * $signed(mplier_i);
 wire [23:0] prod = prod_full >>> 23;
@@ -27,7 +30,6 @@ always @(posedge clk) begin
     delay[2] <= delay[1];
     delay[3] <= delay[2];
     delay[4] <= delay[3];
-    delay[5] <= delay[4];
 end
 `endif
 
