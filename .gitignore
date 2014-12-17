@@ -8,3 +8,4 @@ dspsw/resample.dSYM
 *.wav
 *.dat
 *.pyc
+testdata

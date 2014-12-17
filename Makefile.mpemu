@@ -6,7 +6,10 @@ runsim: mpemu_t.lxt
 .vvp.lxt:
 	vvp $< -lxt2
 
-mpemu_t.vvp: mpemu.v mpemu_t.v
-	iverilog -o $@ $^
+mpemu_t.vvp: mpemu.v mpemu_t.v testdata/gen/mp_a.hex
+	iverilog -o $@ mpemu{,_t}.v
+
+testdata/gen/mp_a.hex: gen_random_mul.rb
+	ruby gen_random_mul.rb
 
 .SUFFIXES: .lxt .vvp
