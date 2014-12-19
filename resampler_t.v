@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
 `define NUM_CH 2
+`define NUM_CH_LOG2 1
 `define HALFDEPTH_LOG2 4
 // `define NODUMP
 
@@ -17,11 +18,11 @@ reg rst;
 reg [(24*`NUM_CH-1):0] data_i;
 reg [(`NUM_CH-1):0] ack_i;
 
-reg pop_i;
+reg [(`NUM_CH-1):0] pop_i;
 
 wire [(`NUM_CH-1):0] rb_pop;
-wire [(`NUM_CH*(`HALFDEPTH_LOG2+1)-1):0] rb_offset;
-wire [(`NUM_CH*24-1):0] rb_data;
+wire [(`HALFDEPTH_LOG2+1-1):0] rb_offset;
+wire [23:0] rb_data;
 ringbuf #(
     .LEN(64), // should work w/ 32, but buffer a little to address input jitter
     .LEN_LOG2(6)
@@ -35,11 +36,11 @@ wire [23:0] bank_data;
 rom_firbank_441_480 bank(
     .clk(clk), .addr(bank_addr), .data(bank_data));
 
-resampler_core #(.NUM_CH(`NUM_CH)) uut(
+resampler_core #(.NUM_CH(`NUM_CH), .NUM_CH_LOG2(`NUM_CH_LOG2)) uut(
     .clk(clk), .rst(rst),
     .bank_addr_o(bank_addr), .bank_data_i(bank_data),
     .pop_o(rb_pop), .offset_o(rb_offset), .data_i(rb_data),
-    .pop_i({1'b0, pop_i})
+    .pop_i(pop_i)
     );
 
 integer i;
@@ -86,7 +87,7 @@ end
 always #(TCLK/2) clk = ~clk;
 
 always begin
-    pop_i = 2'b01;
+    pop_i = 2'b11;
     #(TCLK);
     pop_i = 2'b00;
     #(TCLK*63);
@@ -94,11 +95,22 @@ end
 
 always @(posedge uut.pop_o[0]) begin
     #(TCLK);
-    data_i = {testdata[testdata_iter]};
+    data_i = {24'h0, testdata[testdata_iter]};
     testdata_iter = testdata_iter+1;
     ack_i[0] = 1;
     #(TCLK);
     ack_i[0] = 0;
+end
+
+reg [23:0] simple_increment_ff;
+
+always @(posedge uut.pop_o[1]) begin
+    #(TCLK);
+    data_i = {simple_increment_ff, 24'h0};
+    simple_increment_ff = simple_increment_ff + 1;
+    ack_i[1] = 1;
+    #(TCLK);
+    ack_i[1] = 0;
 end
 
 endmodule

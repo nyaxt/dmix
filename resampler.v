@@ -23,8 +23,8 @@ module resampler_core
 
     // to ringbuf array
     output [(NUM_CH-1):0] pop_o,
-    output [((HALFDEPTH_LOG2+1)*NUM_CH-1):0] offset_o,
-    input [(24*NUM_CH-1):0] data_i,
+    output [(HALFDEPTH_LOG2+1-1):0] offset_o,
+    input [23:0] data_i,
 
     // data output
     input [(NUM_CH-1):0] pop_i,
