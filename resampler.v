@@ -189,8 +189,17 @@ endcase
 end
 
 // Supply mpcand
+// OUTPUT:
 wire [23:0] mpcand_o;
-assign offset_o = {~mplier_lwing_active, muladd_wing_cycle_counter[(HALFDEPTH_LOG2-1):0]};
+
+reg [(HALFDEPTH_LOG2-1):0] offset_counter;
+assign offset_o = {~mplier_lwing_active, offset_counter};
+always @(posedge clk) begin
+    offset_counter <= offset_counter - 1;
+    if (state_ff == ST_BEGIN_CYCLE || state_ff == ST_PREP_LWING)
+        offset_counter <= HALFDEPTH-1;
+end
+
 wire [23:0] data_i_ary [(NUM_CH-1):0];
 genvar ig;
 generate
