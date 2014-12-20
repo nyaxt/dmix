@@ -23,7 +23,7 @@ module resampler_core
     // to ringbuf array
     output [(NUM_CH-1):0] pop_o,
     output [(HALFDEPTH_LOG2+1-1):0] offset_o,
-    input [23:0] data_i,
+    input [(NUM_CH*24-1):0] data_i,
 
     // data output
     input [(NUM_CH-1):0] pop_i,
@@ -178,8 +178,16 @@ endcase
 end
 
 // Supply mpcand
-wire [23:0] mpcand_o = data_i;
+wire [23:0] mpcand_o;
 assign offset_o = {~mplier_lwing_active, muladd_wing_cycle_counter[(HALFDEPTH_LOG2-1):0]};
+wire [23:0] data_i_ary [(NUM_CH-1):0];
+genvar ig;
+generate
+    for (ig = 0; ig < NUM_CH; ig = ig + 1) begin:data_i_to_ary
+        assign data_i_ary[ig] = data_i[(ig*24)+:24];
+    end
+endgenerate
+assign mpcand_o = data_i_ary[processing_ch_ff];
 
 // Multiplier
 wire [23:0] mprod_i;
@@ -234,29 +242,20 @@ module ringbuffered_resampler
 
 wire [(NUM_CH-1):0] rb_pop;
 wire [(HALFDEPTH_LOG2+1-1):0] rb_offset;
-
-wire [23:0] rb_or_data [(NUM_CH-1):0];
+wire [(NUM_CH*24-1):0] rb_data;
 
 genvar ig;
 generate
 for (ig = 0; ig < NUM_CH; ig = ig + 1) begin:rbunit
-    wire [23:0] rb_u_data;
     ringbuf #(
         .LEN(HALFDEPTH*4), // should work w/ *2, but buffer a little longer to address input jitter
         .LEN_LOG2(HALFDEPTH_LOG2+2)
     ) rb(
         .clk(clk), .rst(rst),
-        .data_i(data_i[(24*ig+23):(24*ig)]), .we_i(ack_i[ig]),
-        .pop_i(rb_pop[ig]), .offset_i({1'b0, rb_offset[HALFDEPTH_LOG2:0]}), .data_o(rb_u_data));
-
-    if (ig == 0) begin
-        assign rb_or_data[0] = rb_u_data;
-    end else begin
-        assign rb_or_data[ig] = rb_or_data[ig-1] | rb_u_data;
-    end
+        .data_i(data_i[(24*ig)+:24]), .we_i(ack_i[ig]),
+        .pop_i(rb_pop[ig]), .offset_i({1'b0, rb_offset[HALFDEPTH_LOG2:0]}), .data_o(rb_data[(24*ig+23):(24*ig)]));
 end
 endgenerate
-wire [23:0] rb_data = rb_or_data[(NUM_CH-1)];
 
 resampler_core #(
     .NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2),

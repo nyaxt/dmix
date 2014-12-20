@@ -7,9 +7,11 @@
 module resampler_t;
 
 parameter DATALEN = 100000;
-reg signed [15:0] testdata [DATALEN-1:0];
+reg [15:0] testdata [DATALEN-1:0];
 reg [16:0] testdata_iter;
 
+wire [15:0] testdata_curr = testdata[testdata_iter];
+wire [23:0] testdata_curr_exp = {{8{testdata_curr[15]}}, testdata_curr};
 reg [23:0] simple_increment_ff;
 
 parameter TCLK = 10; // 98.304Mhz ~ 100Mhz
@@ -19,6 +21,7 @@ reg rst;
 
 reg [(`NUM_CH-1):0] ack_i;
 reg [(24*`NUM_CH-1):0] data_i;
+reg [(24*`NUM_CH-1):0] data_i2;
 
 reg [(`NUM_CH-1):0] pop_i;
 
@@ -55,13 +58,14 @@ initial begin
     rst = 1'b0;
     #TCLK;
 
-    for (i = 0; i < 65; i = i + 1) begin
+    for (i = 0; i < 64; i = i + 1) begin
         #(TCLK);
-        data_i = {testdata[testdata_iter]};
-        testdata_iter = testdata_iter+1;
-        ack_i[0] = 1;
+        data_i = {simple_increment_ff, testdata_curr_exp};
+        testdata_iter = testdata_iter + 1;
+        simple_increment_ff = simple_increment_ff + 1;
+        ack_i = 2'b11;
     end
-    ack_i[0] = 0;
+    ack_i = 2'b00;
 
     rst = 1'b0;
     #(TCLK);
@@ -87,7 +91,7 @@ end
 
 always @(posedge uut.rb_pop[0]) begin
     #(TCLK);
-    data_i = {24'h0, testdata[testdata_iter]};
+    data_i = {24'h0, testdata_curr_exp};
     testdata_iter = testdata_iter+1;
     ack_i[0] = 1;
     #(TCLK);
