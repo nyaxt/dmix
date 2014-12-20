@@ -19,18 +19,27 @@ mp mp(
   .b(mplier_i),
   .p(mprod_o));
 `else
-reg signed [23:0] delay[4:0];
-assign mprod_o = delay[4];
+reg [23:0] delay_a[4:0];
+reg [23:0] delay_b[4:0];
 
-wire [46:0] prod_full = $signed(mpcand_i) * $signed(mplier_i);
-wire [23:0] prod = prod_full >>> 23;
 always @(posedge clk) begin
-    delay[0] <= prod;
-    delay[1] <= delay[0];
-    delay[2] <= delay[1];
-    delay[3] <= delay[2];
-    delay[4] <= delay[3];
+    delay_a[0] <= mpcand_i;
+    delay_a[1] <= delay_a[0];
+    delay_a[2] <= delay_a[1];
+    delay_a[3] <= delay_a[2];
+    delay_a[4] <= delay_a[3];
+
+    delay_b[0] <= mplier_i;
+    delay_b[1] <= delay_b[0];
+    delay_b[2] <= delay_b[1];
+    delay_b[3] <= delay_b[2];
+    delay_b[4] <= delay_b[3];
 end
+wire [23:0] delayed_a = delay_a[4];
+wire [23:0] delayed_b = delay_b[4];
+
+wire [46:0] prod_full = $signed(delayed_a) * $signed(delayed_b);
+assign mprod_o = $signed(prod_full) >>> 23;
 `endif
 
 endmodule

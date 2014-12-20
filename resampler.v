@@ -1,3 +1,5 @@
+`define DEBUG
+
 module resampler_core
 #(
     parameter NUM_CH = 8,
@@ -68,15 +70,15 @@ end
 // Sequence management
 reg processing_enabled_ff;
 reg [7:0] state_ff; // Note: bit width will be optimized anyway.
-parameter MULT_LATENCY = 5;
+
+parameter MULT_LATENCY = 4;
 parameter ST_READY = 0; // 1 clk
 parameter ST_BEGIN_CYCLE = 1;  // 1 clk
-parameter ST_MULADD_RWING = 2; // MULT_LATENCY + HALFDEPTH clk
+parameter ST_MULADD_RWING = 2; // 1 + MULT_LATENCY + HALFDEPTH clk
 parameter ST_PREP_LWING = 3; // 1 clk
-parameter ST_MULADD_LWING = 4; // MULT_LATENCY + HALFDEPTH clk
+parameter ST_MULADD_LWING = 4; // 1 + MULT_LATENCY + HALFDEPTH clk
 parameter ST_END_CYCLE = 5; // 1 clk
 parameter ST_IDLE = 6;
-
 reg [(NUM_CH-1):0] ack_pop_ff;
 assign ack_pop_i = ack_pop_ff;
 
@@ -143,12 +145,19 @@ always @(posedge clk) begin
         firidx_rwing_currch_ff <= 0;
     end else begin
         case (state_ff)
-            ST_BEGIN_CYCLE:
+            ST_BEGIN_CYCLE: begin
                 firidx_rwing_currch_ff <= firidx_mem[processing_ch_ff];
+                `ifdef DEBUG
+                $display("ch: %d. begin cycle. firidx_rwing: %d", processing_ch_ff, firidx_mem[processing_ch_ff]);
+                `endif
+            end
             ST_END_CYCLE: begin
                 if (firidx_rwing_currch_ff > NUM_FIR - DECIM) begin
                     firidx_mem[processing_ch_ff] <= firidx_rwing_currch_ff + DECIM - NUM_FIR;
                     pop_o_ff[processing_ch_ff] <= 1;
+                    `ifdef DEBUG
+                    $display("ch: %d. pop!", processing_ch_ff);
+                    `endif
                 end else begin
                     firidx_mem[processing_ch_ff] <= firidx_rwing_currch_ff + DECIM;
                 end
@@ -172,6 +181,8 @@ always @(posedge clk) begin
         depthidx_ff <= HALFDEPTH-1;
     ST_MULADD_RWING:
         depthidx_ff <= depthidx_ff - 1;
+    ST_PREP_LWING:
+        depthidx_ff <= 0;
     ST_MULADD_LWING:
         depthidx_ff <= depthidx_ff + 1;
 endcase
@@ -199,8 +210,13 @@ reg [23:0] sum_ff;
 always @(posedge clk) begin
     if (state_ff == ST_BEGIN_CYCLE)
         sum_ff <= 0;
-    else if (product_valid)
+    else if (product_valid) begin
+        `ifdef DEBUG
+        $display("ch: %d curr_sum: %d. mpcand %d * mplier %d = %d",
+            processing_ch_ff, $signed(sum_ff), $signed(mpemu.delayed_a), $signed(mpemu.delayed_b), $signed(mprod_i));
+        `endif
         sum_ff <= $signed(sum_ff) + $signed(mprod_i);
+    end
 end
 
 // Result
