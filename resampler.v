@@ -8,7 +8,6 @@ module resampler_core
     parameter NUM_FIR = 160,
     parameter NUM_FIR_LOG2 = 8,
     parameter DECIM = 147,
-    parameter MULT_LATENCY = 5,
     parameter BANK_WIDTH = NUM_FIR_LOG2+HALFDEPTH_LOG2,
 
     parameter TIMESLICE = 64, // Not sure if this is OK.
@@ -69,6 +68,7 @@ end
 // Sequence management
 reg processing_enabled_ff;
 reg [7:0] state_ff; // Note: bit width will be optimized anyway.
+parameter MULT_LATENCY = 5;
 parameter ST_READY = 0; // 1 clk
 parameter ST_BEGIN_CYCLE = 1;  // 1 clk
 parameter ST_MULADD_RWING = 2; // MULT_LATENCY + HALFDEPTH clk
@@ -198,5 +198,76 @@ end
 // Result
 assign data_o = sum_ff;
 assign ack_o = (state_ff == ST_END_CYCLE ? 1 : 0) << processing_ch_ff;
+
+endmodule
+
+module ringbuffered_resampler
+#(
+    parameter NUM_CH = 8,
+    parameter NUM_CH_LOG2 = 3,
+
+    parameter HALFDEPTH = 16,
+    parameter HALFDEPTH_LOG2 = 4,
+    parameter NUM_FIR = 160,
+    parameter NUM_FIR_LOG2 = 8,
+    parameter DECIM = 147,
+    parameter BANK_WIDTH = NUM_FIR_LOG2+HALFDEPTH_LOG2,
+
+    parameter TIMESLICE = 64, // Not sure if this is OK.
+    parameter TIMESLICE_LOG2 = 6
+)(
+    input clk,
+    input rst,
+
+    // to firbank
+    output [(BANK_WIDTH-1):0] bank_addr_o,
+    input [23:0] bank_data_i,
+
+    // data input
+    input [(NUM_CH-1):0] ack_i,
+    input [(24*NUM_CH-1):0] data_i,
+
+    // data output
+    input [(NUM_CH-1):0] pop_i,
+    output [23:0] data_o,
+    output [(NUM_CH-1):0] ack_o);
+
+wire [(NUM_CH-1):0] rb_pop;
+wire [(HALFDEPTH_LOG2+1-1):0] rb_offset;
+
+wire [23:0] rb_or_data [(NUM_CH-1):0];
+
+genvar ig;
+generate
+for (ig = 0; ig < NUM_CH; ig = ig + 1) begin:rbunit
+    wire [23:0] rb_u_data;
+    ringbuf #(
+        .LEN(HALFDEPTH*4), // should work w/ *2, but buffer a little longer to address input jitter
+        .LEN_LOG2(HALFDEPTH_LOG2+2)
+    ) rb(
+        .clk(clk), .rst(rst),
+        .data_i(data_i[(24*ig+23):(24*ig)]), .we_i(ack_i[ig]),
+        .pop_i(rb_pop[ig]), .offset_i({1'b0, rb_offset[HALFDEPTH_LOG2:0]}), .data_o(rb_u_data));
+
+    if (ig == 0) begin
+        assign rb_or_data[0] = rb_u_data;
+    end else begin
+        assign rb_or_data[ig] = rb_or_data[ig-1] | rb_u_data;
+    end
+end
+endgenerate
+wire [23:0] rb_data = rb_or_data[(NUM_CH-1)];
+
+resampler_core #(
+    .NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2),
+    .HALFDEPTH(HALFDEPTH), .HALFDEPTH_LOG2(HALFDEPTH_LOG2),
+    .NUM_FIR(NUM_FIR), .NUM_FIR_LOG2(NUM_FIR_LOG2), .DECIM(DECIM),
+    .TIMESLICE(TIMESLICE), .TIMESLICE_LOG2(TIMESLICE_LOG2)
+) uut(
+    .clk(clk), .rst(rst),
+    .bank_addr_o(bank_addr_o), .bank_data_i(bank_data_i),
+    .pop_o(rb_pop), .offset_o(rb_offset), .data_i(rb_data),
+    .pop_i(pop_i), .data_o(data_o), .ack_o(ack_o)
+    );
 
 endmodule

@@ -10,36 +10,27 @@ parameter DATALEN = 100000;
 reg signed [15:0] testdata [DATALEN-1:0];
 reg [16:0] testdata_iter;
 
+reg [23:0] simple_increment_ff;
+
 parameter TCLK = 10; // 98.304Mhz ~ 100Mhz
 
 reg clk;
 reg rst;
 
-reg [(24*`NUM_CH-1):0] data_i;
 reg [(`NUM_CH-1):0] ack_i;
+reg [(24*`NUM_CH-1):0] data_i;
 
 reg [(`NUM_CH-1):0] pop_i;
-
-wire [(`NUM_CH-1):0] rb_pop;
-wire [(`HALFDEPTH_LOG2+1-1):0] rb_offset;
-wire [23:0] rb_data;
-ringbuf #(
-    .LEN(64), // should work w/ 32, but buffer a little to address input jitter
-    .LEN_LOG2(6)
-) rb(
-    .clk(clk), .rst(rst),
-    .data_i(data_i[23:0]), .we_i(ack_i[0]),
-    .pop_i(rb_pop[0]), .offset_i({1'b0, rb_offset[`HALFDEPTH_LOG2:0]}), .data_o(rb_data[23:0]));
 
 wire [11:0] bank_addr;
 wire [23:0] bank_data;
 rom_firbank_441_480 bank(
     .clk(clk), .addr(bank_addr), .data(bank_data));
 
-resampler_core #(.NUM_CH(`NUM_CH), .NUM_CH_LOG2(`NUM_CH_LOG2)) uut(
+ringbuffered_resampler #(.NUM_CH(`NUM_CH), .NUM_CH_LOG2(`NUM_CH_LOG2)) uut(
     .clk(clk), .rst(rst),
     .bank_addr_o(bank_addr), .bank_data_i(bank_data),
-    .pop_o(rb_pop), .offset_o(rb_offset), .data_i(rb_data),
+    .ack_i(ack_i), .data_i(data_i),
     .pop_i(pop_i)
     );
 
@@ -51,6 +42,7 @@ initial begin
 `endif
     $readmemh("testdata/damashie.hex", testdata);
     testdata_iter = 0;
+    simple_increment_ff = 0;
 
     clk = 1'b0;
 
@@ -93,7 +85,7 @@ always begin
     #(TCLK*63);
 end
 
-always @(posedge uut.pop_o[0]) begin
+always @(posedge uut.rb_pop[0]) begin
     #(TCLK);
     data_i = {24'h0, testdata[testdata_iter]};
     testdata_iter = testdata_iter+1;
@@ -102,9 +94,7 @@ always @(posedge uut.pop_o[0]) begin
     ack_i[0] = 0;
 end
 
-reg [23:0] simple_increment_ff;
-
-always @(posedge uut.pop_o[1]) begin
+always @(posedge uut.rb_pop[1]) begin
     #(TCLK);
     data_i = {simple_increment_ff, 24'h0};
     simple_increment_ff = simple_increment_ff + 1;
