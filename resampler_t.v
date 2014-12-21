@@ -2,7 +2,9 @@
 `define NUM_CH 2
 `define NUM_CH_LOG2 1
 `define HALFDEPTH_LOG2 4
-// `define NODUMP
+
+// `define PRELOAD
+`define NODUMP
 
 module resampler_t;
 
@@ -11,7 +13,7 @@ reg [15:0] testdata [DATALEN-1:0];
 reg [16:0] testdata_iter;
 
 wire [15:0] testdata_curr = testdata[testdata_iter];
-wire [23:0] testdata_curr_exp = {{8{testdata_curr[15]}}, testdata_curr};
+wire [23:0] testdata_curr_exp = {testdata_curr, 8'b0}; //{{8{testdata_curr[15]}}, testdata_curr};
 reg [23:0] simple_increment_ff;
 
 parameter TCLK = 10; // 98.304Mhz ~ 100Mhz
@@ -58,6 +60,7 @@ initial begin
     rst = 1'b0;
     #TCLK;
 
+`ifdef PRELOAD
     for (i = 0; i < 64; i = i + 1) begin
         #(TCLK);
         data_i = {simple_increment_ff, testdata_curr_exp};
@@ -66,6 +69,7 @@ initial begin
         ack_i = 2'b11;
     end
     ack_i = 2'b00;
+`endif
 
     rst = 1'b0;
     #(TCLK);
@@ -93,6 +97,8 @@ always @(posedge uut.rb_pop[0]) begin
     #(TCLK);
     data_i = {24'h0, testdata_curr_exp};
     testdata_iter = testdata_iter+1;
+    if (testdata_iter == 256)
+        $finish(2);
     ack_i[0] = 1;
     #(TCLK);
     ack_i[0] = 0;
@@ -105,6 +111,10 @@ always @(posedge uut.rb_pop[1]) begin
     ack_i[1] = 1;
     #(TCLK);
     ack_i[1] = 0;
+end
+
+always @(posedge uut.ack_o[1]) begin
+    $display("%d", $signed(uut.data_o));
 end
 
 endmodule

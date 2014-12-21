@@ -1,4 +1,4 @@
-`define DEBUG
+// `define DEBUG
 
 module resampler_core
 #(
@@ -152,7 +152,7 @@ always @(posedge clk) begin
                 `endif
             end
             ST_END_CYCLE: begin
-                if (firidx_rwing_currch_ff > NUM_FIR - DECIM) begin
+                if (firidx_rwing_currch_ff >= NUM_FIR - DECIM) begin
                     firidx_mem[processing_ch_ff] <= firidx_rwing_currch_ff + DECIM - NUM_FIR;
                     pop_o_ff[processing_ch_ff] <= 1;
                     `ifdef DEBUG
@@ -287,7 +287,7 @@ resampler_core #(
     .HALFDEPTH(HALFDEPTH), .HALFDEPTH_LOG2(HALFDEPTH_LOG2),
     .NUM_FIR(NUM_FIR), .NUM_FIR_LOG2(NUM_FIR_LOG2), .DECIM(DECIM),
     .TIMESLICE(TIMESLICE), .TIMESLICE_LOG2(TIMESLICE_LOG2)
-) uut(
+) core(
     .clk(clk), .rst(rst),
     .bank_addr_o(bank_addr_o), .bank_data_i(bank_data_i),
     .pop_o(rb_pop), .offset_o(rb_offset), .data_i(rb_data),
