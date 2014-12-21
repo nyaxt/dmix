@@ -1,0 +1,12 @@
+dump: async_fifo_t.lxt
+	gtkwave async_fifo_t.lxt &
+
+runsim: async_fifo_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+async_fifo_t.vvp: async_fifo.v async_fifo_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp

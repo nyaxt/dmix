@@ -1,10 +1,13 @@
-module async_fifo (
+module async_fifo
+#(
+    parameter DATA_WIDTH = 8    
+)(
     // write if
     input wclk,
     input wrst,
     input [(DATA_WIDTH-1):0] data_i,
     input ack_i,
-    output full_o,
+    output full_o, // use with caution. may be buggy
 
     // read if
     input rclk,
@@ -16,70 +19,78 @@ module async_fifo (
 reg [(DATA_WIDTH-1):0] mem [3:0];
 
 // write if
-reg [1:0] waddr_ff;
+reg [2:0] waddr_ff;
+wire [2:0] waddr_next = waddr_ff + (ack_i ? 3'b001 : 3'b000);
 always @(posedge wclk) begin
-    if (wrst) begin
-        waddr_ff <= 2'b00;
-    end else if (ack_i) begin
-        mem[waddr_ff] <= data_i;
-        waddr_ff <= waddr_ff + 2'b01;
-    end
+    if (wrst)
+        waddr_ff <= 3'b000;
+    else
+        waddr_ff <= waddr_next;
 end
+
+always @(posedge wclk)
+    if (ack_i)
+        mem[waddr_ff[1:0]] <= data_i;
 
 // read if
-assign data_o = mem[raddr_ff];
+assign data_o = mem[raddr_ff[1:0]];
 
-reg [1:0] raddr_ff;
+reg [2:0] raddr_ff;
+wire [2:0] raddr_next = raddr_ff + (pop_i ? 3'b001 : 3'b000);
 always @(posedge rclk) begin
-    if (rrst) begin
-        raddr_ff <= 2'b00;
-    end else if (pop_i) begin
-        raddr_ff <= raddr_ff + 2'b01;
-    end
+    if (rrst)
+        raddr_ff <= 3'b000;
+    else
+        raddr_ff <= raddr_next;
 end
 
-function [1:0] gray_enc(
-    input [1:0] in);
+function [2:0] gray_enc(
+    input [2:0] in);
     case (in)
-        2'b00: gray_enc = 2'b00;
-        2'b01: gray_enc = 2'b01;
-        2'b10: gray_enc = 2'b11;
-        2'b11: gray_enc = 2'b10;
+    3'b000: gray_enc = 3'b000;
+    3'b001: gray_enc = 3'b001;
+    3'b010: gray_enc = 3'b011;
+    3'b011: gray_enc = 3'b010;
+    3'b100: gray_enc = 3'b110;
+    3'b101: gray_enc = 3'b111;
+    3'b110: gray_enc = 3'b101;
+    3'b111: gray_enc = 3'b100;
     endcase
 endfunction
 
-function [1:0] gray_dec(
-    input [1:0] in);
+function [2:0] gray_dec(
+    input [2:0] in);
     case (in)
-        2'b00: gray_dec = 2'b00;
-        2'b01: gray_dec = 2'b01;
-        2'b11: gray_dec = 2'b10;
-        2'b10: gray_dec = 2'b11;
+    3'b000: gray_dec = 3'b000;
+    3'b001: gray_dec = 3'b001;
+    3'b011: gray_dec = 3'b010;
+    3'b010: gray_dec = 3'b011;
+    3'b110: gray_dec = 3'b100;
+    3'b111: gray_dec = 3'b101;
+    3'b101: gray_dec = 3'b110;
+    3'b100: gray_dec = 3'b111;
     endcase
 endfunction
 
 // empty notify
-wire waddr_gray = gray_enc(waddr_ff);
-reg [5:0] waddr_gray_delay_ff;
+wire [2:0] waddr_gray = gray_enc(waddr_ff);
+reg [8:0] waddr_gray_delay_ff;
 always @(posedge rclk)
-    waddr_gray_delay_ff <= {waddr_gray, waddr_gray_delay_ff[5:2]};
-wire waddr_delayed = gray_dec(waddr_gray_delay_ff[1:0]);
+    waddr_gray_delay_ff <= {waddr_gray, waddr_gray_delay_ff[8:3]};
+wire [2:0] waddr_delayed = gray_dec(waddr_gray_delay_ff[2:0]);
 
-reg empty_ff;
-always @(posedge rclk)
-    empty_ff <= (waddr_delayed == raddr_ff);
-assign empty_o = empty_ff;
+assign empty_o = (waddr_delayed[1:0] == raddr_next[1:0]) && (waddr_delayed[2] == raddr_next[2]);
 
 // full notify
-wire raddr_gray = gray_enc(raddr_ff);
-reg [5:0] raddr_gray_delay_ff;
+wire [2:0] raddr_gray = gray_enc(raddr_ff);
+reg [8:0] raddr_gray_delay_ff;
 always @(posedge wclk)
-    raddr_gray_delay_ff <= {raddr_gray, raddr_gray_delay_ff[5:2]};
-wire raddr_delayed = gray_dec(raddr_gray_delay_ff[1:0]);
+    raddr_gray_delay_ff <= {raddr_gray, raddr_gray_delay_ff[8:3]};
+wire [2:0] raddr_delayed = gray_dec(raddr_gray_delay_ff[2:0]);
 
-reg full_ff;
-always @(posedge rclk)
-    full_ff <= (raddr_delayed == waddr_ff);
-assign full_o = full_ff;
+assign full_o = (raddr_delayed[1:0] == waddr_next[1:0]) && (raddr_delayed[2] != waddr_next[2]);
+reg last_full_ff;
+always @(posedge wclk)
+    last_full_ff <= full_o;
 
 endmodule
