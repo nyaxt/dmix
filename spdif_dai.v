@@ -14,10 +14,18 @@ module spdif_dai #(
     output [191:0] udata_o,
     output [191:0] cdata_o);
 
+// read async signal through chained ffs to avoid meta stable
+wire buffed_signal;
+parameter BUF_LEN = 2;
+reg [(BUF_LEN-1):0] buf_ff;
+always @(posedge clk)
+    buf_ff <= {buf_ff[(BUF_LEN-2):0], signal_i};
+assign buffed_signal = buf_ff[BUF_LEN-1];
+
 parameter HIST_LEN = 2;
 reg [(HIST_LEN-1):0] lvl_history_ff;
 always @(posedge clk)
-    lvl_history_ff <= {lvl_history_ff[(HIST_LEN-2):0], signal_i};
+    lvl_history_ff <= {lvl_history_ff[(HIST_LEN-2):0], buffed_signal};
 
 reg lvl_probe_ff;
 always @(posedge clk)
