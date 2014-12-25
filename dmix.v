@@ -1,6 +1,7 @@
 module dmix_top #(
     parameter NUM_SPDIF_IN = 1,
-    parameter NUM_CH = NUM_SPDIF_IN
+    parameter NUM_CH = 2,
+    parameter NUM_CH_LOG2 = 1
 )(
     input clk245760_pad,
     input rst,
@@ -13,11 +14,13 @@ module dmix_top #(
     output dac_lrck_o,
     output dac_data_o,
 
+    /*
     // SPI config
     input spi_cfg_sck,
     input spi_cfg_mosi,
     output spi_cfg_miso,
     input spi_cfg_ss,
+    */
 
     /*
     // SPI peek
@@ -31,40 +34,17 @@ module dmix_top #(
     output led_o // T3
     );
 
+wire clk245760;
+wire clk491520;
+wire clk983040;
+dmix_dcm dcm(
+    .clk245760_pad(clk245760_pad),
+    .clk245760(clk245760),
+    .clk491520(clk491520),
+    .clk983040(clk983040));
+
 wire rst_ip;
 wire rst_dcm;
-
-wire clk245760 = clk245760_pad;
-wire clk491520;
-wire clk983040; // =  48.0kHz * 64 bits * 32 clk/bit = 98.3040Mhz
-                // =  96.0kHz * 64 bits * 16 clk/bit = 98.3040Mhz
-                // = 192.0kHz * 64 bits *  8 clk/bit = 98.3040Mhz
-wire clk245760_unbuf;
-wire clk491520_unbuf;
-wire clk983040_unbuf;
-DCM #(
-    .CLK_FEEDBACK("1X"),
-    .CLKFX_DIVIDE(1),
-    .CLKFX_MULTIPLY(4),
-    .CLKIN_PERIOD(40.690),
-    .CLKOUT_PHASE_SHIFT("NONE"),
-    .DFS_FREQUENCY_MODE("LOW"),
-    .FACTORY_JF(16'hC080),
-    .PHASE_SHIFT(0),
-    .STARTUP_WAIT("FALSE")
-) dcm983040(
-    .CLKFB(clk245760_unbuf),
-    .CLKIN(clk245760_pad),
-    .DSSEN(0), 
-    .PSCLK(0), // phase shift
-    .PSEN(0),
-    .PSINCDEC(0),
-    .RST(rst_dcm),
-    .CLK0(clk245760_unbuf),
-    .CLK2X(clk491520_unbuf),
-    .CLKFX(clk983040_unbuf));
-BUFG buf491520(.I(clk491520_unbuf), .O(clk491520));
-BUFG buf983040(.I(clk983040_unbuf), .O(clk983040));
 
 reg [19:0] rst_counter;
 always @(posedge clk245760)
@@ -75,23 +55,18 @@ always @(posedge clk245760)
 assign rst_dcm = (rst_counter[19:3] == 17'h00000);
 assign rst_ip = (rst_counter[19:3] == 17'h0000e);
 
-wire [(NUM_CH*2*16-1):0] vol;
-wire [(NUM_CH*4-1):0] rate;
-wire [(NUM_CH*192-1):0] udata;
-wire [(NUM_CH*192-1):0] cdata;
-csr_spi #(.NUM_CH(NUM_CH)) csr_spi(
-    .clk(clk245760), .rst(rst_ip),
-    .sck(spi_cfg_sck), .mosi(spi_cfg_mosi), .miso(spi_cfg_miso), .ss(spi_cfg_ss),
-    .vol_o(vol), .rate_i(rate), .udata_i(udata), .cdata_i(cdata));
+wire [(NUM_CH-1):0] fifo_ack;
+wire [(NUM_CH*24-1):0] fifo_data;
 
 genvar ig;
 generate
 for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
-    wire [23:0] dai_data;
-    wire dai_locked;
-    wire dai_rst_983040;
+    wire [23:0] dai_data_983040;
+    wire dai_lrck_983040;
     wire dai_ack_983040;
-    wire dai_lrck;
+
+    wire dai_locked;
+
     wire [3:0] dai_rate;
     wire [191:0] dai_udata;
     wire [191:0] dai_cdata;
@@ -104,64 +79,69 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
         .rst(rst_ip),
         .signal_i(spdif_i[ig]),
 
-        .data_o(dai_data),
+        .data_o(dai_data_983040),
         .ack_o(dai_ack_983040),
-        .rst_o(dai_rst_983040),
+        // .rst_o(dai_rst_983040),
+        .lrck_o(dai_lrck_983040),
+
         .locked_o(dai_locked),
-        .lrck_o(dai_lrck),
+
         .udata_o(dai_udata),
         .cdata_o(dai_cdata),
-    
         .rate_o(dai_rate));
         
-    wire [1:0] resampled_pop_i;
-    wire [23:0] resampled_data_o;
+    wire [23:0] dai_data_491520;
+    wire dai_lrck_491520;
 
-    wire dai_ack_491520;
-    wire dai_rst_491520;
-    conv_pulse conv_ack(.clk_i(clk983040), .clk_o(clk491520), .pulse_i(dai_ack_983040), .pulse_o(dai_ack_491520));
-    conv_pulse conv_rst(.clk_i(clk983040), .clk_o(clk491520), .pulse_i(dai_rst_983040), .pulse_o(dai_rst_491520));
+    reg fifo_pop_ff;
+    wire fifo_empty;
+    async_fifo #(.DATA_WIDTH(24 + 1)) fifo(
+        .wclk(clk983040),
+        .wrst(rst_ip),
+        .data_i({dai_data_983040, dai_lrck_983040}),
+        .ack_i(dai_ack_983040),
+        // NC: .full_o
 
-    wire [1:0] resampler_ack_i = {dai_lrck & dai_ack_491520, ~dai_lrck & dai_ack_491520};
-    wire [1:0] resampled_ack_o;
+        .rclk(clk491520),
+        .rrst(rst_ip),
+        .data_o({dai_data_491520, dai_lrck_491520}),
+        .pop_i(fifo_pop_ff), 
+        .empty_o(fifo_empty));
 
-    resample_pipeline resampler(
-        .clk(clk491520),
-        .rst(dai_rst_491520),
+    always @(posedge clk491520) begin
+        if (rst_ip)
+            fifo_pop_ff <= 0;
+        else
+            fifo_pop_ff <= fifo_empty ? 0 : 1;
+    end
 
-        .rate_i(4'b0010),
-
-        // data input
-        // .pop_o(NOT CONNECTED),
-        .data_i(dai_data),
-        .ack_i(resampler_ack_i),
-
-        // 192k output
-        .pop_i(resampled_pop_i),
-        .data_o(resampled_data_o),
-        .ack_o(resampled_ack_o));
+    assign fifo_ack[(ig*2) +: 2] = {fifo_pop_ff & ~dai_lrck_491520, fifo_pop_ff & dai_lrck_491520};
+    assign fifo_data[(ig*24*2) +: (24*2)] = {2{dai_data_491520}};
 end
 endgenerate
 
-wire [1:0] mix_pop_i;
-wire [23:0] mix_data_o;
-wire [1:0] mix_ack_o;
+wire [11:0] bank_addr;
+wire [23:0] bank_data;
+rom_firbank_441_480 bank(.clk(clk491520), .addr(bank_addr), .data(bank_data));
 
-mixer #(
-    .NUM_CH(1), .NUM_CH_LOG2(1),
-    .FS(256)
-) mixer(
+wire [(NUM_CH-1):0] resampler_pop_i;
+wire [23:0] resampler_data_o;
+wire [(NUM_CH-1):0] resampler_ack_o;
+
+ringbuffered_resampler #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2)) resampler(
     .clk(clk491520),
     .rst(rst_ip),
 
-    .pop_o({g[0].resampled_pop_i}),//, g[1].resampled_pop_i, g[2].resampled_pop_i}),
-    .data_i({g[0].resampled_data_o}),//, g[1].resampled_data_o, g[2].resampled_data_o}),
-    .vol_i(vol),
-    // .ack_i is assumed to be 1clk latency to pop_o
+    .bank_addr_o(bank_addr),
+    .bank_data_i(bank_data),
 
-    .pop_i(mix_pop_i),
-    .data_o(mix_data_o),
-    .ack_o(mix_ack_o));
+    .ack_i(fifo_ack),
+    .data_i(fifo_data),
+
+    .pop_i(resampler_pop_i),
+    .data_o(resampler_data_o),
+    .ack_o(resampler_ack_o)
+    );
 
 dac_drv dac_drv(
     .clk(clk491520),
@@ -171,9 +151,9 @@ dac_drv dac_drv(
     .lrck_o(dac_lrck_o),
     .data_o(dac_data_o),
 
-    .ack_i(mix_ack_o),
-    .data_i(mix_data_o),
-    .pop_o(mix_pop_i));
+    .ack_i(resampler_ack_o),
+    .data_i(resampler_data_o),
+    .pop_o(resampler_pop_i));
 assign dac_sck_o = clk245760_pad;
 
 assign led_o = g[0].dai_locked;//spdif_i[0];

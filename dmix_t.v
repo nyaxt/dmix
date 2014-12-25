@@ -7,32 +7,9 @@ reg rst;
 
 reg signal;
 
-parameter Tclk112896 = 88.577; // 11.2896Mhz
-parameter Tclk245760 = 40.69; // 24.576Mhz
+parameter Tclk245760 = 40;
 parameter TclkSPDIF = Tclk245760 * 4;
-parameter Tclk903200 = 11.07;
-parameter Tclk983040 = 10.17;
-parameter TCLK = Tclk245760;
-
-reg clk112896;
-always #(Tclk112896/2) clk112896 = ~clk112896;
-reg clk245760;
-always #(Tclk245760/2) clk245760 = ~clk245760;
-reg clk903200;
-always #(Tclk903200/2) clk903200 = ~clk903200;
-reg clk983040;
-always #(Tclk983040/2) clk983040 = ~clk983040;
-initial begin
-	clk112896 = 1'b0;
-	clk245760 = 1'b0;
-	clk903200 = 1'b0;
-	clk983040 = 1'b0;
-end
-
-dmix_top uut(.clk245760_pad(clk245760), .rst(rst), .spdif_i(signal));
-// assign uut.clk903200 = clk903200;
-// assign uut.clk983040 = clk983040;
-// assign uut.rst_dcm = rst_dcm;
+dmix_top uut(.rst(rst), .spdif_i(signal));
 
 task recv_rawbit;
     input b;
@@ -170,21 +147,23 @@ task recv_subframe;
     end
 endtask
 
+`define USE_CAPTURE
+
 reg [23:0] counter;
 initial begin
-	// $dumpfile("dmix_t.lxt");
-	// $dumpvars(0, dmix_t);
+	$dumpfile("dmix_t.lxt");
+	$dumpvars(0, uut);
 
 	rst = 1'b0;
     signal = 0;
 
-	#(TCLK*10);
+	#(10);
 	rst = 1'b1;
-	#(TCLK);
+	#(40);
 	rst = 1'b0;
-	#(TCLK*100);
-    //#(10_000_000);
+	#(50);
 
+`ifndef USE_CAPTURE
     counter <= 0;
     recv_B();
     recv_subframe(counter);
@@ -214,9 +193,23 @@ initial begin
         recv_subframe(counter);
         counter = counter + 1;
     end
-
-	#(1_000_000);
+	#(100_000);
 	$finish(2);
+`endif
 end
+
+`ifdef USE_CAPTURE
+reg [31:0] capture [262143:0];
+integer capture_iter;
+initial $readmemh("spdif_capture3", capture);
+initial capture_iter = 0;
+always begin
+    signal = capture[capture_iter][2];
+    capture_iter = capture_iter + 1;
+    if (capture_iter > 262143)
+        $finish(2);
+    #(5);
+end
+`endif
 
 endmodule

@@ -1,0 +1,12 @@
+dump: dcm_t.lxt
+	gtkwave dcm_t.lxt &
+
+runsim: dcm_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+dcm_t.vvp: dcm.v dcm_t.v
+	iverilog -Wtimescale -o $@ $^
+
+.SUFFIXES: .lxt .vvp

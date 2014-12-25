@@ -278,7 +278,7 @@ for (ig = 0; ig < NUM_CH; ig = ig + 1) begin:rbunit
     ) rb(
         .clk(clk), .rst(rst),
         .data_i(data_i[(24*ig)+:24]), .we_i(ack_i[ig]),
-        .pop_i(rb_pop[ig]), .offset_i({1'b0, rb_offset[HALFDEPTH_LOG2:0]}), .data_o(rb_data[(24*ig+23):(24*ig)]));
+        .pop_i(rb_pop[ig]), .offset_i({1'b0, rb_offset[HALFDEPTH_LOG2:0]}), .data_o(rb_data[(24*ig) +: 24]));
 end
 endgenerate
 
