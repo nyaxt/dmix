@@ -1,3 +1,5 @@
+`define SKIP_RESAMPLER
+
 module dmix_top #(
     parameter NUM_SPDIF_IN = 1,
     parameter NUM_CH = 2,
@@ -124,6 +126,7 @@ wire [11:0] bank_addr;
 wire [23:0] bank_data;
 rom_firbank_441_480 bank(.clk(clk491520), .addr(bank_addr), .data(bank_data));
 
+`ifndef SKIP_RESAMPLER
 wire [(NUM_CH-1):0] resampler_pop_i;
 wire [23:0] resampler_data_o;
 wire [(NUM_CH-1):0] resampler_ack_o;
@@ -154,6 +157,20 @@ dac_drv dac_drv(
     .ack_i(resampler_ack_o),
     .data_i(resampler_data_o),
     .pop_o(resampler_pop_i));
+`else
+dac_drv dac_drv(
+    .clk(clk491520),
+    .rst(rst_ip),
+
+    .bck_o(dac_bck_o),
+    .lrck_o(dac_lrck_o),
+    .data_o(dac_data_o),
+
+    .ack_i(fifo_ack),
+    .data_i(fifo_data)
+    //.pop_o(NC)
+    );
+`endif
 assign dac_sck_o = clk245760_pad;
 
 assign led_o = g[0].dai_locked;//spdif_i[0];
