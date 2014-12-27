@@ -33,7 +33,8 @@ module dmix_top #(
     */
 
     // debug
-    output led_o // T3
+    output led_o, // T3
+	 output [3:0] debug_o
     );
 
 wire clk245760;
@@ -196,8 +197,13 @@ dac_drv dac_drv(
     .pop_o(dac_pop_o)
     );
 `endif
-assign dac_sck_o = clk245760_pad;
+assign dac_sck_o = clk245760;//_pad;
 
 assign led_o = g[0].dai_locked;
+
+assign debug_o[0] = spdif_i[0];
+assign debug_o[1] = g[0].dai_ack_983040;
+assign debug_o[2] = fifo_ack[0];
+assign debug_o[3] = dac_pop_o;
 
 endmodule
