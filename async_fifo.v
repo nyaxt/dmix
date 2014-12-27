@@ -33,8 +33,6 @@ always @(posedge wclk)
         mem[waddr_ff[1:0]] <= data_i;
 
 // read if
-assign data_o = mem[raddr_ff[1:0]];
-
 reg [2:0] raddr_ff;
 wire [2:0] raddr_next = raddr_ff + (pop_i ? 3'b001 : 3'b000);
 always @(posedge rclk) begin
@@ -43,6 +41,8 @@ always @(posedge rclk) begin
     else
         raddr_ff <= raddr_next;
 end
+
+assign data_o = mem[raddr_ff[1:0]];
 
 function [2:0] gray_enc(
     input [2:0] in);

@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+`define USE_IP
 
 module dmix_dcm(
     input clk245760_pad,

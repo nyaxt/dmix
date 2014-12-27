@@ -72,10 +72,6 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [3:0] dai_rate;
     wire [191:0] dai_udata;
     wire [191:0] dai_cdata;
-    assign rate[(ig*4) +: 4] = dai_rate;
-    assign udata[(ig*192) +: 192] = dai_udata;
-    assign cdata[(ig*192) +: 192] = dai_cdata;
-
     spdif_dai_varclk dai(
         .clk(clk983040),
         .rst(rst_ip),
@@ -173,6 +169,6 @@ dac_drv dac_drv(
 `endif
 assign dac_sck_o = clk245760_pad;
 
-assign led_o = g[0].dai_locked;//spdif_i[0];
+assign led_o = g[0].dai_locked;
 
 endmodule
