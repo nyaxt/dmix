@@ -91,6 +91,12 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [23:0] dai_data_491520;
     wire dai_lrck_491520;
 
+`ifdef AAA
+    wire dai_ack_491520;
+    conv_pulse conv_ack(.clk_i(clk983040), .clk_o(clk491520), .pulse_i(dai_ack_983040), .pulse_o(dai_ack_491520));
+	 assign fifo_ack[(ig*2) +: 2] = {1'b0, dai_ack_491520 & dai_lrck_983040};
+    assign fifo_data[(ig*24*2) +: (24*2)] = {2{dai_data_983040}};
+`else
     reg fifo_pop_ff;
     wire fifo_empty;
     async_fifo #(.DATA_WIDTH(24 + 1)) fifo(
@@ -115,6 +121,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 
     assign fifo_ack[(ig*2) +: 2] = {fifo_pop_ff & ~dai_lrck_491520, fifo_pop_ff & dai_lrck_491520};
     assign fifo_data[(ig*24*2) +: (24*2)] = {2{dai_data_491520}};
+`endif
 end
 endgenerate
 
