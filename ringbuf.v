@@ -1,3 +1,5 @@
+`undef DEBUG
+
 module ringbuf
 #(
     parameter LEN = 16,
@@ -23,6 +25,9 @@ always @(posedge clk) begin
         witer <= 0;
     end else begin
         if(we_i) begin
+        `ifdef DEBUG
+            $display("ringbuf: write addr: %d/%d data: %h", witer, LEN, data_i);
+        `endif
             mem[witer] <= data_i;
             witer <= witer + 1;
         end

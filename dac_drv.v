@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+`define DEBUG
 
 module dac_drv(
 	input clk,
@@ -46,10 +47,14 @@ assign data_o = data_o_ff[31];
 
 wire chsel = clk_counter[7];
 always @(posedge clk) begin
-    if(clk_counter[6:0] == 7'h7f)
+    if(clk_counter[6:0] == 7'h7f) begin
+    `ifdef DEBUG
+        $display("dac_drv:   lr %d send %h", lrck_o, data_i_ff[chsel]);
+    `endif
         data_o_ff <= {8'b0, data_i_ff[chsel]};
-    else if(clk_counter[1:0] == 2'b11)
+    end else if(clk_counter[1:0] == 2'b11) begin
         data_o_ff <= {data_o_ff[30:0], 1'b0};
+    end
 end
 
 endmodule

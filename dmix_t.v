@@ -7,8 +7,7 @@ reg rst;
 
 reg signal;
 
-parameter Tclk245760 = 40;
-parameter TclkSPDIF = Tclk245760 * 4;
+parameter TclkSPDIF = 40; // 24.576kHz == 192Khz * 32 bit * 2 (biphase)
 dmix_top uut(.rst(rst), .spdif_i(signal));
 
 task recv_rawbit;
@@ -117,14 +116,14 @@ endtask
 task recv_bmcbyte;
     input [7:0] byte;
     begin
-        recv_bmcbit(byte[7]);
-        recv_bmcbit(byte[6]);
-        recv_bmcbit(byte[5]);
-        recv_bmcbit(byte[4]);
-        recv_bmcbit(byte[3]);
-        recv_bmcbit(byte[2]);
-        recv_bmcbit(byte[1]);
         recv_bmcbit(byte[0]);
+        recv_bmcbit(byte[1]);
+        recv_bmcbit(byte[2]);
+        recv_bmcbit(byte[3]);
+        recv_bmcbit(byte[4]);
+        recv_bmcbit(byte[5]);
+        recv_bmcbit(byte[6]);
+        recv_bmcbit(byte[7]);
     end
 endtask
 
@@ -140,16 +139,15 @@ endtask
 task recv_subframe;
     input [23:0] data;
     begin
-        recv_bmcbyte(data[23:16]);
-        recv_bmcbyte(data[15:8]);
         recv_bmcbyte(data[7:0]);
+        recv_bmcbyte(data[15:8]);
+        recv_bmcbyte(data[23:16]);
         recv_bmcctl();
     end
 endtask
 
-`define USE_CAPTURE
+// `define USE_CAPTURE
 
-reg [23:0] counter;
 initial begin
 	$dumpfile("dmix_t.lxt");
 	$dumpvars(0, uut);
@@ -162,8 +160,11 @@ initial begin
 	#(40);
 	rst = 1'b0;
 	#(50);
+end
 
 `ifndef USE_CAPTURE
+reg [22:0] counter;
+always begin
     counter <= 0;
     recv_B();
     recv_subframe(counter);
@@ -179,6 +180,7 @@ initial begin
         recv_subframe(counter);
         counter = counter + 1;
     end
+
     recv_B();
     recv_subframe(counter);
     counter = counter + 1;
@@ -193,12 +195,11 @@ initial begin
         recv_subframe(counter);
         counter = counter + 1;
     end
-	#(100_000);
-	$finish(2);
-`endif
-end
 
-`ifdef USE_CAPTURE
+    if (counter > 1)
+        $finish(2);
+end
+`else
 reg [31:0] capture [262143:0];
 integer capture_iter;
 initial $readmemh("spdif_capture3", capture);

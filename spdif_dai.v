@@ -1,3 +1,5 @@
+// `define DEBUG
+
 module spdif_dai #(
     parameter MAX_CLK_PER_HALFBIT_LOG2 = 5 // 32 max
 )(
@@ -148,6 +150,9 @@ reg [23:0] data_ff;
 reg ack_ff;
 always @(posedge clk) begin
     if(audiodata_ready) begin
+    `ifdef DEBUG
+        $display("spdif_dai: lr %d recv %h", lrck_o, bit_hist_ff[23:0]);
+    `endif
         data_ff <= bit_hist_ff[23:0];
         ack_ff <= locked_o; // only ack if locked
     end else
