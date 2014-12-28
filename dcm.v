@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+// `define DEBUG_SLOW
 `define USE_IP
 
 module dmix_dcm(
@@ -7,6 +8,16 @@ module dmix_dcm(
     output clk491520,
     output clk983040);
 
+`ifdef DEBUG_SLOW
+reg [1:0] mul_counter_ff;
+always @(posedge clk245760_pad)
+    mul_counter_ff <= mul_counter_ff + 2'b1;
+
+assign clk245760 = mul_counter_ff[1];
+assign clk491520 = mul_counter_ff[0];
+assign clk983040 = clk245760_pad;
+
+`else
 `ifdef USE_IP
 assign clk245760 = clk245760_pad;
 
@@ -70,6 +81,7 @@ always begin
     #(15);
 end
 
+`endif
 `endif
 
 endmodule
