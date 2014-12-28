@@ -92,7 +92,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [23:0] dai_data_491520;
     wire dai_lrck_491520;
 
-// `define AAA
+ //`define AAA
 `ifdef AAA
     wire dai_ack_491520;
     conv_pulse conv_ack(.clk_i(clk983040), .clk_o(clk491520), .pulse_i(dai_ack_983040), .pulse_o(dai_ack_491520));
@@ -202,9 +202,9 @@ assign dac_sck_o = clk245760;//_pad;
 
 assign led_o = g[0].dai_locked;
 
-assign debug_o[0] = spdif_i[0];
-assign debug_o[1] = g[0].dai_ack_983040;
-assign debug_o[2] = fifo_ack[0];
-assign debug_o[3] = dac_pop_o;
+assign debug_o[0] = dac_sck_o;
+assign debug_o[1] = dac_lrck_o;
+assign debug_o[2] = dac_data_o;
+assign debug_o[3] = dac_bck_o;
 
 endmodule
