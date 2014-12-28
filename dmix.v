@@ -1,4 +1,4 @@
-`define SKIP_RESAMPLER
+//`define SKIP_RESAMPLER
 
 module dmix_top #(
     parameter NUM_SPDIF_IN = 1,
