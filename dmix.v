@@ -1,4 +1,5 @@
 //`define SKIP_RESAMPLER
+`define TEST_96192
 
 module dmix_top #(
     parameter NUM_SPDIF_IN = 1,
@@ -137,7 +138,11 @@ wire [(NUM_CH-1):0] resampler_ack_o;
 
 `ifdef TEST_96192
 rom_firbank_96_192 bank(.clk(clk491520), .addr(bank_addr), .data(bank_data));
-ringbuffered_resampler #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2))
+ringbuffered_resampler #(
+    .NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2),
+    .HALFDEPTH(8), .HALFDEPTH_LOG2(3),
+    .NUM_FIR(2), .NUM_FIR_LOG2(1), .DECIM(1),
+    .TIMESLICE(32), .TIMESLICE_LOG2(5))
 `else
 rom_firbank_441_480 bank(.clk(clk491520), .addr(bank_addr), .data(bank_data));
 ringbuffered_resampler #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2))

@@ -10,6 +10,6 @@ runsim: $(TARGET)_t.lxt
 	vvp $< -lxt2
 
 $(TARGET)_t.vvp: $(TARGET)_t.v $(DEPS)
-	iverilog -o $@ $^
+	iverilog -DNO_IP -o $@ $^
 
 .SUFFIXES: .lxt .vvp

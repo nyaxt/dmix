@@ -1,6 +1,5 @@
 `timescale 1ns / 1ps
 // `define DEBUG_SLOW
-`define USE_IP
 
 module dmix_dcm(
     input clk245760_pad,
@@ -18,7 +17,7 @@ assign clk491520 = mul_counter_ff[0];
 assign clk983040 = clk245760_pad;
 
 `else
-`ifdef USE_IP
+`ifndef NO_IP
 assign clk245760 = clk245760_pad;
 
 wire clk245760_unbuf; // =  48.0kHz * 64 bits * 32 clk/bit = 98.3040Mhz

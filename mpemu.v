@@ -1,5 +1,4 @@
 // simulates multiplier ip core provided by xilinx
- `define USE_IP
 
 module mpemu(
     input clk,
@@ -8,7 +7,7 @@ module mpemu(
     input [23:0] mplier_i,
     output [23:0] mprod_o);
 
-`ifdef USE_IP
+`ifndef NO_IP
 // A: signed 24 bit
 // B: signed 24 bit
 // P: Custom Output Width MSB=46 LSB=23
@@ -51,7 +50,7 @@ module mpemu_scale(
     input [15:0] scale_i,
     output signed [23:0] mprod_o);
 
-`ifdef USE_IP
+`ifndef NO_IP
 mp_scale mp_scale(
   .clk(clk),
   .a(mpcand_i),
