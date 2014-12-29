@@ -245,13 +245,13 @@ begin
     bext = {b[31], b};
     sumext = $signed(aext) + $signed(bext);
 
-    case (sumext[24:23])
+    case (sumext[31:30])
         2'b00, 2'b11: // sum is in expressible range
-            saturated_add = sumext[23:0];
+            saturated_add = sumext[31:0];
         2'b01: // overflow
             saturated_add = 32'h7fff_ffff;
         2'b10: // underflow
-            saturated_add = 32'hffff_ffff;
+            saturated_add = 32'h8000_0000;
     endcase
 end
 endfunction
@@ -274,16 +274,16 @@ reg [23:0] saturated_sum_ff;
 always @(posedge clk) begin
     if (sum_ff[31] == 1'b0) begin
         // sum +
-        if (sum_ff[30:28] != 3'b000)
+        if (sum_ff[30:27] != 4'b0000)
             saturated_sum_ff <= 24'h7f_ffff; // overflow
         else
-            saturated_sum_ff <= sum_ff[27:4]; // sum is in expressible range
+            saturated_sum_ff <= {1'b0, sum_ff[26:4]}; // sum is in expressible range
     end else begin
         // sum -
-        if (sum_ff[30:28] != 3'b111)
-            saturated_sum_ff <= 24'hff_ffff; // underflow
+        if (sum_ff[30:27] != 4'b1111)
+            saturated_sum_ff <= 24'h80_0000; // underflow
         else
-            saturated_sum_ff <= sum_ff[27:4]; // sum is in expressible range
+            saturated_sum_ff <= {1'b1, sum_ff[26:4]}; // sum is in expressible range
     end
 end
 assign data_o = saturated_sum_ff;
