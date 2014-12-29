@@ -5,12 +5,12 @@ module mpemu(
     
     input [23:0] mpcand_i,
     input [23:0] mplier_i,
-    output [23:0] mprod_o);
+    output [27:0] mprod_o);
 
 `ifndef NO_IP
 // A: signed 24 bit
 // B: signed 24 bit
-// P: Custom Output Width MSB=46 LSB=23
+// P: Custom Output Width MSB=46 LSB=19
 // Pipeline Stages 5
 mp mp(
   .clk(clk),
@@ -38,7 +38,7 @@ wire [23:0] delayed_a = delay_a[4];
 wire [23:0] delayed_b = delay_b[4];
 
 wire [46:0] prod_full = $signed(delayed_a) * $signed(delayed_b);
-assign mprod_o = $signed(prod_full) >>> 23;
+assign mprod_o = prod_full[46:19];
 `endif
 
 endmodule

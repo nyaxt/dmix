@@ -1,4 +1,4 @@
-`define DEBUG
+// `define DEBUG
 
 module resampler_core
 #(
@@ -76,8 +76,9 @@ parameter ST_READY = 0;
 parameter ST_MULADD_RWING = 2; // HALFDEPTH clk
 parameter ST_MULADD_LWING = 3; // HALFDEPTH clk
 parameter ST_WAIT_RESULT = 4;  // 1 + MULT_LATENCY clk
-parameter ST_END_CYCLE = 5; // 1 clk
-parameter ST_IDLE = 6;
+parameter ST_SATURATE = 5; // 1 clk
+parameter ST_END_CYCLE = 6; // 1 clk
+parameter ST_IDLE = 7;
 reg [(NUM_CH-1):0] ack_pop_ff;
 assign ack_pop_i = ack_pop_ff;
 
@@ -113,7 +114,10 @@ always @(posedge clk) begin
             end
             ST_WAIT_RESULT: begin
                 if (muladd_wing_cycle_counter == MULT_LATENCY)
-                    state_ff <= ST_END_CYCLE;
+                    state_ff <= ST_SATURATE;
+            end
+            ST_SATURATE: begin
+                state_ff <= ST_END_CYCLE;
             end
             ST_END_CYCLE: begin
                 state_ff <= ST_IDLE;
@@ -213,7 +217,7 @@ endgenerate
 assign mpcand_o = data_i_ary[processing_ch_ff];
 
 // Multiplier
-wire [23:0] mprod_i;
+wire [27:0] mprod_i;
 mpemu mpemu(.clk(clk), .mpcand_i(mpcand_o), .mplier_i(mplier_o), .mprod_o(mprod_i));
 parameter KILL_RESULT = MULT_LATENCY + 1; // 1 clk for rom/ringbuf latency
 reg [(KILL_RESULT-1):0] kill_result_ff;
@@ -226,28 +230,28 @@ end
 wire product_valid = kill_result_ff[0];
 
 // Adder
-reg [23:0] sum_ff;
+reg [31:0] sum_ff;
 
-function [23:0] saturated_add(
-    input [23:0] a,
-    input [23:0] b);
+function [31:0] saturated_add(
+    input [31:0] a,
+    input [31:0] b);
 
-reg [24:0] aext;
-reg [24:0] bext;
-reg [24:0] sumext;
+reg [32:0] aext;
+reg [32:0] bext;
+reg [32:0] sumext;
 
 begin
-    aext = {a[23], a};
-    bext = {b[23], b};
+    aext = {a[31], a};
+    bext = {b[31], b};
     sumext = $signed(aext) + $signed(bext);
 
     case (sumext[24:23])
-        2'b00, 2'b11: // no overflow
+        2'b00, 2'b11: // sum is in expressible range
             saturated_add = sumext[23:0];
-        2'b01: // + overflow
-            saturated_add = 24'h7fffff;
-        2'b10: // - overflow
-            saturated_add = 24'hffffff;
+        2'b01: // overflow
+            saturated_add = 32'h7fff_ffff;
+        2'b10: // underflow
+            saturated_add = 32'hffff_ffff;
     endcase
 end
 endfunction
@@ -258,15 +262,31 @@ always @(posedge clk) begin
     end else begin
         `ifdef DEBUG
         if (ST_READY < state_ff && state_ff < ST_END_CYCLE)
-            $display("ch: %d curr_sum: %d. mpcand %d * mplier %d = %d",
-                processing_ch_ff, $signed(sum_ff), $signed(mpemu.delayed_a), $signed(mpemu.delayed_b), $signed(mprod_i));
+            $display("ch: %d curr_sum: %d shifted %d. mpcand %d * mplier %d = %d",
+                processing_ch_ff, $signed(sum_ff), $signed(sum_ff) >>> 4, $signed(mpemu.delayed_a), $signed(mpemu.delayed_b), $signed(mprod_i));
         `endif
-        sum_ff <= saturated_add(sum_ff, mprod_i);
+        sum_ff <= saturated_add(sum_ff, {{4{mprod_i[27]}}, mprod_i});
     end
 end
 
 // Result
-assign data_o = sum_ff;
+reg [23:0] saturated_sum_ff;
+always @(posedge clk) begin
+    if (sum_ff[31] == 1'b0) begin
+        // sum +
+        if (sum_ff[30:28] != 3'b000)
+            saturated_sum_ff <= 24'h7f_ffff; // overflow
+        else
+            saturated_sum_ff <= sum_ff[27:4]; // sum is in expressible range
+    end else begin
+        // sum -
+        if (sum_ff[30:28] != 3'b111)
+            saturated_sum_ff <= 24'hff_ffff; // underflow
+        else
+            saturated_sum_ff <= sum_ff[27:4]; // sum is in expressible range
+    end
+end
+assign data_o = saturated_sum_ff;
 assign ack_o = (state_ff == ST_END_CYCLE ? 1 : 0) << processing_ch_ff;
 
 endmodule
