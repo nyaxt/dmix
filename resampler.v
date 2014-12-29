@@ -1,4 +1,4 @@
-// `define DEBUG
+`define DEBUG
 
 module resampler_core
 #(
@@ -227,6 +227,31 @@ wire product_valid = kill_result_ff[0];
 
 // Adder
 reg [23:0] sum_ff;
+
+function [23:0] saturated_add(
+    input [23:0] a,
+    input [23:0] b);
+
+reg [24:0] aext;
+reg [24:0] bext;
+reg [24:0] sumext;
+
+begin
+    aext = {a[23], a};
+    bext = {b[23], b};
+    sumext = $signed(aext) + $signed(bext);
+
+    case (sumext[24:23])
+        2'b00, 2'b11: // no overflow
+            saturated_add = sumext[23:0];
+        2'b01: // + overflow
+            saturated_add = 24'h7fffff;
+        2'b10: // - overflow
+            saturated_add = 24'hffffff;
+    endcase
+end
+endfunction
+
 always @(posedge clk) begin
     if (!product_valid) begin
         sum_ff <= 0;
@@ -236,7 +261,7 @@ always @(posedge clk) begin
             $display("ch: %d curr_sum: %d. mpcand %d * mplier %d = %d",
                 processing_ch_ff, $signed(sum_ff), $signed(mpemu.delayed_a), $signed(mpemu.delayed_b), $signed(mprod_i));
         `endif
-        sum_ff <= $signed(sum_ff) + $signed(mprod_i);
+        sum_ff <= saturated_add(sum_ff, mprod_i);
     end
 end
 
