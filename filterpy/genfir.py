@@ -1,8 +1,13 @@
 import polyphase_resampler as pr
 
-from_rate = 44100.
-to_rate = 48000.0
+f = pr.PolyphaseResampler(32000.0, 48000.0, 32)
+f.export_verilog_mem("../rom_firbank_32_48.v")
 
-f = pr.PolyphaseResampler(from_rate, to_rate)
-# f.export_c_header("../dspsw/filter.h")
+f = pr.PolyphaseResampler(44100.0, 48000.0, 32)
 f.export_verilog_mem("../rom_firbank_441_480.v")
+
+f = pr.PolyphaseResampler(48000.0, 96000.0, 32)
+f.export_verilog_mem("../rom_firbank_48_96.v")
+
+f = pr.PolyphaseResampler(96000.0, 192000.0, 16)
+f.export_verilog_mem("../rom_firbank_96_192.v")

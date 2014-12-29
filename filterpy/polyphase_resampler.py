@@ -216,7 +216,7 @@ def readwav(wav_filepath):
   return numpy.frombuffer(w.readframes(n), dtype='int16')
 
 class PolyphaseResampler:
-  def __init__(self, from_rate, to_rate):
+  def __init__(self, from_rate, to_rate, depth = 32):
     self.from_rate = from_rate
     self.to_rate = to_rate
 
@@ -233,7 +233,6 @@ class PolyphaseResampler:
     N, beta = signal.kaiserord(ripple_db, width)
     print("suggested N: %d, beta: %d" % (N,beta))
 
-    depth = 32
     beta = 6
     N = depth * self.ups_ratio
     print("N: %d, beta: %d" % (N,beta))
