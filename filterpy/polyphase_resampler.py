@@ -219,6 +219,7 @@ class PolyphaseResampler:
   def __init__(self, from_rate, to_rate, depth = 32):
     self.from_rate = from_rate
     self.to_rate = to_rate
+    self.depth = depth
 
     samp_rate = calc_samp_rate(self.from_rate, self.to_rate)
     nyq_rate = calc_nyq_rate(samp_rate)
@@ -234,7 +235,7 @@ class PolyphaseResampler:
     print("suggested N: %d, beta: %d" % (N,beta))
 
     beta = 6
-    N = depth * self.ups_ratio
+    N = self.depth * self.ups_ratio
     print("N: %d, beta: %d" % (N,beta))
     print("polyphase depth: %d\n" % (N/self.ups_ratio))
 
@@ -292,19 +293,21 @@ polyphase_filter_t filter_441_48 = {rhtaps_441_48, %d, %d, %d, %d};
 """ % (len(self.rhetaps), self.ups_ratio, self.dec_ratio, len(self.rhetaps) / self.ups_ratio))
     f.close()
 
-  def export_verilog_mem(self, header_filepath):
+  def export_verilog_mem(self, header_filepath, name):
     f = open(header_filepath, 'w')
     addrbus_width = int(math.ceil(math.log(len(self.rhetaps), 2)))
+    f.write("// Polyphase filter bank for upsampling from {0}kHz to {1}kHz\n".format(self.from_rate, self.to_rate))
+    f.write("// Depth: {0}\n".format(self.depth))
     f.write("""
-module rom_firbank_441_480(
+module {0}(
     input clk,
-    input [{0}:0] addr,
-    output [{1}:0] data);
-reg [{1}:0] data_ff;
+    input [{1}:0] addr,
+    output [{2}:0] data);
+reg [{2}:0] data_ff;
 assign data = data_ff;
 always @(posedge clk) begin
     case(addr)
-""".format(addrbus_width-1, self.tapsbits-1))
+""".format(name, addrbus_width-1, self.tapsbits-1))
     i = 0
     for c in self.rhetaps:
       flag = "" if c > 0 else "-"

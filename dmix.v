@@ -127,16 +127,22 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 end
 endgenerate
 
+`ifndef SKIP_RESAMPLER
 wire [11:0] bank_addr;
 wire [23:0] bank_data;
-rom_firbank_441_480 bank(.clk(clk491520), .addr(bank_addr), .data(bank_data));
 
-`ifndef SKIP_RESAMPLER
 wire [(NUM_CH-1):0] resampler_pop_i;
 wire [23:0] resampler_data_o;
 wire [(NUM_CH-1):0] resampler_ack_o;
 
-ringbuffered_resampler #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2)) resampler(
+`ifdef TEST_96192
+rom_firbank_96_192 bank(.clk(clk491520), .addr(bank_addr), .data(bank_data));
+ringbuffered_resampler #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2))
+`else
+rom_firbank_441_480 bank(.clk(clk491520), .addr(bank_addr), .data(bank_data));
+ringbuffered_resampler #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2))
+`endif
+  resampler(
     .clk(clk491520),
     .rst(rst_ip),
 

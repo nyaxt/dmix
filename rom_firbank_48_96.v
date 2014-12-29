@@ -1,5 +1,7 @@
+// Polyphase filter bank for upsampling from 48000.0kHz to 96000.0kHz
+// Depth: 32
 
-module rom_firbank_441_480(
+module rom_firbank_48_96(
     input clk,
     input [4:0] addr,
     output [23:0] data);
