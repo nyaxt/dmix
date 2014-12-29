@@ -1,4 +1,4 @@
-`define DEBUG
+// `define DEBUG
 
 module resampler_core
 #(
@@ -71,12 +71,11 @@ end
 reg processing_enabled_ff;
 reg [7:0] state_ff; // Note: bit width will be optimized anyway.
 
-parameter MULT_LATENCY = 4;
-parameter ST_READY = 0; // 1 clk
-parameter ST_BEGIN_CYCLE = 1;  // 1 clk
-parameter ST_MULADD_RWING = 2; // 1 + MULT_LATENCY + HALFDEPTH clk
-parameter ST_PREP_LWING = 3; // 1 clk
-parameter ST_MULADD_LWING = 4; // 1 + MULT_LATENCY + HALFDEPTH clk
+parameter MULT_LATENCY = 5;
+parameter ST_READY = 0;
+parameter ST_MULADD_RWING = 2; // HALFDEPTH clk
+parameter ST_MULADD_LWING = 3; // HALFDEPTH clk
+parameter ST_WAIT_RESULT = 4;  // 1 + MULT_LATENCY clk
 parameter ST_END_CYCLE = 5; // 1 clk
 parameter ST_IDLE = 6;
 reg [(NUM_CH-1):0] ack_pop_ff;
@@ -95,23 +94,25 @@ always @(posedge clk) begin
         ack_pop_ff <= 0;
         case (state_ff)
             ST_READY: begin
-                if (processing_enabled_ff)
-                    state_ff <= ST_BEGIN_CYCLE;
-            end
-            ST_BEGIN_CYCLE: begin
-                state_ff <= ST_MULADD_RWING;
-                muladd_wing_cycle_counter <= 0;
+                if (processing_enabled_ff) begin
+                    state_ff <= ST_MULADD_RWING;
+                    muladd_wing_cycle_counter <= 0;
+                end
             end
             ST_MULADD_RWING: begin
-                if (muladd_wing_cycle_counter == 1 + MULT_LATENCY + HALFDEPTH)
-                    state_ff <= ST_PREP_LWING;
-            end
-            ST_PREP_LWING: begin
-                state_ff <= ST_MULADD_LWING;
-                muladd_wing_cycle_counter <= 0;
+                if (muladd_wing_cycle_counter == HALFDEPTH-1) begin
+                    state_ff <= ST_MULADD_LWING;
+                    muladd_wing_cycle_counter <= 0;
+                end
             end
             ST_MULADD_LWING: begin
-                if (muladd_wing_cycle_counter == 1 + MULT_LATENCY + HALFDEPTH)
+                if (muladd_wing_cycle_counter == HALFDEPTH-1) begin
+                    state_ff <= ST_WAIT_RESULT;
+                    muladd_wing_cycle_counter <= 0;
+                end
+            end
+            ST_WAIT_RESULT: begin
+                if (muladd_wing_cycle_counter == MULT_LATENCY)
                     state_ff <= ST_END_CYCLE;
             end
             ST_END_CYCLE: begin
@@ -145,10 +146,13 @@ always @(posedge clk) begin
         firidx_rwing_currch_ff <= 0;
     end else begin
         case (state_ff)
-            ST_BEGIN_CYCLE: begin
+            ST_READY: begin
                 firidx_rwing_currch_ff <= firidx_mem[processing_ch_ff];
+            end
+            ST_MULADD_RWING: begin
                 `ifdef DEBUG
-                $display("ch: %d. begin cycle. firidx_rwing: %d", processing_ch_ff, firidx_mem[processing_ch_ff]);
+                if (muladd_wing_cycle_counter == 0)
+                    $display("ch: %d. firidx_rwing: %d", processing_ch_ff, firidx_mem[processing_ch_ff]);
                 `endif
             end
             ST_END_CYCLE: begin
@@ -177,12 +181,11 @@ reg [(HALFDEPTH_LOG2-1):0] depthidx_ff;
 assign bank_addr_o[(BANK_WIDTH-1):0] = {firidx, depthidx_ff}; // FIXME: HALFDEPTH must be power of 2
 always @(posedge clk) begin
     case (state_ff)
-    ST_BEGIN_CYCLE:
+    ST_READY:
         depthidx_ff <= HALFDEPTH-1;
     ST_MULADD_RWING:
-        depthidx_ff <= depthidx_ff - 1;
-    ST_PREP_LWING:
-        depthidx_ff <= 0;
+        if (depthidx_ff != 0)
+            depthidx_ff <= depthidx_ff - 1;
     ST_MULADD_LWING:
         depthidx_ff <= depthidx_ff + 1;
 endcase
@@ -196,7 +199,7 @@ reg [(HALFDEPTH_LOG2-1):0] offset_counter;
 assign offset_o = {~mplier_lwing_active, offset_counter};
 always @(posedge clk) begin
     offset_counter <= offset_counter - 1;
-    if (state_ff == ST_BEGIN_CYCLE || state_ff == ST_PREP_LWING)
+    if (state_ff == ST_READY)
         offset_counter <= HALFDEPTH-1;
 end
 
@@ -212,17 +215,26 @@ assign mpcand_o = data_i_ary[processing_ch_ff];
 // Multiplier
 wire [23:0] mprod_i;
 mpemu mpemu(.clk(clk), .mpcand_i(mpcand_o), .mplier_i(mplier_o), .mprod_o(mprod_i));
-wire product_valid = muladd_wing_cycle_counter > MULT_LATENCY+1 && (state_ff == ST_MULADD_LWING || state_ff == ST_MULADD_RWING);
+parameter KILL_RESULT = MULT_LATENCY + 1; // 1 clk for rom/ringbuf latency
+reg [(KILL_RESULT-1):0] kill_result_ff;
+always @(posedge clk) begin
+    if (state_ff == ST_READY)
+        kill_result_ff <= 0;
+    else
+        kill_result_ff <= {1'b1, kill_result_ff[(KILL_RESULT-1):1]};
+end
+wire product_valid = kill_result_ff[0];
 
 // Adder
 reg [23:0] sum_ff;
 always @(posedge clk) begin
-    if (state_ff == ST_BEGIN_CYCLE)
+    if (!product_valid) begin
         sum_ff <= 0;
-    else if (product_valid) begin
+    end else begin
         `ifdef DEBUG
-        $display("ch: %d curr_sum: %d. mpcand %d * mplier %d = %d",
-            processing_ch_ff, $signed(sum_ff), $signed(mpemu.delayed_a), $signed(mpemu.delayed_b), $signed(mprod_i));
+        if (ST_READY < state_ff && state_ff < ST_END_CYCLE)
+            $display("ch: %d curr_sum: %d. mpcand %d * mplier %d = %d",
+                processing_ch_ff, $signed(sum_ff), $signed(mpemu.delayed_a), $signed(mpemu.delayed_b), $signed(mprod_i));
         `endif
         sum_ff <= $signed(sum_ff) + $signed(mprod_i);
     end
