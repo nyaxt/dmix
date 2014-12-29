@@ -23,10 +23,18 @@ always @(posedge clk)
 		clk_counter <= clk_counter + 1;
 
 // generate bck = 4x clk = 64fs * 192kHz = 12.28Mhz
-assign bck_o = clk_counter[1];
+wire bck_int_o = clk_counter[1];
+reg bck_ff;
+always @(posedge clk)
+	bck_ff <= bck_int_o;
+assign bck_o = bck_ff;
 
 // generate lrck = 256x clk = 192kHz
-assign lrck_o = ~clk_counter[7];
+wire lrck_int_o = ~clk_counter[7];
+reg lrck_ff;
+always @(posedge clk)
+	lrck_ff <= lrck_int_o;
+assign lrck_o = lrck_ff;
 
 // generate data
 reg [23:0] data_i_ff [1:0];
@@ -43,7 +51,11 @@ assign pop_o[1] = (clk_counter == 8'b00000000);
 assign pop_o[0] = (clk_counter == 8'b10000000);
 
 reg [31:0] data_o_ff;
-assign data_o = data_o_ff[31];
+wire data_int_o = data_o_ff[31];
+reg data_o_buf_ff;
+always @(posedge clk)
+	data_o_buf_ff <= data_int_o;
+assign data_o = data_o_buf_ff;
 
 wire chsel = clk_counter[7];
 always @(posedge clk) begin

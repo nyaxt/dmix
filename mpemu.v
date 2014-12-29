@@ -1,5 +1,5 @@
 // simulates multiplier ip core provided by xilinx
-// `define USE_IP
+ `define USE_IP
 
 module mpemu(
     input clk,
