@@ -3,7 +3,7 @@
 `define NUM_CH_LOG2 1
 
 `define PRELOAD
-`define NODUMP
+// `define NODUMP
 
 module resample_pipeline_t;
 
@@ -28,7 +28,7 @@ reg [(`NUM_CH-1):0] pop_i;
 wire [23:0] bank_data;
 resample_pipeline #(.NUM_CH(2), .NUM_CH_LOG2(1)) uut(
     .clk(clk), .rst(rst),
-    .rate_i(10'b0100001000),
+    .rate_i(10'b0010000100),
     .ack_i(ack_i), .data_i(data_i),
     .pop_i(pop_i)
     );
@@ -63,15 +63,8 @@ initial begin
     ack_i = 2'b00;
 `endif
 
-    rst = 1'b0;
-    #(TCLK);
-    rst = 1'b1;
-    #TCLK;
-    rst = 1'b0;
-    #TCLK;
-
 `ifndef NODUMP
-    #10_000;
+    #300_000;
     $finish(2);
 `endif
 end
@@ -89,8 +82,6 @@ always @(posedge uut.pop_o[0]) begin
     #(TCLK);
     data_i[23:0] = testdata_curr_exp;
     testdata_iter = testdata_iter+1;
-    if (testdata_iter == 256)
-        $finish(2);
     ack_i[0] = 1;
     #(TCLK);
     ack_i[0] = 0;
@@ -98,8 +89,11 @@ end
 
 always @(posedge uut.pop_o[1]) begin
     #(TCLK);
+    $display("pop_o[1] : out %d", simple_increment_ff);
     data_i[46:24] = simple_increment_ff;
     simple_increment_ff = simple_increment_ff + 1;
+    if (simple_increment_ff == 256)
+        $finish(2);
     ack_i[1] = 1;
     #(TCLK);
     ack_i[1] = 0;
