@@ -6,7 +6,7 @@ runsim: resample_pipeline_t.lxt
 .vvp.lxt:
 	vvp $< -lxt2
 
-resample_pipeline_t.vvp: resampler.v rom_firbank_441_480.v rom_firbank_half.v ringbuf.v mpemu.v resample_pipeline.v resample_pipeline_t.v
-	iverilog -o $@ $^
+resample_pipeline_t.vvp: resampler.v rom_*.v ringbuf.v mpemu.v resample_pipeline.v resample_pipeline_t.v
+	iverilog -DNO_IP -o $@ $^
 
 .SUFFIXES: .lxt .vvp

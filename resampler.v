@@ -12,7 +12,7 @@ module resampler_core
     parameter DECIM = 147,
     parameter BANK_WIDTH = NUM_FIR_LOG2+HALFDEPTH_LOG2,
 
-    parameter TIMESLICE = 64, // Not sure if this is OK.
+    parameter TIMESLICE = 64,
     parameter TIMESLICE_LOG2 = 6
 )(
     input clk,
@@ -316,13 +316,14 @@ module ringbuffered_resampler
     // data input
     input [(NUM_CH-1):0] ack_i,
     input [(24*NUM_CH-1):0] data_i,
+    output [(NUM_CH-1):0] pop_o,
 
     // data output
     input [(NUM_CH-1):0] pop_i,
     output [23:0] data_o,
     output [(NUM_CH-1):0] ack_o);
 
-wire [(NUM_CH-1):0] rb_pop;
+wire [(NUM_CH-1):0] pop;
 wire [(HALFDEPTH_LOG2+1-1):0] rb_offset;
 wire [(NUM_CH*24-1):0] rb_data;
 
@@ -335,7 +336,7 @@ for (ig = 0; ig < NUM_CH; ig = ig + 1) begin:rbunit
     ) rb(
         .clk(clk), .rst(rst),
         .data_i(data_i[(24*ig)+:24]), .we_i(ack_i[ig]),
-        .pop_i(rb_pop[ig]), .offset_i({1'b0, rb_offset[HALFDEPTH_LOG2:0]}), .data_o(rb_data[(24*ig) +: 24]));
+        .pop_i(pop[ig]), .offset_i({1'b0, rb_offset[HALFDEPTH_LOG2:0]}), .data_o(rb_data[(24*ig) +: 24]));
 end
 endgenerate
 
@@ -347,8 +348,10 @@ resampler_core #(
 ) core(
     .clk(clk), .rst(rst),
     .bank_addr_o(bank_addr_o), .bank_data_i(bank_data_i),
-    .pop_o(rb_pop), .offset_o(rb_offset), .data_i(rb_data),
+    .pop_o(pop), .offset_o(rb_offset), .data_i(rb_data),
     .pop_i(pop_i), .data_o(data_o), .ack_o(ack_o)
     );
+
+assign pop_o = pop;
 
 endmodule

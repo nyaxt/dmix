@@ -1,112 +1,117 @@
-module resample_pipeline(
+module resample_pipeline
+#(
+    parameter NUM_CH = 8,
+    parameter NUM_CH_LOG2 = 3,
+
+    parameter NUM_RATE = 5
+)(
     input clk,
     input rst,
 
-    // input rate
-    input [3:0] rate_i,
+    // data in
+    input [(NUM_RATE*NUM_CH-1):0] rate_i,
+    input [(NUM_CH-1):0] ack_i,
+    input [(24*NUM_CH-1):0] data_i,
+    output [(NUM_CH-1):0] pop_o,
 
-    // data input
-    output [1:0] pop_o,
-    input [23:0] data_i,
-    input [1:0] ack_i,
+    // data out
+    input [(NUM_CH-1):0] pop_i,
+    output [(NUM_CH-1):0] data_o,
+    output [(NUM_CH-1):0] ack_o);
 
-    // 192k output
-    input [1:0] pop_i,
-    output [23:0] data_o,
-    output [1:0] ack_o);
+parameter RATE_32 = 0;
+parameter RATE_441 = 1;
+parameter RATE_48 = 2;
+parameter RATE_96 = 3;
+parameter RATE_192 = 4;
 
-parameter RATE_441 = 0;
-parameter RATE_48 = 1;
-parameter RATE_96 = 2;
-parameter RATE_192 = 3;
+// 48kHz -> 96kHz upsampler
+// INPUT:
+wire [(NUM_CH-1):0] pop_48_96;
+// OUTPUT:
+wire [(24*NUM_CH-1):0] data_48_96;
+wire [(NUM_CH-1):0] ack_48_96;
 
-parameter SCHED_SLOT = 42;
-reg [5:0] mpready_shift;
-reg [6:0] mpsched_counter;
-always @(posedge clk) begin
-	if(pop_i) begin
-		mpsched_counter <= 0;
-		mpready_shift <= 6'b000001;
-	end else if(mpsched_counter == SCHED_SLOT-1) begin
-		mpsched_counter <= 0;
-		mpready_shift <= {mpready_shift[4:0], 1'b0};
-	end else
-		mpsched_counter <= mpsched_counter + 1;
+// 96kHz muxer
+// OUTPUT: 
+wire [(24*NUM_CH-1):0] data_96;
+wire [(NUM_CH-1):0] ack_96;
+
+genvar ig96;
+generate
+for (ig96 = 0; ig96 < NUM_CH; ig96 = ig96 + 1) begin:g96
+    wire in96 = rate_i[NUM_RATE*ig96+RATE_96];
+    assign data_96[(24*ig96) +: 24] = in96 ? data_i[24*ig96 +: 24] : data_48_96;
+    assign ack_96[ig96] = in96 ? ack_i[ig96] : ack_48_96;
 end
-wire [1:0] mpready_441to48 = mpready_shift[5:4];
-wire [1:0] mpready_48to96 = mpready_shift[3:2];
-wire [1:0] mpready_96to192 = mpready_shift[1:0];
+endgenerate
 
-// multiplier
-wire [23:0] mpcand441;
-wire [23:0] mpcand48;
-wire [23:0] mpcand96;
-wire [15:0] mplier441;
-wire [15:0] mplier48;
-wire [15:0] mplier96;
+// 96kHz -> 192kHz upsampler
+// INPUT:
+wire [(NUM_CH-1):0] pop_i_96_192;
+// OUTPUT:
+wire [(NUM_CH-1):0] pop_o_96_192;
+wire [23:0] data_96_192;
+wire [(NUM_CH-1):0] ack_96_192;
 
-wire [23:0] mpcand = mpcand441 | mpcand48 | mpcand96;
-wire [15:0] mplier = mplier441 | mplier48 | mplier96;
-wire [23:0] mprod;
-mpemu mpemu(
-    .clk(clk),
-    .mpcand_i(mpcand), .mplier_i(mplier), .mprod_o(mprod));
-
-wire [23:0] data_441 = data_i;
-wire [1:0] ack_441 = ack_i;
-wire [1:0] pop_48;
-
-wire [1:0] pop_o_441;
-wire [23:0] data_o_48;
-wire [1:0] ack_o_48;
-resample441_48 resample441_48(
+wire [23:0] bank_data_96_192;
+wire [3:0] bank_addr_96_192;
+rom_firbank_96_192 bank(.clk(clk), .addr(bank_addr_96_192), .data(bank_data_96_192));
+ringbuffered_resampler #(
+    .NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2),
+    .HALFDEPTH(8), .HALFDEPTH_LOG2(3),
+    .NUM_FIR(2), .NUM_FIR_LOG2(1), .DECIM(1),
+    .TIMESLICE(32), .TIMESLICE_LOG2(5)) resampler_96_192(
     .clk(clk), .rst(rst),
-    .mpready_i(mpready_441to48), .mpcand_o(mpcand441), .mplier_o(mplier441), .mprod_i(mprod),
-    .pop_o(pop_o_441), .data_i(data_441), .ack_i(ack_441),
-    .pop_i(pop_48), .data_o(data_o_48), .ack_o(ack_o_48));
+    .bank_addr_o(bank_addr_96_192), .bank_data_i(bank_data_96_192),
+    .ack_i(ack_96), .data_i(data_96), .pop_o(pop_o_96_192),
+    .pop_i(pop_i_96_192), .data_o(data_96_192), .ack_o(ack_96_192));
 
-wire [23:0] data_48 = rate_i[RATE_48] ? data_i : data_o_48;
-wire [1:0] ack_48 = rate_i[RATE_48] ? ack_i : ack_o_48;
-wire [1:0] pop_96;
+// 192kHz muxer
+genvar ig192;
+generate
+for (ig192 = 0; ig192 < NUM_CH; ig192 = ig192 + 1) begin:g192
+    wire in192 = rate_i[NUM_RATE*ig192 + RATE_192];
 
-wire [1:0] pop_o_48;
-wire [23:0] data_o_96;
-wire [1:0] ack_o_96;
-upsample2x ups_48to96(
-    .clk(clk), .rst(rst),
-    .mpready_i(mpready_48to96), .mpcand_o(mpcand48), .mplier_o(mplier48), .mprod_i(mprod),
-    .pop_o(pop_o_48), .data_i(data_48), .ack_i(ack_48),
-    .pop_i(pop_96), .data_o(data_o_96), .ack_o(ack_o_96));
+    wire [23:0] data_192 = in192 ? data_i[24*ig192 +: 24] : data_96_192;
+    wire ack_192 = in192 ? ack_i[ig192] : ack_96_192[ig192];
+    wire pop_192 = pop_i[ig192];
 
-wire [23:0] data_96 = rate_i[RATE_96] ? data_i : data_o_96;
-wire [1:0] ack_96 = rate_i[RATE_96] ? ack_i : ack_o_96;
+    assign pop_i_96_192[ig192] = pop_192;
 
-wire [1:0] pop_o_96;
-wire [23:0] data_o_192;
-wire [1:0] ack_o_192;
-upsample2x ups_96to192(
-    .clk(clk), .rst(rst),
-    .mpready_i(mpready_96to192), .mpcand_o(mpcand96), .mplier_o(mplier96), .mprod_i(mprod),
-    .pop_o(pop_o_96), .data_i(data_96), .ack_i(ack_96),
-    .pop_i(pop_i), .data_o(data_o_192), .ack_o(ack_o_192));
-
-assign data_o = rate_i[RATE_192] ? data_i : data_o_192;
-assign ack_o = rate_i[RATE_192] ? ack_i : ack_o_192;
-
-// FIXME: use ringbuf even when 192k
-reg [1:0] pop_reg;
-always @(rate_i or pop_i or pop_o_96 or pop_o_48 or pop_o_441) begin
-    if(rate_i[RATE_192])
-        pop_reg = pop_i; // FIXME: mixer assumes 1clk latency
-    else if (rate_i[RATE_96])
-        pop_reg = pop_o_96;
-    else if (rate_i[RATE_48])
-        pop_reg = pop_o_48;
-    else // if (pop_i[RATE_441])
-        pop_reg = pop_o_441;
+    // ringbuf
+    wire [23:0] data_rb;
+    ringbuf rb192(
+        .clk(clk), .rst(rst),
+        .data_i(data_192), .we_i(ack_192),
+        .pop_i(pop_192), .offset_i(4'b0), .data_o(data_rb));
+    reg ack_rb_ff;
+    always @(posedge clk) begin
+        if (rst)
+            ack_rb_ff <= 0;
+        else
+            ack_rb_ff <= pop_192;
+    end
+    assign data_o[(24*ig192) +: 24] = data_rb;
+    assign ack_o[ig192] = ack_rb_ff;
 end
-assign pop_o = pop_reg;
-assign pop_96 = pop_o_96;
-assign pop_48 = pop_o_48;
+endgenerate
+
+// pop_o sel
+reg [(NUM_CH-1):0] pop_o_reg; // combinatory logic
+genvar igpop;
+generate
+for (igpop = 0; igpop < NUM_CH; igpop = igpop + 1) begin:gpop
+    wire [(NUM_RATE-1):0] pop_rate = rate_i[NUM_RATE*igpop +: NUM_RATE];
+    always @(*) begin
+        if (pop_rate[RATE_192])
+            pop_o_reg[igpop] = pop_i[igpop];
+        else if (pop_rate[RATE_96])
+            pop_o_reg[igpop] = pop_o_96_192[igpop];
+        // FIXME: add more
+    end
+end
+endgenerate
+assign pop_o = pop_o_reg;
 
 endmodule

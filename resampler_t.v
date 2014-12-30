@@ -1,7 +1,6 @@
 `timescale 1ns / 1ps
 `define NUM_CH 2
 `define NUM_CH_LOG2 1
-`define HALFDEPTH_LOG2 4
 
 `define TEST_96192
 `define PRELOAD
@@ -36,7 +35,7 @@ ringbuffered_resampler #(
     .NUM_CH(`NUM_CH), .NUM_CH_LOG2(`NUM_CH_LOG2),
     .HALFDEPTH(8), .HALFDEPTH_LOG2(3),
     .NUM_FIR(2), .NUM_FIR_LOG2(1), .DECIM(1),
-    .TIMESLICE(32), .TIMESLICE_LOG2(5)) // FIXME: This needs to be <32
+    .TIMESLICE(32), .TIMESLICE_LOG2(5))
 `else
 wire [11:0] bank_addr;
 rom_firbank_441_480 bank(.clk(clk), .addr(bank_addr), .data(bank_data));
