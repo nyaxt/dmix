@@ -120,7 +120,7 @@ def apply_filter_half_reordered(src, rhtaps, ups, dec):
   return dst
 
 def float_to_fixed(l, bits):
-  scale = (1 << (bits-1)) - 1
+  scale = (1 << (bits-2)) - 1
   return [int(x * scale) for x in l]
 
 def muladde(mcand, mplier, cross):
@@ -259,7 +259,7 @@ class PolyphaseResampler:
     xi = float_to_fixed(x, self.srcbits)
     resi = apply_filter_half_reordered_emu(xi, self.rhetaps, self.ups_ratio, self.dec_ratio)
 
-    scale = 1.0 / ((1 << (self.srcbits-1 + self.tapsbits-1)) - 1)
+    scale = 1.0 / ((1 << (self.srcbits-2 + self.tapsbits-2)) - 1)
     res = [float(x) * scale for x in resi]
     return res
 
@@ -272,8 +272,8 @@ class PolyphaseResampler:
     self.srcbits = 24
     res = apply_filter_half_reordered_emu(xi, self.rhetaps, self.ups_ratio, self.dec_ratio)
 
-    scale = 1.0 / ((1 << (self.srcbits-1 + self.tapsbits-1)) - 1)
-    y = [i >> (8+self.tapsbits-1) for i in res]
+    scale = 1.0 / ((1 << (self.srcbits-2 + self.tapsbits-2)) - 1)
+    y = [i >> (8+self.tapsbits-2) for i in res]
 
     wo = wave.open("out.wav", 'w')
     wo.setnchannels(1)
@@ -311,7 +311,7 @@ always @(posedge clk) begin
     i = 0
     for c in self.rhetaps:
       flag = "" if c > 0 else "-"
-      f.write("        {0}: data_ff <= {1}{2}'d{3};\n".format(i, flag, self.tapsbits, abs(c)))
+      f.write("        {0}: data_ff <= {1}'h{2:0>6X}; // {3}\n".format(i, self.tapsbits, c & 0xffffff, c))
       i += 1
     f.write("""
         default: data_ff <= 0;

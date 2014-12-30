@@ -263,7 +263,7 @@ always @(posedge clk) begin
         `ifdef DEBUG
         if (ST_READY < state_ff && state_ff < ST_END_CYCLE)
             $display("ch: %d curr_sum: %d shifted %d. mpcand %d * mplier %d = %d",
-                processing_ch_ff, $signed(sum_ff), $signed(sum_ff) >>> 4, $signed(mpemu.delayed_a), $signed(mpemu.delayed_b), $signed(mprod_i));
+                processing_ch_ff, $signed(sum_ff), $signed(sum_ff) >>> 3, $signed(mpemu.delayed_a), $signed(mpemu.delayed_b), $signed(mprod_i));
         `endif
         sum_ff <= saturated_add(sum_ff, {{4{mprod_i[27]}}, mprod_i});
     end
@@ -274,16 +274,16 @@ reg [23:0] saturated_sum_ff;
 always @(posedge clk) begin
     if (sum_ff[31] == 1'b0) begin
         // sum +
-        if (sum_ff[30:27] != 4'b0000)
+        if (sum_ff[30:26] != 5'b00000)
             saturated_sum_ff <= 24'h7f_ffff; // overflow
         else
-            saturated_sum_ff <= {1'b0, sum_ff[26:4]}; // sum is in expressible range
+            saturated_sum_ff <= {1'b0, sum_ff[26:3]}; // sum is in expressible range
     end else begin
         // sum -
-        if (sum_ff[30:27] != 4'b1111)
+        if (sum_ff[30:26] != 5'b11111)
             saturated_sum_ff <= 24'h80_0000; // underflow
         else
-            saturated_sum_ff <= {1'b1, sum_ff[26:4]}; // sum is in expressible range
+            saturated_sum_ff <= {1'b1, sum_ff[26:3]}; // sum is in expressible range
     end
 end
 assign data_o = saturated_sum_ff;

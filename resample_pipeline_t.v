@@ -28,7 +28,7 @@ reg [(`NUM_CH-1):0] pop_i;
 wire [23:0] bank_data;
 resample_pipeline #(.NUM_CH(2), .NUM_CH_LOG2(1)) uut(
     .clk(clk), .rst(rst),
-    .rate_i(10'b0001000010),
+    .rate_i(10'b0000100001),
     .ack_i(ack_i), .data_i(data_i),
     .pop_i(pop_i)
     );
@@ -89,7 +89,6 @@ end
 
 always @(posedge uut.pop_o[1]) begin
     #(TCLK);
-    $display("pop_o[1] : out %d", simple_increment_ff);
     data_i[46:24] = simple_increment_ff;
     simple_increment_ff = simple_increment_ff + 1;
     if (simple_increment_ff == 256)

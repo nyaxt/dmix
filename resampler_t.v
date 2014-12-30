@@ -2,7 +2,8 @@
 `define NUM_CH 2
 `define NUM_CH_LOG2 1
 
-`define TEST_96192
+`define TEST_32_48
+// `define TEST_96192
 `define PRELOAD
 `define NODUMP
 
@@ -28,7 +29,15 @@ reg [(24*`NUM_CH-1):0] data_i2;
 reg [(`NUM_CH-1):0] pop_i;
 
 wire [23:0] bank_data;
-`ifdef TEST_96192
+`ifdef TEST_32_48
+wire [5:0] bank_addr;
+rom_firbank_32_48 bank_32_48(.clk(clk), .addr(bank_addr), .data(bank_data));
+ringbuffered_resampler #(
+    .NUM_CH(`NUM_CH), .NUM_CH_LOG2(`NUM_CH_LOG2),
+    .HALFDEPTH(16), .HALFDEPTH_LOG2(4),
+    .NUM_FIR(3), .NUM_FIR_LOG2(2), .DECIM(2),
+    .TIMESLICE(64), .TIMESLICE_LOG2(6))
+`elsif TEST_96192
 wire [3:0] bank_addr;
 rom_firbank_96_192 bank(.clk(clk), .addr(bank_addr), .data(bank_data));
 ringbuffered_resampler #(

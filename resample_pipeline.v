@@ -25,6 +25,30 @@ parameter RATE_48 = 2;
 parameter RATE_96 = 3;
 parameter RATE_192 = 4;
 
+// 32kHz -> 48kHz upsampler
+// INPUT:
+wire [(NUM_CH-1):0] pop_i_32_48;
+// OUTPUT:
+wire [(NUM_CH-1):0] pop_o_32_48;
+wire [23:0] data_32_48;
+wire [(NUM_CH-1):0] ack_32_48;
+
+wire [23:0] bank_data_32_48;
+wire [5:0] bank_addr_32_48;
+rom_firbank_32_48 bank_32_48(.clk(clk), .addr(bank_addr_32_48), .data(bank_data_32_48));
+ringbuffered_resampler #(
+    .NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2),
+    .HALFDEPTH(16), .HALFDEPTH_LOG2(4),
+    .NUM_FIR(3), .NUM_FIR_LOG2(2), .DECIM(2),
+    .TIMESLICE(64), .TIMESLICE_LOG2(6)) resampler_32_48(
+    .clk(clk), .rst(rst),
+    .bank_addr_o(bank_addr_32_48), .bank_data_i(bank_data_32_48),
+    .ack_i(ack_i), .data_i(data_i), .pop_o(pop_o_32_48),
+    .pop_i(pop_i_32_48), .data_o(data_32_48), .ack_o(ack_32_48));
+
+always @(posedge ack_32_48[1])
+    $display("32->48: %d", $signed(data_32_48));
+
 // 44.1kHz -> 48.0kHz upsampler
 // INPUT:
 wire [(NUM_CH-1):0] pop_i_441_480;
@@ -46,9 +70,6 @@ ringbuffered_resampler #(
     .ack_i(ack_i), .data_i(data_i), .pop_o(pop_o_441_480),
     .pop_i(pop_i_441_480), .data_o(data_441_480), .ack_o(ack_441_480));
 
-always @(posedge ack_441_480[1])
-    $display("441->480: %d", $signed(data_441_480));
-
 // 48kHz muxer
 // OUTPUT:
 wire [(24*NUM_CH-1):0] data_48;
@@ -58,8 +79,13 @@ genvar ig48;
 generate
 for (ig48 = 0; ig48 < NUM_CH; ig48 = ig48 + 1) begin:g48
     wire in48 = rate_i[NUM_RATE*ig48+RATE_48];
-    assign data_48[(24*ig48) +: 24] = in48 ? data_i[24*ig48 +: 24] : data_441_480;
-    assign ack_48[ig48] = in48 ? ack_i[ig48] : ack_441_480[ig48];
+    wire in441 = rate_i[NUM_RATE*ig48+RATE_441];
+    assign data_48[(24*ig48) +: 24] =
+        in48 ? data_i[24*ig48 +: 24] :
+        in441 ? data_441_480 : data_32_48;
+    assign ack_48[ig48] =
+        in48 ? ack_i[ig48] :
+        in441 ? ack_441_480[ig48] : ack_32_48[ig48];
 end
 endgenerate
 
@@ -84,6 +110,7 @@ ringbuffered_resampler #(
     .ack_i(ack_48), .data_i(data_48), .pop_o(pop_o_48_96),
     .pop_i(pop_i_48_96), .data_o(data_48_96), .ack_o(ack_48_96));
 assign pop_i_441_480 = pop_o_48_96;
+assign pop_i_32_48 = pop_o_48_96;
 
 // 96kHz muxer
 // OUTPUT: 
@@ -166,7 +193,8 @@ for (igpop = 0; igpop < NUM_CH; igpop = igpop + 1) begin:gpop
             pop_o_reg[igpop] = pop_o_48_96[igpop];
         else if (pop_rate[RATE_441])
             pop_o_reg[igpop] = pop_o_441_480[igpop];
-        // FIXME: add more
+        else // if (pop_rate[RATE_32])
+            pop_o_reg[igpop] = pop_o_32_48[igpop];
     end
 end
 endgenerate
