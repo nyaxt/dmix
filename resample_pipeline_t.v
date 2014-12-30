@@ -28,7 +28,7 @@ reg [(`NUM_CH-1):0] pop_i;
 wire [23:0] bank_data;
 resample_pipeline #(.NUM_CH(2), .NUM_CH_LOG2(1)) uut(
     .clk(clk), .rst(rst),
-    .rate_i(10'b0010000100),
+    .rate_i(10'b0001000010),
     .ack_i(ack_i), .data_i(data_i),
     .pop_i(pop_i)
     );
@@ -64,7 +64,7 @@ initial begin
 `endif
 
 `ifndef NODUMP
-    #300_000;
+    #500_000;
     $finish(2);
 `endif
 end

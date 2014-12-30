@@ -25,12 +25,29 @@ parameter RATE_48 = 2;
 parameter RATE_96 = 3;
 parameter RATE_192 = 4;
 
-// 48kHz -> 96kHz upsampler
+// 44.1kHz -> 48.0kHz upsampler
 // INPUT:
-wire [(NUM_CH-1):0] pop_441_480;
+wire [(NUM_CH-1):0] pop_i_441_480;
 // OUTPUT:
-wire [(24*NUM_CH-1):0] data_441_480;
+wire [(NUM_CH-1):0] pop_o_441_480;
+wire [23:0] data_441_480;
 wire [(NUM_CH-1):0] ack_441_480;
+
+wire [23:0] bank_data_441_480;
+wire [11:0] bank_addr_441_480;
+rom_firbank_441_480 bank_441_480(.clk(clk), .addr(bank_addr_441_480), .data(bank_data_441_480));
+ringbuffered_resampler #(
+    .NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2),
+    .HALFDEPTH(16), .HALFDEPTH_LOG2(4),
+    .NUM_FIR(160), .NUM_FIR_LOG2(8), .DECIM(147),
+    .TIMESLICE(64), .TIMESLICE_LOG2(6)) resampler_441_480(
+    .clk(clk), .rst(rst),
+    .bank_addr_o(bank_addr_441_480), .bank_data_i(bank_data_441_480),
+    .ack_i(ack_i), .data_i(data_i), .pop_o(pop_o_441_480),
+    .pop_i(pop_i_441_480), .data_o(data_441_480), .ack_o(ack_441_480));
+
+always @(posedge ack_441_480[1])
+    $display("441->480: %d", $signed(data_441_480));
 
 // 48kHz muxer
 // OUTPUT:
@@ -42,7 +59,7 @@ generate
 for (ig48 = 0; ig48 < NUM_CH; ig48 = ig48 + 1) begin:g48
     wire in48 = rate_i[NUM_RATE*ig48+RATE_48];
     assign data_48[(24*ig48) +: 24] = in48 ? data_i[24*ig48 +: 24] : data_441_480;
-    assign ack_48[ig48] = in48 ? ack_i[ig48] : ack_441_480;
+    assign ack_48[ig48] = in48 ? ack_i[ig48] : ack_441_480[ig48];
 end
 endgenerate
 
@@ -66,6 +83,7 @@ ringbuffered_resampler #(
     .bank_addr_o(bank_addr_48_96), .bank_data_i(bank_data_48_96),
     .ack_i(ack_48), .data_i(data_48), .pop_o(pop_o_48_96),
     .pop_i(pop_i_48_96), .data_o(data_48_96), .ack_o(ack_48_96));
+assign pop_i_441_480 = pop_o_48_96;
 
 // 96kHz muxer
 // OUTPUT: 
@@ -146,6 +164,8 @@ for (igpop = 0; igpop < NUM_CH; igpop = igpop + 1) begin:gpop
             pop_o_reg[igpop] = pop_o_96_192[igpop];
         else if (pop_rate[RATE_48])
             pop_o_reg[igpop] = pop_o_48_96[igpop];
+        else if (pop_rate[RATE_441])
+            pop_o_reg[igpop] = pop_o_441_480[igpop];
         // FIXME: add more
     end
 end
