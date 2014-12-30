@@ -139,7 +139,6 @@ reg [(NUM_FIR_LOG2-1):0] firidx_mem [(NUM_CH-1):0];
 
 integer i;
 always @(posedge clk) begin
-    firidx_lwing_currch_ff <= NUM_FIR-1 - firidx_rwing_currch_ff;
     pop_o_ff <= 0;
 
     if (rst) begin
@@ -147,27 +146,28 @@ always @(posedge clk) begin
             firidx_mem[i] <= 0;
         end
         
-        firidx_rwing_currch_ff <= 0;
+        firidx_lwing_currch_ff <= 0;
     end else begin
         case (state_ff)
             ST_READY: begin
-                firidx_rwing_currch_ff <= firidx_mem[processing_ch_ff];
+                firidx_lwing_currch_ff <= firidx_mem[processing_ch_ff];
+                firidx_rwing_currch_ff <= NUM_FIR-1 - firidx_mem[processing_ch_ff];
             end
             ST_MULADD_RWING: begin
                 `ifdef DEBUG
                 if (muladd_wing_cycle_counter == 0)
-                    $display("ch: %d. firidx_rwing: %d", processing_ch_ff, firidx_mem[processing_ch_ff]);
+                    $display("ch: %d. firidx_lwing: %d", processing_ch_ff, firidx_mem[processing_ch_ff]);
                 `endif
             end
             ST_END_CYCLE: begin
-                if (firidx_rwing_currch_ff >= NUM_FIR - DECIM) begin
-                    firidx_mem[processing_ch_ff] <= firidx_rwing_currch_ff + DECIM - NUM_FIR;
+                if (firidx_lwing_currch_ff >= NUM_FIR - DECIM) begin
+                    firidx_mem[processing_ch_ff] <= firidx_lwing_currch_ff + DECIM - NUM_FIR;
                     pop_o_ff[processing_ch_ff] <= 1;
                     `ifdef DEBUG
                     $display("ch: %d. pop!", processing_ch_ff);
                     `endif
                 end else begin
-                    firidx_mem[processing_ch_ff] <= firidx_rwing_currch_ff + DECIM;
+                    firidx_mem[processing_ch_ff] <= firidx_lwing_currch_ff + DECIM;
                 end
             end
         endcase

@@ -80,13 +80,6 @@ initial begin
     ack_i = 2'b00;
 `endif
 
-    rst = 1'b0;
-    #(TCLK);
-    rst = 1'b1;
-    #TCLK;
-    rst = 1'b0;
-    #TCLK;
-
 `ifndef NODUMP
     #3_000;
     $finish(2);
@@ -102,7 +95,7 @@ always begin
     #(TCLK*63);
 end
 
-always @(posedge uut.rb_pop[0]) begin
+always @(posedge uut.pop_o[0]) begin
     #(TCLK);
     data_i = {24'h0, testdata_curr_exp};
     testdata_iter = testdata_iter+1;
@@ -113,7 +106,7 @@ always @(posedge uut.rb_pop[0]) begin
     ack_i[0] = 0;
 end
 
-always @(posedge uut.rb_pop[1]) begin
+always @(posedge uut.pop_o[1]) begin
     #(TCLK);
     data_i = {simple_increment_ff, 24'h0};
     simple_increment_ff = simple_increment_ff + 1;

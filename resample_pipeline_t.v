@@ -2,7 +2,6 @@
 `define NUM_CH 2
 `define NUM_CH_LOG2 1
 
-`define TEST_96192
 `define PRELOAD
 `define NODUMP
 
@@ -29,7 +28,7 @@ reg [(`NUM_CH-1):0] pop_i;
 wire [23:0] bank_data;
 resample_pipeline #(.NUM_CH(2), .NUM_CH_LOG2(1)) uut(
     .clk(clk), .rst(rst),
-    .rate_i(5'b00001),
+    .rate_i(10'b0100001000),
     .ack_i(ack_i), .data_i(data_i),
     .pop_i(pop_i)
     );
@@ -45,8 +44,6 @@ initial begin
     simple_increment_ff = 0;
 
     clk = 1'b0;
-
-    data_i = 24'h0;
 
     rst = 1'b0;
     #(TCLK);
@@ -74,7 +71,7 @@ initial begin
     #TCLK;
 
 `ifndef NODUMP
-    #3_000;
+    #10_000;
     $finish(2);
 `endif
 end
@@ -90,7 +87,7 @@ end
 
 always @(posedge uut.pop_o[0]) begin
     #(TCLK);
-    data_i = {24'h0, testdata_curr_exp};
+    data_i[23:0] = testdata_curr_exp;
     testdata_iter = testdata_iter+1;
     if (testdata_iter == 256)
         $finish(2);
@@ -101,7 +98,7 @@ end
 
 always @(posedge uut.pop_o[1]) begin
     #(TCLK);
-    data_i = {simple_increment_ff, 24'h0};
+    data_i[46:24] = simple_increment_ff;
     simple_increment_ff = simple_increment_ff + 1;
     ack_i[1] = 1;
     #(TCLK);
@@ -109,7 +106,7 @@ always @(posedge uut.pop_o[1]) begin
 end
 
 always @(posedge uut.ack_o[1]) begin
-    $display("%d", $signed(uut.data_o));
+    $display("%d", $signed(uut.data_o[46:24]));
 end
 
 endmodule
