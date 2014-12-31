@@ -6,6 +6,9 @@ dmix is a FPGA-based digital mixer.
 
 MIT License
 
+## Block diagram
+https://docs.google.com/presentation/d/1eTRmQODLgxqnv2yuBNbpwJNigMHqBfnhtFLWPbKyl60/edit?usp=sharing
+
 ## List of modules
 
 - dac_drv.v
