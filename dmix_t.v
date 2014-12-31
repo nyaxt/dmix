@@ -14,7 +14,7 @@ task recv_rawbit;
     input b;
     begin
         signal = b;
-        #(TclkSPDIF*2);
+        #(TclkSPDIF);//*6);
     end
 endtask
 
@@ -148,12 +148,14 @@ endtask
 
 // `define USE_CAPTURE
 
+reg [22:0] counter;
 initial begin
 	$dumpfile("dmix_t.lxt");
 	$dumpvars(0, uut);
 
 	rst = 1'b0;
     signal = 0;
+    counter <= 0;
 
 	#(10);
 	rst = 1'b1;
@@ -163,9 +165,7 @@ initial begin
 end
 
 `ifndef USE_CAPTURE
-reg [22:0] counter;
 always begin
-    counter <= 0;
     recv_B();
     recv_subframe(counter);
     counter = counter + 1;
@@ -196,7 +196,7 @@ always begin
         counter = counter + 1;
     end
 
-    if (counter > 1)
+    if (counter > 512)
         $finish(2);
 end
 `else
