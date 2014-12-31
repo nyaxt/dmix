@@ -1,0 +1,12 @@
+dump: genpulse_t.lxt
+	gtkwave genpulse_t.lxt &
+
+runsim: genpulse_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+genpulse_t.vvp: genpulse.v genpulse_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp
