@@ -21,6 +21,7 @@ parameter TCLK = 10; // 98.304Mhz ~ 100Mhz
 
 reg clk;
 reg rst;
+wire [(`NUM_CH-1):0] rst_ch = 2'b00;
 
 reg [(`NUM_CH-1):0] ack_i;
 reg [(24*`NUM_CH-1):0] data_i;
@@ -51,7 +52,7 @@ rom_firbank_441_480 bank(.clk(clk), .addr(bank_addr), .data(bank_data));
 ringbuffered_resampler #(.NUM_CH(`NUM_CH), .NUM_CH_LOG2(`NUM_CH_LOG2))
 `endif
   uut(
-    .clk(clk), .rst(rst),
+    .clk(clk), .rst(rst), .rst_ch(rst_ch),
     .bank_addr_o(bank_addr), .bank_data_i(bank_data),
     .ack_i(ack_i), .data_i(data_i),
     .pop_i(pop_i)

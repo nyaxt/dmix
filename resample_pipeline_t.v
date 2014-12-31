@@ -27,7 +27,7 @@ reg [(`NUM_CH-1):0] pop_i;
 
 wire [23:0] bank_data;
 resample_pipeline #(.NUM_CH(2), .NUM_CH_LOG2(1)) uut(
-    .clk(clk), .rst(rst),
+    .clk(clk), .rst(rst), .rst_ch(0),
     .rate_i(10'b0000100001),
     .ack_i(ack_i), .data_i(data_i),
     .pop_i(pop_i)

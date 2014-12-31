@@ -62,6 +62,7 @@ assign rst_dcm = (rst_counter[19:3] == 17'h00000);
 assign rst_ip = (rst_counter[19:3] == 17'h0000e);
 
 wire [(NUM_CH*NUM_RATE-1):0] rate;
+wire [(NUM_CH-1):0] rst_ch;
 wire [(NUM_CH-1):0] fifo_ack;
 wire [(NUM_CH*24-1):0] fifo_data;
 
@@ -71,7 +72,6 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     wire [23:0] dai_data_983040;
     wire dai_lrck_983040;
     wire dai_ack_983040;
-
     wire dai_locked;
 
     wire [(NUM_RATE-1):0] dai_rate;
@@ -119,6 +119,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     end
 
     assign rate[(ig*NUM_RATE*2) +: (NUM_RATE*2)] = {2{dai_rate}};
+    assign rst_ch[(ig*2) +: 2] = {2{~dai_locked}};
     assign fifo_ack[(ig*2) +: 2] = {fifo_pop_ff & ~dai_lrck_491520, fifo_pop_ff & dai_lrck_491520};
     assign fifo_data[(ig*24*2) +: (24*2)] = {2{dai_data_491520}};
 end
@@ -132,6 +133,7 @@ wire [(NUM_CH-1):0] resampler_ack_o;
 resample_pipeline #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2)) resampler(
     .clk(clk491520),
     .rst(rst_ip),
+    .rst_ch(rst_ch),
 
     .rate_i(rate),
     .ack_i(fifo_ack),

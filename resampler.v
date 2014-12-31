@@ -306,6 +306,7 @@ module ringbuffered_resampler
 )(
     input clk,
     input rst,
+    input [(NUM_CH-1):0] rst_ch,
 
     // to firbank
     output [(BANK_WIDTH-1):0] bank_addr_o,
@@ -332,7 +333,7 @@ for (ig = 0; ig < NUM_CH; ig = ig + 1) begin:rbunit
         .LEN(HALFDEPTH*4), // should work w/ *2, but buffer a little longer to address input jitter
         .LEN_LOG2(HALFDEPTH_LOG2+2)
     ) rb(
-        .clk(clk), .rst(rst),
+        .clk(clk), .rst(rst | rst_ch[ig]),
         .data_i(data_i[(24*ig)+:24]), .we_i(ack_i[ig]),
         .pop_i(pop[ig]), .offset_i({1'b0, rb_offset[HALFDEPTH_LOG2:0]}), .data_o(rb_data[(24*ig) +: 24]));
 end

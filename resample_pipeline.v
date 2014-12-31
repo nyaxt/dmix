@@ -7,6 +7,7 @@ module resample_pipeline
 )(
     input clk,
     input rst,
+    input [(NUM_CH-1):0] rst_ch,
 
     // data in
     input [(NUM_RATE*NUM_CH-1):0] rate_i,
@@ -41,7 +42,7 @@ ringbuffered_resampler #(
     .HALFDEPTH(16), .HALFDEPTH_LOG2(4),
     .NUM_FIR(3), .NUM_FIR_LOG2(2), .DECIM(2),
     .TIMESLICE(64), .TIMESLICE_LOG2(6)) resampler_32_48(
-    .clk(clk), .rst(rst),
+    .clk(clk), .rst(rst), .rst_ch(rst_ch),
     .bank_addr_o(bank_addr_32_48), .bank_data_i(bank_data_32_48),
     .ack_i(ack_i), .data_i(data_i), .pop_o(pop_o_32_48),
     .pop_i(pop_i_32_48), .data_o(data_32_48), .ack_o(ack_32_48));
@@ -62,7 +63,7 @@ ringbuffered_resampler #(
     .HALFDEPTH(16), .HALFDEPTH_LOG2(4),
     .NUM_FIR(160), .NUM_FIR_LOG2(8), .DECIM(147),
     .TIMESLICE(64), .TIMESLICE_LOG2(6)) resampler_441_480(
-    .clk(clk), .rst(rst),
+    .clk(clk), .rst(rst), .rst_ch(rst_ch),
     .bank_addr_o(bank_addr_441_480), .bank_data_i(bank_data_441_480),
     .ack_i(ack_i), .data_i(data_i), .pop_o(pop_o_441_480),
     .pop_i(pop_i_441_480), .data_o(data_441_480), .ack_o(ack_441_480));
@@ -102,7 +103,7 @@ ringbuffered_resampler #(
     .HALFDEPTH(16), .HALFDEPTH_LOG2(4),
     .NUM_FIR(2), .NUM_FIR_LOG2(1), .DECIM(1),
     .TIMESLICE(64), .TIMESLICE_LOG2(6)) resampler_48_96(
-    .clk(clk), .rst(rst),
+    .clk(clk), .rst(rst), .rst_ch(rst_ch),
     .bank_addr_o(bank_addr_48_96), .bank_data_i(bank_data_48_96),
     .ack_i(ack_48), .data_i(data_48), .pop_o(pop_o_48_96),
     .pop_i(pop_i_48_96), .data_o(data_48_96), .ack_o(ack_48_96));
@@ -139,7 +140,7 @@ ringbuffered_resampler #(
     .HALFDEPTH(8), .HALFDEPTH_LOG2(3),
     .NUM_FIR(2), .NUM_FIR_LOG2(1), .DECIM(1),
     .TIMESLICE(32), .TIMESLICE_LOG2(5)) resampler_96_192(
-    .clk(clk), .rst(rst),
+    .clk(clk), .rst(rst), .rst_ch(rst_ch),
     .bank_addr_o(bank_addr_96_192), .bank_data_i(bank_data_96_192),
     .ack_i(ack_96), .data_i(data_96), .pop_o(pop_o_96_192),
     .pop_i(pop_i_96_192), .data_o(data_96_192), .ack_o(ack_96_192));
@@ -160,7 +161,7 @@ for (ig192 = 0; ig192 < NUM_CH; ig192 = ig192 + 1) begin:g192
     // ringbuf
     wire [23:0] data_rb;
     ringbuf rb192(
-        .clk(clk), .rst(rst),
+        .clk(clk), .rst(rst | rst_ch[ig192]),
         .data_i(data_192), .we_i(ack_192),
         .pop_i(pop_192), .offset_i(4'b0), .data_o(data_rb));
     reg ack_rb_ff;
