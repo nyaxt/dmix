@@ -1,4 +1,5 @@
 //`define SKIP_RESAMPLER
+`define SKIP_MIXER
 `define TEST_96192
 
 module dmix_top #(
@@ -126,9 +127,9 @@ end
 endgenerate
 
 `ifndef SKIP_RESAMPLER
-wire [(NUM_CH-1):0] resampler_pop_i;
-wire [47:0] resampler_data_o;
-wire [(NUM_CH-1):0] resampler_ack_o;
+wire [(NUM_CH-1):0] resampler_pop;
+wire [47:0] resampler_data;
+wire [(NUM_CH-1):0] resampler_ack;
 
 resample_pipeline #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2)) resampler(
     .clk(clk491520),
@@ -140,12 +141,21 @@ resample_pipeline #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2)) resampler(
     .data_i(fifo_data),
     // .pop_o(fifo_pop) NC???
 
-    .pop_i(resampler_pop_i),
-    .data_o(resampler_data_o),
-    .ack_o(resampler_ack_o)
-    );
+    .pop_i(resampler_pop),
+    .data_o(resampler_data),
+    .ack_o(resampler_ack));
 
-wire [23:0] resampler_data_sel = resampler_ack_o[1] ? resampler_data_o[47:24] : resampler_data_o[23:0];
+`ifndef SKIP_MIXER
+wire [1:0] mixer_ack;
+wire [47:0] mixer_data;
+wire [1:0] mixer_pop;
+
+wire [(NUM_CH*VOL_WIDTH-1):0] vol = {NUM_CH{32'h0100_0000}};
+
+mixer mixer(
+    .clk(clk491520), .rst(rst_ip),
+    .pop_o(resampler_pop), .data_i(resampler_data), .vol_i(vol),
+    .pop_i(mixer_pop), .data_o(mixer_data), .ack_o(mixer_ack));
 
 dac_drv dac_drv(
     .clk(clk491520),
@@ -155,9 +165,24 @@ dac_drv dac_drv(
     .lrck_o(dac_lrck_o),
     .data_o(dac_data_o),
 
-    .ack_i(resampler_ack_o),
+    .ack_i(mixer_ack),
+    .data_i(mixer_data),
+    .pop_o(mixer_pop));
+`else
+wire [23:0] resampler_data_sel = resampler_ack[1] ? resampler_data[47:24] : resampler_data[23:0];
+
+dac_drv dac_drv(
+    .clk(clk491520),
+    .rst(rst_ip),
+
+    .bck_o(dac_bck_o),
+    .lrck_o(dac_lrck_o),
+    .data_o(dac_data_o),
+
+    .ack_i(resampler_ack),
     .data_i(resampler_data_sel),
-    .pop_o(resampler_pop_i));
+    .pop_o(resampler_pop));
+`endif
 `else
 
 wire dac_pop_o;

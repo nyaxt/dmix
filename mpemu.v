@@ -46,9 +46,9 @@ endmodule
 module mpemu_scale(
     input clk,
     
-    input signed [23:0] mpcand_i,
-    input [15:0] scale_i,
-    output signed [23:0] mprod_o);
+    input [23:0] mpcand_i,
+    input [31:0] scale_i,
+    output [55:0] mprod_o);
 
 `ifndef NO_IP
 mp_scale mp_scale(
@@ -57,19 +57,26 @@ mp_scale mp_scale(
   .b(scale_i),
   .p(mprod_o));
 `else
-wire signed [16:0] mplier_i = scale_i;
-reg signed [23:0] delay[4:0];
-assign mprod_o = delay[4];
+reg [23:0] delay_a[4:0];
+reg [31:0] delay_b[4:0];
 
-wire [39:0] prod_full = mpcand_i * mplier_i;
-wire [23:0] prod = mpcand_i;
 always @(posedge clk) begin
-    delay[0] <= prod;
-    delay[1] <= delay[0];
-    delay[2] <= delay[1];
-    delay[3] <= delay[2];
-    delay[4] <= delay[3];
+    delay_a[0] <= mpcand_i;
+    delay_a[1] <= delay_a[0];
+    delay_a[2] <= delay_a[1];
+    delay_a[3] <= delay_a[2];
+    delay_a[4] <= delay_a[3];
+
+    delay_b[0] <= scale_i;
+    delay_b[1] <= delay_b[0];
+    delay_b[2] <= delay_b[1];
+    delay_b[3] <= delay_b[2];
+    delay_b[4] <= delay_b[3];
 end
+wire [23:0] delayed_a = delay_a[4];
+wire [31:0] delayed_b = delay_b[4];
+
+assign prod_full = $signed(delayed_a) * $signed(delayed_b);
 `endif
 
 endmodule
