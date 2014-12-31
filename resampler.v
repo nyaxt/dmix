@@ -113,7 +113,7 @@ always @(posedge clk) begin
                 end
             end
             ST_WAIT_RESULT: begin
-                if (muladd_wing_cycle_counter == MULT_LATENCY)
+                if (muladd_wing_cycle_counter == 1+MULT_LATENCY-1)
                     state_ff <= ST_SATURATE;
             end
             ST_SATURATE: begin
