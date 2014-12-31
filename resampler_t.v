@@ -2,7 +2,7 @@
 `define NUM_CH 2
 `define NUM_CH_LOG2 1
 
-`define TEST_32_48
+// `define TEST_32_48
 // `define TEST_96192
 `define PRELOAD
 `define NODUMP

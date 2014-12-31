@@ -1,0 +1,12 @@
+dump: pop_latch_t.lxt
+	gtkwave pop_latch_t.lxt &
+
+runsim: pop_latch_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+pop_latch_t.vvp: pop_latch.v pop_latch_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp

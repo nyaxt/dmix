@@ -6,7 +6,7 @@ runsim: resampler_t.lxt
 .vvp.lxt:
 	vvp $< -lxt2
 
-resampler_t.vvp: resampler.v mpemu.v rom_*.v ringbuf.v resampler_t.v
+resampler_t.vvp: resampler.v mpemu.v rom_*.v ringbuf.v resampler_t.v pop_latch.v
 	iverilog -DNO_IP -o $@ $^
 
 .SUFFIXES: .lxt .vvp

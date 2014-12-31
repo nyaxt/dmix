@@ -33,15 +33,17 @@ module resampler_core
     output [(NUM_CH-1):0] ack_o);
 
 // Latch pop_i request
-reg [(NUM_CH-1):0] pop_i_latch;
 wire [(NUM_CH-1):0] ack_pop_i;
-always @(posedge clk) begin
-    if (rst) begin
-        pop_i_latch <= 0;
-    end else begin
-        pop_i_latch <= pop_i | (~ack_pop_i & pop_i_latch);
-    end
+wire [(NUM_CH-1):0] pop_i_latched;
+genvar igl;
+generate
+for(igl = 0; igl < NUM_CH; igl = igl + 1) begin:g
+    pop_latch pop_latch(
+        .clk(clk), .rst(rst),
+        .pop_i(pop_i[igl]),
+        .ack_pop_i(ack_pop_i[igl]), .pop_latched_o(pop_i_latched[igl]));
 end
+endgenerate
 
 // Fixed timeslice based scheduling and decide ch to process
 reg [(NUM_CH_LOG2-1):0] processing_ch_ff;
@@ -93,7 +95,7 @@ always @(posedge clk) begin
         ack_pop_ff <= 0;
         case (state_ff)
             ST_READY: begin
-                if (pop_i_latch[processing_ch_ff]) begin
+                if (pop_i_latched[processing_ch_ff]) begin
                     state_ff <= ST_MULADD_RWING;
                     muladd_wing_cycle_counter <= 0;
                 end
