@@ -68,7 +68,6 @@ always @(posedge clk) begin
 end
 
 // Sequence management
-reg processing_enabled_ff;
 reg [7:0] state_ff; // Note: bit width will be optimized anyway.
 
 parameter MULT_LATENCY = 5;
@@ -87,7 +86,6 @@ reg [HALFDEPTH_LOG2:0] muladd_wing_cycle_counter;
 always @(posedge clk) begin
     if (rst_processing_ff) begin
         ack_pop_ff <= 1 << processing_ch_ff;
-        processing_enabled_ff <= pop_i_latch[processing_ch_ff];
         state_ff <= ST_READY;
     end else begin
         muladd_wing_cycle_counter <= muladd_wing_cycle_counter + 1;
