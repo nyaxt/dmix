@@ -95,11 +95,6 @@ always @(posedge clk) begin
     end
 end
 
-// - output pop at end of cycle
-// FIXME remove: reg [(NUM_CH_OUT-1):0] pop_o_ff;
-// FIXME remove: always @(posedge clk)
-// FIXME remove:     pop_o_ff <= end_of_cycle << processing_out_ch_ff;
-
 // Supply mpcand
 // OUTPUT:
 wire [23:0] mpcand = buffered_data[processing_in_ch_ff];
