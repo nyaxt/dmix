@@ -180,6 +180,7 @@ always begin
         recv_subframe(counter);
         counter = counter + 1;
     end
+    $finish(2);
 
     recv_B();
     recv_subframe(counter);

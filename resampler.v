@@ -274,13 +274,13 @@ reg [23:0] saturated_sum_ff;
 always @(posedge clk) begin
     if (sum_ff[31] == 1'b0) begin
         // sum +
-        if (sum_ff[30:26] != 5'b00000)
+        if (sum_ff[30:27] != 4'b0000)
             saturated_sum_ff <= 24'h7f_ffff; // overflow
         else
             saturated_sum_ff <= {1'b0, sum_ff[26:3]}; // sum is in expressible range
     end else begin
         // sum -
-        if (sum_ff[30:26] != 5'b11111)
+        if (sum_ff[30:27] != 4'b1111)
             saturated_sum_ff <= 24'h80_0000; // underflow
         else
             saturated_sum_ff <= {1'b1, sum_ff[26:3]}; // sum is in expressible range

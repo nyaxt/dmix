@@ -1,5 +1,5 @@
 TARGET=dmix
-DEPS=dmix.v spdif_dai_varclk.v spdif_dai.v resampler.v resample_pipeline.v dac_drv.v mpemu.v rom_*.v ringbuf.v dcm.v async_fifo.v posedge_latch.v
+DEPS=dmix.v spdif_dai_varclk.v spdif_dai.v resampler.v resample_pipeline.v dac_drv.v mpemu.v rom_*.v ringbuf.v dcm.v async_fifo.v posedge_latch.v pop_latch.v mixer.v
 
 dump: $(TARGET)_t.lxt
 	gtkwave $(TARGET)_t.lxt &

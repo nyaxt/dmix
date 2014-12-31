@@ -6,7 +6,7 @@ runsim: mixer_t.lxt
 .vvp.lxt:
 	vvp $< -lxt2
 
-mixer_t.vvp: mixer.v mixer_t.v
-	iverilog -o $@ $^
+mixer_t.vvp: mixer.v mixer_t.v mpemu.v ringbuf.v pop_latch.v
+	iverilog -DNO_IP -o $@ $^
 
 .SUFFIXES: .lxt .vvp

@@ -57,8 +57,8 @@ mp_scale mp_scale(
   .b(scale_i),
   .p(mprod_o));
 `else
-reg [23:0] delay_a[4:0];
-reg [31:0] delay_b[4:0];
+reg [23:0] delay_a[5:0];
+reg [31:0] delay_b[5:0];
 
 always @(posedge clk) begin
     delay_a[0] <= mpcand_i;
@@ -66,17 +66,23 @@ always @(posedge clk) begin
     delay_a[2] <= delay_a[1];
     delay_a[3] <= delay_a[2];
     delay_a[4] <= delay_a[3];
+    delay_a[5] <= delay_a[4];
 
     delay_b[0] <= scale_i;
     delay_b[1] <= delay_b[0];
     delay_b[2] <= delay_b[1];
     delay_b[3] <= delay_b[2];
     delay_b[4] <= delay_b[3];
+    delay_b[5] <= delay_b[4];
 end
 wire [23:0] delayed_a = delay_a[4];
 wire [31:0] delayed_b = delay_b[4];
 
-assign prod_full = $signed(delayed_a) * $signed(delayed_b);
+// for saturated delay
+wire [23:0] delayed_a2 = delay_a[5];
+wire [31:0] delayed_b2 = delay_b[5];
+
+assign mprod_o = $signed(delayed_a) * delayed_b;
 `endif
 
 endmodule
