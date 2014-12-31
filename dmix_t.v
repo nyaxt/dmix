@@ -7,14 +7,14 @@ reg rst;
 
 reg signal;
 
-parameter TclkSPDIF = 40; // 24.576kHz == 192Khz * 32 bit * 2 (biphase)
+parameter TclkSPDIF = 40; // 24.576MHz == 192Khz * 32 bit * 2 (biphase)
 dmix_top uut(.rst(rst), .spdif_i(signal));
 
 task recv_rawbit;
     input b;
     begin
         signal = b;
-        #(TclkSPDIF);
+        #(TclkSPDIF*2);
     end
 endtask
 

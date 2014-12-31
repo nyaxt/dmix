@@ -4,7 +4,9 @@
 module dmix_top #(
     parameter NUM_SPDIF_IN = 1,
     parameter NUM_CH = 2,
-    parameter NUM_CH_LOG2 = 1
+    parameter NUM_CH_LOG2 = 1,
+
+    parameter NUM_RATE = 5
 )(
     input clk245760_pad,
     input rst,
@@ -35,7 +37,7 @@ module dmix_top #(
 
     // debug
     output led_o, // T3
-	 output [3:0] debug_o
+    output [3:0] debug_o
     );
 
 wire clk245760;
@@ -59,6 +61,7 @@ always @(posedge clk245760)
 assign rst_dcm = (rst_counter[19:3] == 17'h00000);
 assign rst_ip = (rst_counter[19:3] == 17'h0000e);
 
+wire [(NUM_CH*NUM_RATE-1):0] rate;
 wire [(NUM_CH-1):0] fifo_ack;
 wire [(NUM_CH*24-1):0] fifo_data;
 
@@ -71,7 +74,7 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 
     wire dai_locked;
 
-    wire [3:0] dai_rate;
+    wire [(NUM_RATE-1):0] dai_rate;
     wire [191:0] dai_udata;
     wire [191:0] dai_cdata;
     spdif_dai_varclk dai(
@@ -115,44 +118,32 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
             fifo_pop_ff <= fifo_empty ? 0 : 1;
     end
 
+    assign rate[(ig*NUM_RATE*2) +: (NUM_RATE*2)] = {2{dai_rate}};
     assign fifo_ack[(ig*2) +: 2] = {fifo_pop_ff & ~dai_lrck_491520, fifo_pop_ff & dai_lrck_491520};
     assign fifo_data[(ig*24*2) +: (24*2)] = {2{dai_data_491520}};
 end
 endgenerate
 
 `ifndef SKIP_RESAMPLER
-wire [11:0] bank_addr;
-wire [23:0] bank_data;
-
 wire [(NUM_CH-1):0] resampler_pop_i;
-wire [23:0] resampler_data_o;
+wire [47:0] resampler_data_o;
 wire [(NUM_CH-1):0] resampler_ack_o;
 
-`ifdef TEST_96192
-rom_firbank_96_192 bank(.clk(clk491520), .addr(bank_addr), .data(bank_data));
-ringbuffered_resampler #(
-    .NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2),
-    .HALFDEPTH(8), .HALFDEPTH_LOG2(3),
-    .NUM_FIR(2), .NUM_FIR_LOG2(1), .DECIM(1),
-    .TIMESLICE(32), .TIMESLICE_LOG2(5))
-`else
-rom_firbank_441_480 bank(.clk(clk491520), .addr(bank_addr), .data(bank_data));
-ringbuffered_resampler #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2))
-`endif
-  resampler(
+resample_pipeline #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2)) resampler(
     .clk(clk491520),
     .rst(rst_ip),
 
-    .bank_addr_o(bank_addr),
-    .bank_data_i(bank_data),
-
+    .rate_i(rate),
     .ack_i(fifo_ack),
     .data_i(fifo_data),
+    // .pop_o(fifo_pop) NC???
 
     .pop_i(resampler_pop_i),
     .data_o(resampler_data_o),
     .ack_o(resampler_ack_o)
     );
+
+wire [23:0] resampler_data_sel = resampler_ack_o[1] ? resampler_data_o[47:24] : resampler_data_o[23:0];
 
 dac_drv dac_drv(
     .clk(clk491520),
@@ -163,7 +154,7 @@ dac_drv dac_drv(
     .data_o(dac_data_o),
 
     .ack_i(resampler_ack_o),
-    .data_i(resampler_data_o),
+    .data_i(resampler_data_sel),
     .pop_o(resampler_pop_i));
 `else
 

@@ -46,9 +46,6 @@ ringbuffered_resampler #(
     .ack_i(ack_i), .data_i(data_i), .pop_o(pop_o_32_48),
     .pop_i(pop_i_32_48), .data_o(data_32_48), .ack_o(ack_32_48));
 
-always @(posedge ack_32_48[1])
-    $display("32->48: %d", $signed(data_32_48));
-
 // 44.1kHz -> 48.0kHz upsampler
 // INPUT:
 wire [(NUM_CH-1):0] pop_i_441_480;
