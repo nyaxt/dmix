@@ -14,20 +14,24 @@ module spi_trx (
     input [7:0] data_i,
     input ack_i);
 
+// detect sck posedge
 reg [1:0] sck_hist_ff;
 always @(posedge clk) begin
     sck_hist_ff <= {sck_hist_ff[0], sck};
 end
+wire sck_posedge = ss_enabled && sck_hist_ff[1:0] == 2'b01;
+
+// detect ss negedge
 reg [1:0] ss_hist_ff;
 always @(posedge clk) begin
     ss_hist_ff <= {ss_hist_ff[0], ss};
 end
 wire ss_negedge = ss_hist_ff[1:0] == 2'b10;
-assign rst_o = ss_negedge;
 wire ss_enabled = ~ss_hist_ff[0];
 
-wire sck_posedge = ss_enabled && sck_hist_ff[1:0] == 2'b01;
+assign rst_o = ss_negedge;
 
+// mosi -> shiftreg_i
 reg mosi_hist_ff;
 always @(posedge clk) begin
     mosi_hist_ff <= mosi;
@@ -35,12 +39,13 @@ end
 
 reg [7:0] shiftreg_i;
 always @(posedge clk) begin
-    if(sck_posedge)
+    if (sck_posedge)
         shiftreg_i <= {shiftreg_i[6:0], mosi_hist_ff};
 end
 
-reg [2:0] posedge_counter;
+// count 8 posedge -> posedge8_ff
 reg posedge8_ff;
+reg [2:0] posedge_counter;
 always @(posedge clk) begin
     posedge8_ff <= 0;
 
@@ -55,6 +60,7 @@ always @(posedge clk) begin
     end
 end
 
+// rx data -> {data_o, ack_pop_o}
 reg ack_o_ff;
 reg [7:0] data_o_ff;
 always @(posedge clk) begin
@@ -67,6 +73,7 @@ end
 assign ack_pop_o = ack_o_ff;
 assign data_o = data_o_ff;
 
+// {data_i, ack_i} -> tx data
 reg [7:0] data_o_latchff;
 always @(posedge clk)
     if(ack_i)

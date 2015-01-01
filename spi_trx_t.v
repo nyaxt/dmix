@@ -9,7 +9,7 @@ initial clk = 0;
 always #(TCLK/2) clk = ~clk;
 
 reg sck;
-parameter TCLK_SCK = 80;
+parameter TCLK_SCK = 55;
 reg mosi;
 reg ss;
 

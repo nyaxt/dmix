@@ -1,8 +1,10 @@
-module csr_spi#(
-    parameter NUM_CH = 4,
-    parameter VOL_WIDTH = NUM_CH*2*16,
-    parameter RATE_WIDTH = NUM_CH*4,
-    parameter UDATA_WIDTH = NUM_CH*192,
+module csr_spi #(
+    parameter NUM_CH = 8,
+    parameter NUM_SPDIF_IN = 3,
+
+    parameter VOL_WIDTH = NUM_CH*32,
+    parameter RATE_WIDTH = NUM_SPDIF_IN*8,
+    parameter UDATA_WIDTH = NUM_SPDIF_IN*192,
     parameter CDATA_WIDTH = UDATA_WIDTH
 )(
     input clk,
@@ -16,8 +18,8 @@ module csr_spi#(
 
     // registers access
     output [(VOL_WIDTH-1):0] vol_o, // addr: 12'h000 ~
-    input [(RATE_WIDTH-1):0] rate_i,  // addr: 12'800 ~
-    input [(UDATA_WIDTH-1):0] udata_i,  // addr: 12'900 ~
+    input [(RATE_WIDTH-1):0] rate_i, // addr: 12'800 ~
+    input [(UDATA_WIDTH-1):0] udata_i, // addr: 12'900 ~
     input [(CDATA_WIDTH-1):0] cdata_i  // addr: 12'a00 ~
     );
 
@@ -52,7 +54,7 @@ parameter ST_W_ADDR_IN = 1;
 parameter ST_W_DATA_IN = 2;
 parameter ST_R_ADDR_IN = 3;
 parameter ST_R_DATA_OUT_CONT = 4;
-reg [2:0] state;
+reg [7:0] state;
 always @(posedge clk) begin
     spi_ack_i_ff <= 0;
     csr_we_ff <= 0;
@@ -62,10 +64,10 @@ always @(posedge clk) begin
         state <= ST_INIT;
         csr_addr_ff <= 0;
         csr_data_w_ff <= 0;
-    end else if(csr_addr_inc_ff) begin
+    end else if (csr_addr_inc_ff) begin
         csr_addr_ff <= csr_addr_ff + 1;
-    end else if(spi_ack_pop_o) begin
-        case(state)
+    end else if (spi_ack_pop_o) begin
+        case (state)
             ST_INIT: begin
                 csr_addr_ff[11:8] <= spi_data_rx[3:0];
 
