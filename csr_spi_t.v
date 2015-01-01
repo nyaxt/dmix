@@ -14,11 +14,15 @@ parameter TCLK_SCK = 80;
 reg mosi;
 reg ss;
 
-wire [7:0] rate_i = 8'hab;
-wire [383:0] udata_i;
-wire [383:0] cdata_i;
+parameter NUM_CH = 8;
+parameter NUM_SPDIF_IN = 3;
+parameter NUM_RATE = 5;
 
-csr_spi #(.NUM_CH(2)) uut(
+wire [(NUM_RATE*NUM_SPDIF_IN-1):0] rate_i = {5'b00001, 5'b00100, 5'b10000};
+wire [(192*NUM_SPDIF_IN-1):0] udata_i = {NUM_SPDIF_IN{192'h0102030405060708090a0b0c0d0e0f1011121314151617}};
+wire [(192*NUM_SPDIF_IN-1):0] cdata_i = {NUM_SPDIF_IN{192'h0102030405060708090a0b0c0d0e0f1011121314151617}};
+
+csr_spi uut(
     .clk(clk), .rst(rst),
 
     .sck(sck),
@@ -70,7 +74,9 @@ initial begin
     rst = 1;
     #(TCLK);
     rst = 0;
+
     uut.csr.vol_ff = 64'h0123456789abcdef;
+    $display("vol_ff: %x", uut.csr.vol_ff);
 
     #(TCLK*3);
     ss = 0;
@@ -80,18 +86,40 @@ initial begin
     ss = 1;
 
     #(TCLK*3);
-    ss = 0;
-    spi_cycle(8'h00);
-    spi_cycle(8'h00);
-    spi_cycle(8'h00);
-    spi_cycle(8'h00);
-    spi_cycle(8'h00);
-    spi_cycle(8'h00);
-    spi_cycle(8'h00);
-    spi_cycle(8'h00);
-    spi_cycle(8'h00);
+    $display("after csr[12'h003] <= 8'h99");
+    $display("vol_ff: %x", uut.csr.vol_ff);
+
     #(TCLK*3);
+    ss = 0;
+    spi_cycle(8'h00); // init read high  0
+    spi_cycle(8'h00); //      read  low 00
+    spi_cycle(8'h00); // read result 000
+    spi_cycle(8'h00); // read result 001
+    spi_cycle(8'h00); // read result 002
+    spi_cycle(8'h00); // read result 003
+    spi_cycle(8'h00); // read result 004
+    spi_cycle(8'h00); // read result 005
+    spi_cycle(8'h00); // read result 006
+    spi_cycle(8'h00); // read result 007
+    ss = 1;
+    #(TCLK*3);
+    $display("---");
+    #(TCLK*3);
+    ss = 0;
+    spi_cycle(8'h08); // init read high  8
+    spi_cycle(8'h01); //            low 01
+    spi_cycle(8'h00); // read result 102
+    spi_cycle(8'h00); // read result 103
+    ss = 1;
+
     $finish(2);
+end
+
+always @(posedge clk) begin
+    if(uut.spi_trx.ack_i)
+        $display("uut.data_i: %x", uut.spi_trx.data_i);
+    if(uut.spi_trx.ack_pop_o)
+        $display("uut.data_o: %x", uut.spi_trx.data_o);
 end
 
 endmodule

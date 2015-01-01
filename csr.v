@@ -1,8 +1,11 @@
 module csr#(
-    parameter NUM_CH = 4,
-    parameter VOL_WIDTH = NUM_CH*2*16,
-    parameter RATE_WIDTH = NUM_CH*4,
-    parameter UDATA_WIDTH = NUM_CH*192,
+    parameter NUM_CH = 8,
+    parameter NUM_SPDIF_IN = 3,
+    parameter NUM_RATE = 5,
+
+    parameter VOL_WIDTH = NUM_CH*32,
+    parameter RATE_WIDTH = NUM_SPDIF_IN*NUM_RATE,
+    parameter UDATA_WIDTH = NUM_SPDIF_IN*192,
     parameter CDATA_WIDTH = UDATA_WIDTH
 )(
     input clk,
@@ -18,9 +21,9 @@ module csr#(
 
     // registers access
     output [(VOL_WIDTH-1):0] vol_o, // addr: 12'h000 ~
-    input [(RATE_WIDTH-1):0] rate_i,  // addr: 12'800 ~
-    input [(UDATA_WIDTH-1):0] udata_i,  // addr: 12'900 ~
-    input [(CDATA_WIDTH-1):0] cdata_i  // addr: 12'a00 ~
+    input [(RATE_WIDTH-1):0] rate_i,  // addr: 12'h800 ~
+    input [(UDATA_WIDTH-1):0] udata_i,  // addr: 12'h900 ~
+    input [(CDATA_WIDTH-1):0] cdata_i  // addr: 12'ha00 ~
     );
 
 reg [7:0] data_o_ff;
@@ -52,7 +55,7 @@ always @(posedge clk) begin
     4'h0:
         data_o_ff <= vol_ff[(addr_offset*8) +: 8];
     4'h8:
-        data_o_ff <= rate_i[(addr_offset*8) +: 8];
+        data_o_ff <= rate_i[(addr_offset*NUM_RATE) +: NUM_RATE];
     4'h9:
         data_o_ff <= udata_i[(addr_offset*8) +: 8];
     4'ha:
