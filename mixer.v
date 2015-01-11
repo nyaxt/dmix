@@ -23,7 +23,7 @@ module mixer #(
     output [23:0] data_o,
     output [(NUM_CH_OUT-1):0] ack_o);
 
-parameter MULT_LATENCY = 5;
+parameter MULT_LATENCY = 6;
 
 // Input ringbuf
 wire [23:0] buffered_data [(NUM_CH_IN-1):0];
@@ -172,7 +172,7 @@ always @(posedge clk) begin
         `ifdef DEBUG
         if (cycle_valid_ff)
             $display("mixer outch: %d curr_sum: %h. mpcand %h * mplier %h = %h",
-                processing_out_ch_ff, $signed(sum_ff), $signed(mp.delayed_a2), $signed(mp.delayed_b2), $signed(mprod));
+                processing_out_ch_ff, $signed(sum_ff), $signed(mp.delayed_a2), $signed(mp.delayed_b2), $signed(saturated_mprod_ff));
         `endif
         sum_ff <= saturated_add(sum_ff, saturated_mprod_ff);
     end

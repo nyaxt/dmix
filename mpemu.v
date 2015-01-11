@@ -82,12 +82,12 @@ always @(posedge clk) begin
     delay_b[5] <= delay_b[4];
     delay_b[6] <= delay_b[5];
 end
-wire [23:0] delayed_a = delay_a[4];
-wire [31:0] delayed_b = delay_b[4];
+wire [23:0] delayed_a = delay_a[5];
+wire [31:0] delayed_b = delay_b[5];
 
 // for saturated delay
-wire [23:0] delayed_a2 = delay_a[5];
-wire [31:0] delayed_b2 = delay_b[5];
+wire [23:0] delayed_a2 = delay_a[6];
+wire [31:0] delayed_b2 = delay_b[6];
 
 wire [55:0] prod_full = $signed(delayed_a) * delayed_b;
 wire mprod_o = prod_full[55:24];
