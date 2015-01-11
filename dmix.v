@@ -1,5 +1,5 @@
 //`define SKIP_RESAMPLER
-//`define SKIP_MIXER
+`define SKIP_MIXER
 `define TEST_96192
 
 module dmix_top #(

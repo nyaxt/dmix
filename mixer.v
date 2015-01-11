@@ -23,7 +23,7 @@ module mixer #(
     output [23:0] data_o,
     output [(NUM_CH_OUT-1):0] ack_o);
 
-parameter MULT_LATENCY = 5;
+parameter MULT_LATENCY = 6;
 
 // Input ringbuf
 wire [23:0] buffered_data [(NUM_CH_IN-1):0];
