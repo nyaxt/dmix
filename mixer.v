@@ -1,4 +1,4 @@
-// `define DEBUG
+`define DEBUG
 
 module mixer #(
     parameter NUM_CH_IN = 8, // must be multiple of NUM_CH_OUT
@@ -23,7 +23,7 @@ module mixer #(
     output [23:0] data_o,
     output [(NUM_CH_OUT-1):0] ack_o);
 
-parameter MULT_LATENCY = 6;
+parameter MULT_LATENCY = 5;
 
 // Input ringbuf
 wire [23:0] buffered_data [(NUM_CH_IN-1):0];
@@ -100,11 +100,11 @@ end
 wire [23:0] mpcand = buffered_data[processing_in_ch_ff];
 
 // Supply scale
-wire [(VOL_WIDTH-1):0] scale = vol_i[(processing_in_ch_ff*VOL_WIDTH) +: VOL_WIDTH];
+wire [(VOL_WIDTH-1):0] scale = 32'h01_000000; //vol_i[(processing_in_ch_ff*VOL_WIDTH) +: VOL_WIDTH];
 
 // Multiplier
 // OUTPUT:
-wire [55:0] mprod;
+wire [31:0] mprod;
 mpemu_scale mp(
     .clk(clk),
     .mpcand_i(mpcand), .scale_i(scale),
@@ -113,18 +113,18 @@ mpemu_scale mp(
 // Satulated product
 reg [23:0] saturated_mprod_ff;
 always @(posedge clk) begin
-    if (mprod[55] == 1'b0) begin
+    if (mprod[31] == 1'b0) begin
         // sum +
-        if (mprod[54:47] == 8'b1111_1111)
+        if (mprod[30:23] == 8'b1111_1111)
             saturated_mprod_ff <= 24'h7f_ffff; // overflow
         else
-            saturated_mprod_ff <= {1'b0, mprod[46:24]};
+            saturated_mprod_ff <= {1'b0, mprod[22:0]};
     end else begin
         // sum -
-        if (mprod[54:47] == 8'b0000_0000)
+        if (mprod[30:23] == 8'b0000_0000)
             saturated_mprod_ff <= 24'h80_0000; // underflow
         else
-            saturated_mprod_ff <= {1'b1, mprod[46:24]};
+            saturated_mprod_ff <= {1'b1, mprod[22:0]};
     end
 end
 
