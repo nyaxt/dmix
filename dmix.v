@@ -1,6 +1,5 @@
 //`define SKIP_RESAMPLER
 `define SKIP_MIXER
-`define TEST_96192
 
 module dmix_top #(
     parameter NUM_SPDIF_IN = 1,
@@ -127,7 +126,6 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
 end
 endgenerate
 
-`ifndef SKIP_RESAMPLER
 wire [(NUM_CH-1):0] resampler_pop;
 wire [47:0] resampler_data;
 wire [(NUM_CH-1):0] resampler_ack;
@@ -185,42 +183,7 @@ dac_drv dac_drv(
     .data_i(resampler_data_sel),
     .pop_o(resampler_pop));
 `endif
-`else
 
-wire dac_pop_o;
-wire [23:0] rb_data_o;
-ringbuf rb(
-    .clk(clk491520),
-    .rst(rst_ip),
-    
-    .data_i(fifo_data),
-    .we_i(fifo_ack[0]),
-    
-    .pop_i(dac_pop_o),
-    .offset_i(4'b0),
-    .data_o(rb_data_o));
-reg rb_ack_ff;
-
-always @(posedge clk491520) begin
-   if (rst_ip)
-      rb_ack_ff <= 0;
-   else
-      rb_ack_ff <= dac_pop_o;
-end
-
-dac_drv dac_drv(
-    .clk(clk491520),
-    .rst(rst_ip),
-
-    .bck_o(dac_bck_o),
-    .lrck_o(dac_lrck_o),
-    .data_o(dac_data_o),
-
-    .ack_i(rb_ack_ff),
-    .data_i(rb_data_o),
-    .pop_o(dac_pop_o)
-    );
-`endif
 assign dac_sck_o = clk245760;//_pad;
 
 assign led_o = g[0].dai_locked;

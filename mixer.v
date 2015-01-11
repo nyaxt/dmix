@@ -1,4 +1,4 @@
-`define DEBUG
+// `define DEBUG
 
 module mixer #(
     parameter NUM_CH_IN = 8, // must be multiple of NUM_CH_OUT
