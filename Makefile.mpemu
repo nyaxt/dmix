@@ -7,7 +7,7 @@ runsim: mpemu_t.lxt
 	vvp $< -lxt2
 
 mpemu_t.vvp: mpemu.v mpemu_t.v testdata/gen/mp_a.hex
-	iverilog -o $@ mpemu{,_t}.v
+	iverilog -DNO_IP -o $@ mpemu{,_t}.v
 
 testdata/gen/mp_a.hex: gen_random_mul.rb
 	ruby gen_random_mul.rb

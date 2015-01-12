@@ -1,0 +1,15 @@
+dump: mpemu_scale_t.lxt
+	gtkwave mpemu_scale_t.lxt &
+
+runsim: mpemu_scale_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+mpemu_scale_t.vvp: mpemu.v mpemu_scale_t.v testdata/gen/mp_scale_a.hex
+	iverilog -DNO_IP -o $@ mpemu.v mpemu_scale_t.v
+
+testdata/gen/mp_scale_a.hex: gen_random_mul_scale.rb
+	ruby gen_random_mul_scale.rb
+
+.SUFFIXES: .lxt .vvp
