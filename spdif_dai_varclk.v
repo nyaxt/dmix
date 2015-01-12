@@ -77,7 +77,7 @@ always @(posedge clk) begin
         5'd1 << RATE_32:
             clk_per_halfbit_ff <= 5'd24;
         5'd1 << RATE_441:
-            clk_per_halfbit_ff <= 5'd17; // or d18???
+            clk_per_halfbit_ff <= 5'd18; // or d18???
         5'd1 << RATE_48:
             clk_per_halfbit_ff <= 5'd16;
         5'd1 << RATE_96:

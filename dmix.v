@@ -1,5 +1,4 @@
-//`define SKIP_RESAMPLER
-`define SKIP_MIXER
+//`define SKIP_MIXER
 
 module dmix_top #(
     parameter NUM_SPDIF_IN = 1,
@@ -151,7 +150,8 @@ wire [1:0] mixer_pop;
 
 wire [(NUM_CH*VOL_WIDTH-1):0] vol = {NUM_CH{32'h0100_0000}};
 
-mixer #(.NUM_CH_IN(NUM_CH), .NUM_CH_IN_LOG2(NUM_CH_LOG2)) mixer(
+mixer #(.NUM_CH_IN(NUM_CH), .NUM_CH_IN_LOG2(NUM_CH_LOG2),
+.NUM_CH_OUT(2), .NUM_CH_OUT_LOG2(1), .VOL_WIDTH(32)) mixer(
     .clk(clk491520), .rst(rst_ip), .rst_ch(rst_ch),
     .pop_o(resampler_pop), .ack_i(resampler_ack), .data_i(resampler_data),
     .vol_i(vol),

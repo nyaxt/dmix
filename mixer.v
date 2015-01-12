@@ -40,7 +40,7 @@ endgenerate
 // Sequencer
 // OUTPUT:
 parameter TIMESLICE = NUM_CH_IN/NUM_CH_OUT + MULT_LATENCY + 1 + 1; // saturate 1clk, sum 1clk
-parameter TIMESLICE_LOG2 = NUM_CH_IN_LOG2-NUM_CH_OUT_LOG2 + 3; // assumes MULT_LATENCY < 6
+parameter TIMESLICE_LOG2 = NUM_CH_IN_LOG2-NUM_CH_OUT_LOG2 + 4; // assumes MULT_LATENCY + 1 + 1 < 16
 reg [(NUM_CH_IN_LOG2-1):0] processing_in_ch_ff;
 reg [(NUM_CH_OUT_LOG2-1):0] processing_out_ch_ff;
 reg [(TIMESLICE_LOG2-1):0] timeslice_counter;
