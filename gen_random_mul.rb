@@ -6,7 +6,7 @@ end
 
 def write_hex(filename, array)
   open(filename, 'w') do |f|
-    f.write array.map {|x| sprintf("%06x", x & 0xffffff) }.join("\n")
+    f.write array.map {|x| sprintf("%08x", x & 0xffffffff) }.join("\n")
     f.write "\n"
   end
 end
@@ -18,7 +18,7 @@ ps = []
 32.times do
   a = gen_24bit_signed_int
   b = gen_24bit_signed_int
-  p = a * b / 0x800000
+  p = a * b / 0x80000
 
   as << a
   bs << b

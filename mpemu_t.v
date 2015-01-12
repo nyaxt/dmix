@@ -3,9 +3,9 @@
 module mpemu_t;
 
 `define DATALEN 32
-reg [23:0] testdata_a [`DATALEN-1:0];
-reg [23:0] testdata_b [`DATALEN-1:0];
-reg [23:0] testdata_p [`DATALEN-1:0];
+reg [31:0] testdata_a [`DATALEN-1:0];
+reg [31:0] testdata_b [`DATALEN-1:0];
+reg [31:0] testdata_p [`DATALEN-1:0];
 
 // ins
 reg clk;
@@ -14,7 +14,7 @@ reg [23:0] mpcand_i;
 reg [23:0] mplier_i;
 
 // outs
-wire [23:0] mprod_o;
+wire [27:0] mprod_o;
 
 mpemu uut(
     .clk(clk),
@@ -44,7 +44,7 @@ initial begin
     #TCLK;
 
     mpcand_i = 24'hffffff; // -1
-    mplier_i = 24'h7fffff; // 0x7fffff
+    mplier_i = 24'h080000;
     #TCLK;
 
     for (i = 0; i < `DATALEN; i = i + 1) begin
@@ -62,14 +62,14 @@ always #(TCLK/2) clk = ~clk;
 integer i2;
 always begin
     #(TCLK*6);
-    $display("%h should be %h", mprod_o, 24'h02468a);
+    $display("%h should be %h", mprod_o, 28'h02468ac);
     #TCLK;
-    $display("%h should be %h", mprod_o, 24'h02468a);
+    $display("%h should be %h", mprod_o, 28'h02468ac);
     #TCLK;
-    $display("%h should be %h", mprod_o, 24'hffffff);
+    $display("%h should be %h", mprod_o, 28'hfffffff);
     #TCLK;
     for (i2 = 0; i2 < `DATALEN; i2 = i2 + 1) begin
-        $display("%h should be %h", mprod_o, testdata_p[i2]);
+        $display("%h should be %h", mprod_o, testdata_p[i2][27:0]);
         #TCLK;
     end
 end
