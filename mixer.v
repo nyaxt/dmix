@@ -115,16 +115,16 @@ reg [23:0] saturated_mprod_ff;
 always @(posedge clk) begin
     if (mprod[31] == 1'b0) begin
         // sum +
-        if (mprod[30:23] == 8'b1111_1111)
-            saturated_mprod_ff <= 24'h7f_ffff; // overflow
-        else
+        if (mprod[30:23] == 8'b0000_0000)
             saturated_mprod_ff <= {1'b0, mprod[22:0]};
+        else
+            saturated_mprod_ff <= 24'h7f_ffff; // overflow
     end else begin
         // sum -
-        if (mprod[30:23] == 8'b0000_0000)
-            saturated_mprod_ff <= 24'h80_0000; // underflow
+        if (mprod[30:23] == 8'b1111_1111)
+		      saturated_mprod_ff <= {1'b1, mprod[22:0]};
         else
-            saturated_mprod_ff <= {1'b1, mprod[22:0]};
+			   saturated_mprod_ff <= 24'h80_0000; // underflow
     end
 end
 
@@ -154,7 +154,7 @@ begin
     bext = {b[23], b};
     sumext = $signed(aext) + $signed(bext);
 
-    case (sumext[23:22])
+    case (sumext[24:23])
         2'b00, 2'b11: // sum is in expressible range
             saturated_add = sumext[23:0];
         2'b01: // overflow

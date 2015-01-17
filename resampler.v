@@ -245,7 +245,7 @@ begin
     bext = {b[31], b};
     sumext = $signed(aext) + $signed(bext);
 
-    case (sumext[31:30])
+    case (sumext[32:31])
         2'b00, 2'b11: // sum is in expressible range
             saturated_add = sumext[31:0];
         2'b01: // overflow
