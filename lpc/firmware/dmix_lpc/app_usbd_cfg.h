@@ -40,6 +40,10 @@ extern "C"
 {
 #endif
 
+/** @ingroup EXAMPLES_USBDROM_18XX43XX_LUSBK
+ * @{
+ */
+
 /* Comment below and uncomment USE_USB1 to enable USB1 */
 #define USE_USB0
 /* #define USE_USB1 */
@@ -70,7 +74,10 @@ extern "C"
 #define USB_init_pin_clk        Chip_USB1_Init
 #endif
 
-#define WCID_VENDOR_CODE                0x84
+#define LUSB_PID                        0xD316
+#define LUSB_IN_EP                      0x81
+#define LUSB_OUT_EP                     0x01
+#define LUSB_INT_EP                     0x82
 
 /* On LPC18xx/43xx the USB controller requires endpoint queue heads to start on
    a 4KB aligned memory. Hence the mem_base value passed to USB stack init should
@@ -87,7 +94,10 @@ extern const uint8_t USB_StringDescriptor[];
 extern const uint8_t USB_DeviceQualifier[];
 extern const uint8_t WCID_String_Descriptor[];
 extern const uint8_t WCID_CompatID_Descriptor[];
-extern const uint8_t WCID_ExtProp_Descriptor[];
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
