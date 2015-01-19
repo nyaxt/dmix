@@ -92,8 +92,6 @@ extern uint8_t USB_HsConfigDescriptor[];
 extern uint8_t USB_FsConfigDescriptor[];
 extern const uint8_t USB_StringDescriptor[];
 extern const uint8_t USB_DeviceQualifier[];
-extern const uint8_t WCID_String_Descriptor[];
-extern const uint8_t WCID_CompatID_Descriptor[];
 
 /**
  * @}

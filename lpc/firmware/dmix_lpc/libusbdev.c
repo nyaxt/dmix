@@ -131,68 +131,6 @@ ErrorCode_t WCID_hdlr(USBD_HANDLE_T hUsb, void *data, uint32_t event)
 {
 	USB_CORE_CTRL_T *pCtrl = (USB_CORE_CTRL_T *) hUsb;
 	ErrorCode_t ret = ERR_USBD_UNHANDLED;
-
-	if (event == USB_EVT_SETUP) {
-		switch (pCtrl->SetupPacket.bmRequestType.BM.Type) {
-		case REQUEST_STANDARD:
-			if ((pCtrl->SetupPacket.bmRequestType.BM.Recipient == REQUEST_TO_DEVICE) &&
-				(pCtrl->SetupPacket.bRequest == USB_REQUEST_GET_DESCRIPTOR) &&
-				(pCtrl->SetupPacket.wValue.WB.H == USB_STRING_DESCRIPTOR_TYPE) &&
-				(pCtrl->SetupPacket.wValue.WB.L == 0x00EE)) {
-				pCtrl->EP0Data.pData = (uint8_t *) WCID_String_Descriptor;
-				pCtrl->EP0Data.Count = pCtrl->SetupPacket.wLength;
-				USBD_API->core->DataInStage(pCtrl);
-				ret = LPC_OK;
-			}
-			break;
-
-		case REQUEST_VENDOR:
-			switch (pCtrl->SetupPacket.bRequest) {
-			case 0x0E:		/* libusbK benchmark test */
-				pCtrl->EP0Buf[0] = 0x02;
-				pCtrl->EP0Data.pData = (uint8_t *) &pCtrl->EP0Buf[0];
-				pCtrl->EP0Data.Count = pCtrl->SetupPacket.wLength;
-				USBD_API->core->DataInStage(pCtrl);
-				ret = LPC_OK;
-				break;
-
-			case 0x11:		/* libusbK benchmark test */
-				pCtrl->EP0Buf[0] = 'A';
-				pCtrl->EP0Buf[1] = 'B';
-				pCtrl->EP0Buf[2] = 'C';
-				pCtrl->EP0Data.pData = (uint8_t *) &pCtrl->EP0Buf[0];
-				pCtrl->EP0Data.Count = pCtrl->SetupPacket.wLength;
-				USBD_API->core->DataInStage(pCtrl);
-				ret = LPC_OK;
-				break;
-
-			case 0x10:		/* libusbK benchmark test */
-				pCtrl->EP0Data.pData = pCtrl->EP0Buf;	/* data to be received */
-				ret = LPC_OK;
-				break;
-
-			case LUSB_PID:
-				switch (pCtrl->SetupPacket.bmRequestType.BM.Recipient) {
-				case REQUEST_TO_DEVICE:
-					if (pCtrl->SetupPacket.wIndex.W == 0x0004) {
-						pCtrl->EP0Data.pData = (uint8_t *) WCID_CompatID_Descriptor;
-						pCtrl->EP0Data.Count = pCtrl->SetupPacket.wLength;
-						USBD_API->core->DataInStage(pCtrl);
-						ret = LPC_OK;
-					}
-					break;
-				}
-				break;
-			}
-		}
-	}
-	else if ((event == USB_EVT_OUT) && (pCtrl->SetupPacket.bmRequestType.BM.Type == REQUEST_VENDOR)) {
-		if (pCtrl->SetupPacket.bRequest == 0x10) {
-			USBD_API->core->StatusInStage(pCtrl);
-			ret = LPC_OK;
-		}
-	}
-
 	return ret;
 }
 

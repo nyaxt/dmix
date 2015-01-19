@@ -224,34 +224,3 @@ ALIGNED(4) const uint8_t USB_StringDescriptor[] = {
 	'a', 0,
 	'm', 0,
 };
-
-/* WCID USB: Microsoft String Descriptor */
-ALIGNED(4) const uint8_t WCID_String_Descriptor[] = {
-	(8 * 2 + 2),					/* bLength (8 Char + Type + length) */
-	USB_STRING_DESCRIPTOR_TYPE,		/* bDescriptorType */
-	'M', 0,
-	'S', 0,
-	'F', 0,
-	'T', 0,
-	'1', 0,
-	'0', 0,
-	'0', 0,
-	LUSB_PID, 0,
-};
-
-/* WCID USB: Microsoft Compatible ID Feature Descriptor */
-ALIGNED(4) const uint8_t WCID_CompatID_Descriptor[] = {
-	0x28, 0x00, 0x00, 0x00,						/* Length 40 bytes */
-	0x00, 0x01,									/* Version */
-	0x04, 0x00,									/* Compatibility ID Descriptor index  */
-	0x01,										/* Number of sections */
-	0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00,							/* Reserved: 7 bytes */
-	0x00,										/* Interface Number */
-	0x01,										/* Reserved */
-	'L', 'I', 'B', 'U', 'S', 'B', 'K', 0x00,	/* Compatible ID: 8 bytes ASCII */
-	0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00,						/* Sub-Compatible ID: 8 bytes ASCII*/
-	0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00,									/* Reserved: 6 bytes */
-};
