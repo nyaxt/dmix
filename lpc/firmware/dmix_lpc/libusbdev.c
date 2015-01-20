@@ -1,27 +1,6 @@
 /*
- * @brief USB Band Width test and WCID examples for USB ROM API.
+ * Based on LPCOpen example code
  *
- *
- * @note
- * Copyright(C) NXP Semiconductors, 2013
- * All rights reserved.
- *
- * @par
- * Software that is described herein is for illustrative purposes only
- * which provides customers with programming information regarding the
- * LPC products.  This software is supplied "AS IS" without any warranties of
- * any kind, and NXP Semiconductors and its licensor disclaim any and
- * all warranties, express or implied, including all implied warranties of
- * merchantability, fitness for a particular purpose and non-infringement of
- * intellectual property rights.  NXP Semiconductors assumes no responsibility
- * or liability for the use of the software, conveys no license or rights under any
- * patent, copyright, mask work right, or any other intellectual property rights in
- * or to any products. NXP Semiconductors reserves the right to make changes
- * in the software without notification. NXP Semiconductors also makes no
- * representation or warranty that such application will be suitable for the
- * specified use without further testing or modification.
- *
- * @par
  * Permission to use, copy, modify, and distribute this software and its
  * documentation is hereby granted, under NXP Semiconductors' and its
  * licensor's relevant copyrights in the software, without fee, provided that it
@@ -35,10 +14,6 @@
 #include <string.h>
 #include "app_usbd_cfg.h"
 #include "libusbdev.h"
-
-/*****************************************************************************
- * Private types/enumerations/variables
- ****************************************************************************/
 
 /* Endpoint 0 patch that prevents nested NAK event processing */
 static uint32_t g_ep0RxBusy = 0;/* flag indicating whether EP0 OUT/RX buffer is busy. */
@@ -60,14 +35,7 @@ typedef struct _LUSB_CTRL_ {
 
 LUSB_CTRL_T g_lusb;
 
-/*****************************************************************************
- * Public types/enumerations/variables
- ****************************************************************************/
 const USBD_API_T *g_pUsbApi;
-
-/*****************************************************************************
- * Private functions
- ****************************************************************************/
 
 /* Handle USB RESET event */
 ErrorCode_t lusb_ResetEvent(USBD_HANDLE_T hUsb)
@@ -157,10 +125,6 @@ static ErrorCode_t EP0_patch(USBD_HANDLE_T hUsb, void *data, uint32_t event)
 	}
 	return g_Ep0BaseHdlr(hUsb, data, event);
 }
-
-/*****************************************************************************
- * Public functions
- ****************************************************************************/
 
 /* Handle interrupt from USB */
 void USB_IRQHandler(void)
