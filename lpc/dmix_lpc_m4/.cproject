@@ -254,7 +254,6 @@
 &lt;memory id="Periph" is_volatile="true" type="Peripheral"/&gt;&#13;
 &lt;memoryInstance derived_from="Flash" edited="true" id="Flash_1MB" location="0x14000000" size="0x80000"/&gt;&#13;
 &lt;memoryInstance derived_from="RAM" edited="true" id="RamLoc128" location="0x10000000" size="0x20000"/&gt;&#13;
-&lt;memoryInstance derived_from="RAM" edited="true" id="RamLoc72" location="0x10080000" size="0x12000"/&gt;&#13;
 &lt;memoryInstance derived_from="RAM" edited="true" id="RamM0Sub16" location="0x18000000" size="0x4000"/&gt;&#13;
 &lt;memoryInstance derived_from="RAM" edited="true" id="RamM0Sub2" location="0x18004000" size="0x800"/&gt;&#13;
 &lt;peripheralInstance derived_from="V7M_MPU" id="MPU" location="0xe000ed90"/&gt;&#13;

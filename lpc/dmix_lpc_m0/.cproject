@@ -89,8 +89,8 @@
 									<listOptionValue builtIn="false" value="--gc-sections"/>
 								</option>
 								<option id="com.crt.advproject.link.cpp.hdrlib.176956399" name="Library" superClass="com.crt.advproject.link.cpp.hdrlib" value="com.crt.advproject.cpp.link.hdrlib.newlib.nohost" valueType="enumerated"/>
-								<option id="gnu.cpp.link.option.libs.1941304855" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs"/>
-								<option id="gnu.cpp.link.option.paths.705339643" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths"/>
+								<option id="gnu.cpp.link.option.libs.1941304855" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs"/>
+								<option id="gnu.cpp.link.option.paths.705339643" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths"/>
 								<option id="com.crt.advproject.link.cpp.multicore.slave.1395695564" name="Multicore configuration" superClass="com.crt.advproject.link.cpp.multicore.slave" value="M0APP" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.886424586" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -308,10 +308,7 @@
 &lt;memory id="RAM" type="RAM"/&gt;&#13;
 &lt;memory id="Periph" is_volatile="true" type="Peripheral"/&gt;&#13;
 &lt;memoryInstance derived_from="Flash" edited="true" id="Flash_1MB" location="0x14080000" size="0x80000"/&gt;&#13;
-&lt;memoryInstance derived_from="RAM" edited="true" id="RamLoc128" location="0x10000000" size="0x20000"/&gt;&#13;
 &lt;memoryInstance derived_from="RAM" edited="true" id="RamLoc72" location="0x10080000" size="0x12000"/&gt;&#13;
-&lt;memoryInstance derived_from="RAM" edited="true" id="RamM0Sub16" location="0x18000000" size="0x4000"/&gt;&#13;
-&lt;memoryInstance derived_from="RAM" edited="true" id="RamM0Sub2" location="0x18004000" size="0x800"/&gt;&#13;
 &lt;peripheralInstance derived_from="V6M_NVIC" id="NVIC" location="0xe000e000"/&gt;&#13;
 &lt;peripheralInstance derived_from="V6M_DCR" id="DCR" location="0xe000edf0"/&gt;&#13;
 &lt;peripheralInstance derived_from="SCT" id="SCT" location="0x40000000"/&gt;&#13;

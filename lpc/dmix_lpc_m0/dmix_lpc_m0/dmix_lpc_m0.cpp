@@ -9,6 +9,10 @@ void delay() {
 		y = x;
 }
 
+void MX_CORE_IRQHandler(void) {
+	Chip_CREG_ClearM4Event();
+}
+
 int main(void) {
     // Read clock settings and update SystemCoreClock variable
     SystemCoreClockUpdate();
