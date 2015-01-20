@@ -9,13 +9,13 @@
  * this code.
  */
 
-#include "../dmix_lpc_m4/libusbdev.h"
+#include "libusbdev.h"
 
+#include "board.h"
 #include <stdio.h>
 #include <string.h>
 
-#include "../dmix_lpc_m4/app_usbd_cfg.h"
-#include "../dmix_lpc_m4/lpc_board_nxp_lpclink2_4370/inc/board.h"
+#include "app_usbd_cfg.h"
 
 /* Endpoint 0 patch that prevents nested NAK event processing */
 static uint32_t g_ep0RxBusy = 0;/* flag indicating whether EP0 OUT/RX buffer is busy. */

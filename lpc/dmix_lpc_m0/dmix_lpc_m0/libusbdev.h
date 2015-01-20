@@ -28,9 +28,9 @@
  * copyright, permission, and disclaimer notice must appear in all copies of
  * this code.
  */
-#include "../dmix_lpc_m4/lpc_chip_43xx/inc/error.h"
-#include "../dmix_lpc_m4/lpc_chip_43xx/inc/lpc_types.h"
-#include "../dmix_lpc_m4/lpc_chip_43xx/inc/usbd/usbd_rom_api.h"
+#include "error.h"
+#include "lpc_types.h"
+#include "usbd_rom_api.h"
 
 #ifndef __LIBUSBDEV_H_
 #define __LIBUSBDEV_H_

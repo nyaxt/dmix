@@ -39,6 +39,7 @@
 								<option id="gnu.cpp.compiler.option.include.paths.1911397414" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
 								<inputType id="com.crt.advproject.compiler.cpp.input.1634520700" superClass="com.crt.advproject.compiler.cpp.input"/>
 							</tool>
@@ -61,6 +62,7 @@
 								<option id="gnu.c.compiler.option.include.paths.1911111161" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
 								<inputType id="com.crt.advproject.compiler.input.2118978658" superClass="com.crt.advproject.compiler.input"/>
 							</tool>
@@ -72,6 +74,7 @@
 								<option id="gnu.both.asm.option.include.paths.1472162635" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1754713464" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 								<inputType id="com.crt.advproject.assembler.input.953133553" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
@@ -106,6 +109,7 @@
 							<tool id="com.crt.advproject.cpp.exe.debug.934870955" name="MCU C++ Compiler" superClass="com.crt.advproject.cpp.exe.debug.1851176966">
 								<option id="gnu.cpp.compiler.option.include.paths.28368309" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/config_m0app}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/usbd}&quot;"/>
@@ -115,6 +119,7 @@
 							<tool id="com.crt.advproject.gcc.exe.debug.1558489246" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.695015014">
 								<option id="gnu.c.compiler.option.include.paths.1991268382" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/config_m0app}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/usbd}&quot;"/>
@@ -133,6 +138,37 @@
 							</tool>
 							<tool id="com.crt.advproject.link.cpp.exe.debug.1208333129" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.debug.1422417454"/>
 							<tool id="com.crt.advproject.link.exe.debug.591868974" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug.109259699"/>
+						</toolChain>
+					</folderInfo>
+					<folderInfo id="com.crt.advproject.config.exe.debug.1008477588.578155894" name="/" resourcePath="dmix_lpc_m0/lpc_chip_43xx_m0">
+						<toolChain id="com.crt.advproject.toolchain.exe.debug.332776135" name="Code Red MCU Tools" superClass="com.crt.advproject.toolchain.exe.debug" unusedChildren="">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="com.crt.advproject.platform.exe.debug" name="ARM-based MCU (Debug)" superClass="com.crt.advproject.platform.exe.debug"/>
+							<tool id="com.crt.advproject.cpp.exe.debug.789088274" name="MCU C++ Compiler" superClass="com.crt.advproject.cpp.exe.debug.934870955">
+								<option id="gnu.cpp.compiler.option.include.paths.690671326" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/config_m0app}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/usbd}&quot;"/>
+								</option>
+								<inputType id="com.crt.advproject.compiler.cpp.input.1115439296" superClass="com.crt.advproject.compiler.cpp.input"/>
+							</tool>
+							<tool id="com.crt.advproject.gcc.exe.debug.1918595906" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.1558489246">
+								<option id="gnu.c.compiler.option.include.paths.415873232" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/config_m0app}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/usbd}&quot;"/>
+								</option>
+								<inputType id="com.crt.advproject.compiler.input.1628569215" superClass="com.crt.advproject.compiler.input"/>
+							</tool>
+							<tool id="com.crt.advproject.gas.exe.debug.1433192712" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.debug.65415816">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1462557947" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="com.crt.advproject.assembler.input.1716390552" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
+							</tool>
+							<tool id="com.crt.advproject.link.cpp.exe.debug.2084556689" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.debug.1208333129"/>
+							<tool id="com.crt.advproject.link.exe.debug.1827389577" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug.591868974"/>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
@@ -181,6 +217,7 @@
 								<option id="gnu.cpp.compiler.option.include.paths.684592721" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
 								<inputType id="com.crt.advproject.compiler.cpp.input.1328029581" superClass="com.crt.advproject.compiler.cpp.input"/>
 							</tool>
@@ -203,6 +240,7 @@
 								<option id="gnu.c.compiler.option.include.paths.142462485" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
 								<inputType id="com.crt.advproject.compiler.input.1293938285" superClass="com.crt.advproject.compiler.input"/>
 							</tool>
@@ -214,6 +252,7 @@
 								<option id="gnu.both.asm.option.include.paths.268050761" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.913370216" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 								<inputType id="com.crt.advproject.assembler.input.2087001900" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>

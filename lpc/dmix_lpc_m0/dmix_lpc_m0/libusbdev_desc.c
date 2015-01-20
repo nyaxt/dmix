@@ -29,7 +29,7 @@
  * this code.
  */
 
-#include "../dmix_lpc_m4/app_usbd_cfg.h"
+#include "app_usbd_cfg.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
