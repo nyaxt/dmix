@@ -2,36 +2,40 @@
 
 #include <cr_section_macros.h>
 
-static volatile int y;
-void delay() {
-	volatile int x;
-	for (x = 0; x < 3000000; ++ x)
-		y = x;
-}
+int* g_toggle = (int*)0x2000c000;
+int* g_i = (int*)0x2000c004;
+int* g_j = (int*)0x2000c008;
+
+extern "C" {
 
 void MX_CORE_IRQHandler(void) {
 	Chip_CREG_ClearM4Event();
+
+	if (*g_toggle)
+		Chip_GPIO_SetValue(LPC_GPIO_PORT, 0, 1<<8);
+	else
+		Chip_GPIO_ClearValue(LPC_GPIO_PORT, 0, 1<<8);
+
+	*g_toggle = !*g_toggle;
+	++ *g_i;
+}
+
 }
 
 int main(void) {
-    // Read clock settings and update SystemCoreClock variable
     SystemCoreClockUpdate();
-    // Set up and initialize all required blocks and
-    // functions related to the board hardware
     Board_Init();
+
+	NVIC_EnableIRQ(M4_IRQn);
 
 	Chip_GPIO_SetPinDIROutput(LPC_GPIO_PORT, 0, 8);
 	Chip_GPIO_ClearValue(LPC_GPIO_PORT, 0, 1<<8);
 
-    // Force the counter to be placed into memory
-    volatile static int i = 0 ;
-    // Enter an infinite loop, just incrementing a counter
+	*g_j = 0;
     while(1) {
-    	Chip_GPIO_ClearValue(LPC_GPIO_PORT, 0, 1<<8);
-    	delay();
-    	Chip_GPIO_SetValue(LPC_GPIO_PORT, 0, 1<<8);
-    	delay();
-    	++ i;
+    	++*g_j;
+    	__WFE();
     }
-    return 0 ;
+
+    return 0;
 }

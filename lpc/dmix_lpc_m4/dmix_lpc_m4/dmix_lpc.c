@@ -85,7 +85,8 @@ void M0App_Boot(uint32_t baseaddr) {
 
 void M0App_TriggerIPI() {
 	__DSB();
-	__SEV();
+	// __SEV();
+	LPC_CREG->M4TXEVENT = 0x1;
 }
 
 void MX_CORE_IRQHandler(void) {
