@@ -14,5 +14,6 @@ ipcore_dir
 iseconfig
 Thumbs.db
 spdif_capture*
-lpc/firmware/Debug
+lpc/firmware/dmix_lpc_m0/Debug
+lpc/firmware/dmix_lpc_m4/Debug
 lpc/driver/dmixlpccli
