@@ -76,10 +76,15 @@ private:
 	USBHandler();
 	~USBHandler();
 
-    static USBHandler* s_usbHandler;
+	bool hasUnhandledRxData();
+	void setHandledRxData();
+
+	void enqueueNextRx();
 
 	static ErrorCode_t dispatchReset(USBD_HANDLE_T);
 	ErrorCode_t onReset(USBD_HANDLE_T);
+	static ErrorCode_t dispatchConfigure(USBD_HANDLE_T);
+	ErrorCode_t onConfigure();
 	static ErrorCode_t dispatchControl(USBD_HANDLE_T, void* data, uint32_t event);
 	ErrorCode_t onControl(uint32_t event);
 	static ErrorCode_t dispatchBulkIn(USBD_HANDLE_T, void* data, uint32_t event);
@@ -89,13 +94,17 @@ private:
 	static ErrorCode_t dispatchInterruptIn(USBD_HANDLE_T, void* data, uint32_t event);
 	ErrorCode_t onInterruptIn(uint32_t event);
 
+    static USBHandler* s_usbHandler;
+
 	const USBD_API_T* m_api = nullptr;
 	USBD_HANDLE_T m_handle = nullptr;
-	uint8_t m_recvBuf[4096];
+
+	__attribute__((aligned(4))) uint8_t m_bufRx[4096];
+	ssize_t m_sizeReceived = -1;
+	__attribute__((aligned(4))) uint8_t m_bufTx[4096];
+	ssize_t m_sizeSent = -1;
 
 	bool m_pendingBulkIn = false;
-	bool m_pendingBulkOut = false;
-	bool m_pendingInterruptIn = false;
 };
 
 inline void USBHandler::onIRQ()
@@ -109,6 +118,7 @@ static USB_EP_HANDLER_T g_Ep0BaseHdlr;	/* variable to store the pointer to base 
 
 static ErrorCode_t EP0_patch(USBD_HANDLE_T hUsb, void *data, uint32_t event)
 {
+
 	switch (event) {
 	case USB_EVT_OUT_NAK:
 		if (g_ep0RxBusy) {
@@ -142,6 +152,15 @@ ErrorCode_t USBHandler::onReset(USBD_HANDLE_T handle) {
 	return LPC_OK;
 }
 
+ErrorCode_t USBHandler::dispatchConfigure(USBD_HANDLE_T) {
+	return getInstance()->onConfigure();
+}
+
+ErrorCode_t USBHandler::onConfigure() {
+	// enqueueNextRx();
+	return LPC_OK;
+}
+
 #define DEFINE_DISPATCH_HANDLER(HANDLER_NAME) \
     ErrorCode_t USBHandler::dispatch##HANDLER_NAME(USBD_HANDLE_T, void* data, uint32_t event) { \
 		USBHandler* usbHandler = static_cast<USBHandler*>(data); \
@@ -167,8 +186,12 @@ ErrorCode_t USBHandler::onBulkIn(uint32_t event) {
 }
 
 ErrorCode_t USBHandler::onBulkOut(uint32_t event) {
-	if (event == USB_EVT_OUT)
-		m_pendingBulkOut = true;
+	if (event != USB_EVT_OUT) return LPC_OK;
+
+    // OUT: Host sends data to device.
+	// USB controller has already finished receiving last read request.
+	// Record that we have unhandled read result by setting m_sizeReceived.
+	m_sizeReceived = m_api->hw->ReadEP(m_handle, LUSB_OUT_EP, m_bufRx);
 
 	return LPC_OK;
 }
@@ -183,9 +206,10 @@ ErrorCode_t USBHandler::onInterruptIn(uint32_t event) {
 	return LPC_OK;
 }
 
-static uint8_t mem_usbHandler[sizeof(USBHandler)];
+static __attribute__((aligned(32))) uint8_t mem_usbHandler[sizeof(USBHandler)];
 void USBHandler::init()
 {
+	s_usbHandler = reinterpret_cast<USBHandler*>(mem_usbHandler);
 	s_usbHandler = new(reinterpret_cast<void*>(mem_usbHandler)) USBHandler;
 }
 
@@ -204,6 +228,7 @@ USBHandler::USBHandler() {
 	usb_param.mem_base = USB_STACK_MEM_BASE;
 	usb_param.mem_size = USB_STACK_MEM_SIZE;
 	usb_param.USB_Reset_Event = dispatchReset;
+	// usb_param.USB_Configure_Event = dispatchConfigure;
 
 	/* Set the USB descriptors */
 	USB_CORE_DESCS_T desc;
@@ -242,21 +267,27 @@ bool USBHandler::isConnected() {
 	return m_handle && USB_IsConfigured(m_handle);
 }
 
+inline bool USBHandler::hasUnhandledRxData() { return m_sizeReceived != -1; }
+inline void USBHandler::setHandledRxData() { m_sizeReceived = -1; }
+
+void USBHandler::enqueueNextRx() {
+	m_api->hw->ReadReqEP(m_handle, LUSB_OUT_EP, m_bufRx, sizeof(m_bufRx));
+}
+
 bool USBHandler::process() {
 	if (!isConnected())
 		return false;
 
-#if 0
-	if (libusbdev_QueueReadDone() != -1) {
-		/* Dummy process read data ......*/
-		/* requeue read request */
-		libusbdev_QueueReadReq(g_rxBuff, PACKET_BUFFER_SIZE);
+	if (hasUnhandledRxData()) {
+		if (m_sizeReceived >= static_cast<ssize_t>(sizeof(uint32_t)*2)) {
+			uint32_t* a = reinterpret_cast<uint32_t*>(m_bufRx);
+			*reinterpret_cast<uint32_t*>(m_bufTx) = a[0] + a[1];
+			m_api->hw->WriteEP(m_handle, LUSB_IN_EP, m_bufTx, sizeof(uint32_t));
+		}
+
+		setHandledRxData();
+		enqueueNextRx();
 	}
-	if (libusbdev_QueueSendDone() == 0) {
-		/* Queue send request */
-		libusbdev_QueueSendReq(g_rxBuff, PACKET_BUFFER_SIZE);
-	}
-#endif
 
 	return true;
 }
