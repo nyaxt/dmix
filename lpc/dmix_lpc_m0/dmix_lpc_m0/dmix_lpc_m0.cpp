@@ -157,7 +157,7 @@ ErrorCode_t USBHandler::dispatchConfigure(USBD_HANDLE_T) {
 }
 
 ErrorCode_t USBHandler::onConfigure() {
-	// enqueueNextRx();
+	enqueueNextRx();
 	return LPC_OK;
 }
 
@@ -228,7 +228,7 @@ USBHandler::USBHandler() {
 	usb_param.mem_base = USB_STACK_MEM_BASE;
 	usb_param.mem_size = USB_STACK_MEM_SIZE;
 	usb_param.USB_Reset_Event = dispatchReset;
-	// usb_param.USB_Configure_Event = dispatchConfigure;
+	usb_param.USB_Configure_Event = dispatchConfigure;
 
 	/* Set the USB descriptors */
 	USB_CORE_DESCS_T desc;
@@ -321,8 +321,8 @@ int main(void) {
 	Chip_GPIO_SetPinDIROutput(LPC_GPIO_PORT, 0, 8);
 	Chip_GPIO_ClearValue(LPC_GPIO_PORT, 0, 1<<8);
 
-	USBHandler::init();
 	Dmix_SSP_Init();
+	USBHandler::init();
 
 	for(;;) {
 		bool didSomething = false;
