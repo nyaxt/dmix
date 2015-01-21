@@ -114,6 +114,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/config_m0app}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/usbd}&quot;"/>
 								</option>
+								<option id="com.crt.advproject.cpp.misc.dialect.422486204" superClass="com.crt.advproject.cpp.misc.dialect" value="com.crt.advproject.misc.dialect.cpp11y" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.cpp.input.1925244624" superClass="com.crt.advproject.compiler.cpp.input"/>
 							</tool>
 							<tool id="com.crt.advproject.gcc.exe.debug.1558489246" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.695015014">

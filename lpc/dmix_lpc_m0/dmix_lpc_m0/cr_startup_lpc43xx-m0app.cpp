@@ -449,3 +449,6 @@ void M0_IntDefaultHandler(void)
 {   while(1) { }
 }
 
+#ifdef __cplusplus
+extern "C" void __cxa_pure_virtual() { while (1); }
+#endif
