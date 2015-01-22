@@ -28,6 +28,7 @@
  * copyright, permission, and disclaimer notice must appear in all copies of
  * this code.
  */
+#include "board.h"
 #include "error.h"
 #include "lpc_types.h"
 #include "usbd_rom_api.h"
