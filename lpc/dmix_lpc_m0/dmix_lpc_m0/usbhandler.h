@@ -17,12 +17,15 @@ public:
 
 	void onIRQ();
 
+	void enqueueResponse(size_t len);
+
 private:
 	USBHandler();
 	~USBHandler();
 
 	bool hasUnhandledRxData();
 	void setHandledRxData();
+	void processRxData();
 
 	void enqueueNextRx();
 
@@ -51,10 +54,5 @@ private:
 
 	bool m_pendingBulkIn = false;
 };
-
-inline void USBHandler::onIRQ()
-{
-	m_api->hw->ISR(m_handle);
-}
 
 #endif // usbhandler_h

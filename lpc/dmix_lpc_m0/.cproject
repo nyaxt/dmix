@@ -114,7 +114,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/config_m0app}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/usbd}&quot;"/>
 								</option>
-								<option id="com.crt.advproject.cpp.misc.dialect.422486204" superClass="com.crt.advproject.cpp.misc.dialect" value="com.crt.advproject.misc.dialect.cpp11y" valueType="enumerated"/>
+								<option id="com.crt.advproject.cpp.misc.dialect.422486204" name="Language standard" superClass="com.crt.advproject.cpp.misc.dialect" value="com.crt.advproject.misc.dialect.cpp11y" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.cpp.input.1925244624" superClass="com.crt.advproject.compiler.cpp.input"/>
 							</tool>
 							<tool id="com.crt.advproject.gcc.exe.debug.1558489246" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.695015014">
@@ -197,7 +197,7 @@
 					<folderInfo id="com.crt.advproject.config.exe.release.1983787155." name="/" resourcePath="">
 						<toolChain id="com.crt.advproject.toolchain.exe.release.826024135" name="Code Red MCU Tools" superClass="com.crt.advproject.toolchain.exe.release">
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="com.crt.advproject.platform.exe.release.1287479542" name="ARM-based MCU (Release)" superClass="com.crt.advproject.platform.exe.release"/>
-							<builder buildPath="${workspace_loc:/dmix_lpc_m0}/Release" id="com.crt.advproject.builder.exe.release.1348672426" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="com.crt.advproject.builder.exe.release"/>
+							<builder buildPath="${workspace_loc:/dmix_lpc_m0}/Release" id="com.crt.advproject.builder.exe.release.1348672426" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="com.crt.advproject.builder.exe.release"/>
 							<tool id="com.crt.advproject.cpp.exe.release.2033352451" name="MCU C++ Compiler" superClass="com.crt.advproject.cpp.exe.release">
 								<option id="com.crt.advproject.cpp.arch.1456909339" name="Architecture" superClass="com.crt.advproject.cpp.arch" value="com.crt.advproject.cpp.target.cm0" valueType="enumerated"/>
 								<option id="com.crt.advproject.cpp.thumb.841706267" name="Thumb mode" superClass="com.crt.advproject.cpp.thumb" value="true" valueType="boolean"/>

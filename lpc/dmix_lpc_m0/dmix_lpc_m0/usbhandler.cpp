@@ -3,13 +3,14 @@
 #include "util.h"
 #include <string.h>
 
+#include "spi.h" // FIXME
+
 /* Endpoint 0 patch that prevents nested NAK event processing */
 static uint32_t g_ep0RxBusy = 0;/* flag indicating whether EP0 OUT/RX buffer is busy. */
 static USB_EP_HANDLER_T g_Ep0BaseHdlr;	/* variable to store the pointer to base EP0 handler */
 
 static ErrorCode_t EP0_patch(USBD_HANDLE_T hUsb, void *data, uint32_t event)
 {
-
 	switch (event) {
 	case USB_EVT_OUT_NAK:
 		if (g_ep0RxBusy) {
@@ -30,8 +31,6 @@ static ErrorCode_t EP0_patch(USBD_HANDLE_T hUsb, void *data, uint32_t event)
 	}
 	return g_Ep0BaseHdlr(hUsb, data, event);
 }
-
-USBHandler* USBHandler::s_usbHandler = nullptr;
 
 ErrorCode_t USBHandler::dispatchReset(USBD_HANDLE_T handle) {
 	return getInstance()->onReset(handle);
@@ -96,6 +95,8 @@ ErrorCode_t USBHandler::onInterruptIn(uint32_t event) {
 
 	return LPC_OK;
 }
+
+USBHandler* USBHandler::s_usbHandler = nullptr;
 
 static __attribute__((aligned(32))) uint8_t mem_usbHandler[sizeof(USBHandler)];
 void USBHandler::init()
@@ -170,17 +171,37 @@ bool USBHandler::process() {
 		return false;
 
 	if (hasUnhandledRxData()) {
-		if (m_sizeReceived >= static_cast<ssize_t>(sizeof(uint32_t)*2)) {
-			uint32_t* a = reinterpret_cast<uint32_t*>(m_bufRx);
-			*reinterpret_cast<uint32_t*>(m_bufTx) = a[0] + a[1];
-			m_api->hw->WriteEP(m_handle, LUSB_IN_EP, m_bufTx, sizeof(uint32_t));
-		}
+		processRxData();
 
 		setHandledRxData();
 		enqueueNextRx();
 	}
 
 	return true;
+}
+
+void USBHandler::enqueueResponse(size_t len) {
+	m_api->hw->WriteEP(m_handle, LUSB_IN_EP, m_bufTx, len);
+}
+
+void USBHandler::processRxData() {
+	size_t len = static_cast<size_t>(m_sizeReceived);
+#if 0
+	if (len < sizeof(uint32_t)*2)
+		return;
+
+	uint32_t* a = reinterpret_cast<uint32_t*>(m_bufRx);
+	*reinterpret_cast<uint32_t*>(m_bufTx) = a[0] + a[1];
+#else
+	SPI::getInstance()->doSendRecv(m_bufRx, m_bufTx, len, [len]() {
+		USBHandler::getInstance()->enqueueResponse(len);
+	});
+#endif
+}
+
+inline void USBHandler::onIRQ()
+{
+	m_api->hw->ISR(m_handle);
 }
 
 extern "C" {
