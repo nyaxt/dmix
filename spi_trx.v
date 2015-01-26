@@ -19,7 +19,6 @@ reg [1:0] sck_hist_ff;
 always @(posedge clk) begin
     sck_hist_ff <= {sck_hist_ff[0], sck};
 end
-wire sck_posedge = ss_enabled && sck_hist_ff[1:0] == 2'b01;
 
 // detect ss negedge
 reg [1:0] ss_hist_ff;
@@ -28,6 +27,8 @@ always @(posedge clk) begin
 end
 wire ss_negedge = ss_hist_ff[1:0] == 2'b10;
 wire ss_enabled = ~ss_hist_ff[0];
+wire sck_posedge = ss_enabled && sck_hist_ff[1:0] == 2'b01;
+wire sck_negedge = ss_enabled && sck_hist_ff[1:0] == 2'b10;
 
 assign rst_o = ss_negedge;
 
@@ -77,13 +78,13 @@ assign data_o = data_o_ff;
 reg [7:0] data_o_latchff;
 always @(posedge clk)
     if(ack_i)
-        data_o_latchff <= data_i;
+        data_o_latchff <= 8'hab;//data_i;
 
 reg [7:0] shiftreg_o;
 always @(posedge clk) begin
     if(posedge8_ff || ss_negedge) begin
         shiftreg_o <= data_o_latchff;
-    end else if(sck_posedge) begin
+    end else if(sck_negedge) begin
         shiftreg_o <= {shiftreg_o[6:0], 1'b0};
     end
 end

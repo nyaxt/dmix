@@ -14,9 +14,12 @@ public:
 		doSendRecvImpl(txBuf, rxBuf, len);
 		m_callback = f;
 	}
+
 	void onDMAIRQ();
 
-	void callCallbackIfDone();
+	bool callCallbackIfDone();
+
+	inline bool isTransactionActive() const { return m_isTransactionActive; }
 
 private:
 	void doSendRecvImpl(const uint8_t* txBuf, uint8_t* rxBuf, size_t len);
@@ -24,7 +27,6 @@ private:
 	SPI();
 
 	bool isTransactionDone();
-	void reset();
 
 	static SPI* s_spi;
 

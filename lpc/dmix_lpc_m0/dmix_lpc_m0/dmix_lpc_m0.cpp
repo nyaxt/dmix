@@ -57,6 +57,9 @@ int main(void) {
 		if (USBHandler::getInstance()->process())
 			didSomething = true;
 
+		if (SPI::getInstance()->callCallbackIfDone())
+			didSomething = true;
+
 		if (!didSomething)
 			__WFI();
 	}

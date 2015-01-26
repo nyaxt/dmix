@@ -170,12 +170,13 @@ bool USBHandler::process() {
 	if (!isConnected())
 		return false;
 
-	if (hasUnhandledRxData()) {
-		processRxData();
+	if (!hasUnhandledRxData())
+		return false;
 
-		setHandledRxData();
-		enqueueNextRx();
-	}
+    processRxData();
+
+    setHandledRxData();
+    enqueueNextRx();
 
 	return true;
 }
@@ -193,9 +194,11 @@ void USBHandler::processRxData() {
 	uint32_t* a = reinterpret_cast<uint32_t*>(m_bufRx);
 	*reinterpret_cast<uint32_t*>(m_bufTx) = a[0] + a[1];
 #else
-	SPI::getInstance()->doSendRecv(m_bufRx, m_bufTx, len, [len]() {
-		USBHandler::getInstance()->enqueueResponse(len);
-	});
+	if (!SPI::getInstance()->isTransactionActive()) {
+        SPI::getInstance()->doSendRecv(m_bufRx, m_bufTx, len, [len]() {
+    		USBHandler::getInstance()->enqueueResponse(len);
+    	});
+	}
 #endif
 }
 

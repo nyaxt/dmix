@@ -62,17 +62,14 @@ bool SPI::isTransactionDone() {
 	return m_txComplete && m_rxComplete;
 }
 
-void SPI::reset() {
-	m_isTransactionActive = false;
-	Chip_SSP_DMA_Disable(LPC_SSP1);
-}
-
-void SPI::callCallbackIfDone() {
-	if (!m_isTransactionActive) die();
-	if (!isTransactionDone()) return;
+bool SPI::callCallbackIfDone() {
+	if (!m_isTransactionActive) return false;
+	if (!isTransactionDone()) return false;
 
 	m_callback();
 	m_callback.reset();
 
-	reset();
+	m_isTransactionActive = false;
+	Chip_SSP_DMA_Disable(LPC_SSP1);
+	return true;
 }

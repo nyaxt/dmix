@@ -19,21 +19,11 @@ module dmix_top #(
     output dac_lrck_o,
     output dac_data_o,
 
-    /*
-    // SPI config
-    input spi_cfg_sck,
-    input spi_cfg_mosi,
-    output spi_cfg_miso,
-    input spi_cfg_ss,
-    */
-
-    /*
-    // SPI peek
-    input spi_peek_sck,
-    output spi_peek_mosi,
-    input spi_peek_miso,
-    input spi_peek_ss,
-    */
+    // SPI
+    input spi_sck,
+    input spi_mosi,
+    output spi_miso,
+    input spi_ss,
 
     // debug
     output led_o, // T3
@@ -61,10 +51,20 @@ always @(posedge clk245760)
 assign rst_dcm = (rst_counter[19:3] == 17'h00000);
 assign rst_ip = (rst_counter[19:3] == 17'h0000e);
 
+wire [(NUM_CH*VOL_WIDTH-1):0] vol;
 wire [(NUM_CH*NUM_RATE-1):0] rate;
 wire [(NUM_CH-1):0] rst_ch;
 wire [(NUM_CH-1):0] fifo_ack;
 wire [(NUM_CH*24-1):0] fifo_data;
+
+wire [(NUM_SPDIF_IN*192):0] udata;
+wire [(NUM_SPDIF_IN*192):0] cdata;
+
+csr_spi #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr_spi(
+    .clk(clk491520),
+    .rst(rst_ip),
+    .sck(spi_sck), .miso(spi_miso), .mosi(spi_mosi), .ss(spi_ss),
+    .vol_o(vol), .rate_i(rate), .udata_i(udata), .cdata_i(cdata));
 
 genvar ig;
 generate
@@ -119,6 +119,8 @@ for(ig = 0; ig < NUM_SPDIF_IN; ig = ig + 1) begin:g
     end
 
     assign rate[(ig*NUM_RATE*2) +: (NUM_RATE*2)] = {2{dai_rate}};
+	 assign udata[(ig*192) +: 192] = dai_udata;
+	 assign cdata[(ig*192) +: 192] = dai_cdata;
     assign rst_ch[(ig*2) +: 2] = {2{~dai_locked}};
     assign fifo_ack[(ig*2) +: 2] = {fifo_pop_ff & ~dai_lrck_491520, fifo_pop_ff & dai_lrck_491520};
     assign fifo_data[(ig*24*2) +: (24*2)] = {2{dai_data_491520}};
@@ -147,8 +149,6 @@ resample_pipeline #(.NUM_CH(NUM_CH), .NUM_CH_LOG2(NUM_CH_LOG2)) resampler(
 wire [1:0] mixer_ack;
 wire [23:0] mixer_data;
 wire [1:0] mixer_pop;
-
-wire [(NUM_CH*VOL_WIDTH-1):0] vol = {NUM_CH{32'h0100_0000}};
 
 mixer #(.NUM_CH_IN(NUM_CH), .NUM_CH_IN_LOG2(NUM_CH_LOG2),
 .NUM_CH_OUT(2), .NUM_CH_OUT_LOG2(1), .VOL_WIDTH(32)) mixer(
@@ -188,9 +188,9 @@ assign dac_sck_o = clk245760;//_pad;
 
 assign led_o = g[0].dai_locked;
 
-assign debug_o[0] = dac_sck_o;
-assign debug_o[1] = dac_lrck_o;
-assign debug_o[2] = dac_data_o;
-assign debug_o[3] = dac_bck_o;
+assign debug_o[0] = spi_sck;
+assign debug_o[1] = spi_mosi;
+assign debug_o[2] = spi_miso;
+assign debug_o[3] = spi_ss;
 
 endmodule

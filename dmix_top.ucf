@@ -1,5 +1,5 @@
 //NET "clk112896" LOC = "B14" | IOSTANDARD = LVCMOS33 | TNM_NET = "clk112896";
-NET "clk245760_pad" LOC = "E10" | IOSTANDARD = LVCMOS33 | TNM_NET = "clk245760";// | CLOCK_DEDICATED_ROUTE = FALSE;
+NET "clk245760_pad" LOC = "E10" | TNM_NET = "clk245760";// | CLOCK_DEDICATED_ROUTE = FALSE;
 
 //TIMESPEC "TS_clk112896" = PERIOD "clk112896" 11.2896Mhz HIGH 50%;
 TIMESPEC "TS_clk245760" = PERIOD "clk245760" 24.576Mhz HIGH 50%;
@@ -8,7 +8,7 @@ TIMESPEC "TS_clk245760" = PERIOD "clk245760" 24.576Mhz HIGH 50%;
 //TIMESPEC "TS_clk983040" = PERIOD "clk983040" 98.304Mhz HIGH 50%;
 //NET "clk983040" TNM_NET = "clk983040";
 
-NET "spdif_i<0>" LOC = "A14" | IOSTANDARD = LVCMOS33;
+NET "spdif_i<0>" LOC = "A14";
 
 NET "dac_sck_o" LOC = "K13" | IOSTANDARD = LVCMOS33 | SLEW = FAST | DRIVE = 16;
 NET "dac_bck_o" LOC = "K15" | IOSTANDARD = LVCMOS33 | SLEW = FAST | DRIVE = 16;
@@ -20,10 +20,10 @@ NET "debug_o<1>" LOC = "L3";
 NET "debug_o<2>" LOC = "L6";
 NET "debug_o<3>" LOC = "M4";
 
-// NET "spi_cfg_sck" LOC = "L6";
-// NET "spi_cfg_mosi" LOC = "L1";
-// NET "spi_cfg_miso" LOC = "L3";
-// NET "spi_cfg_ss" LOC = "M4";
+NET "spi_sck" LOC = "F12";
+NET "spi_mosi" LOC = "E11";
+NET "spi_miso" LOC = "C11";
+NET "spi_ss" LOC = "B10";
 
 NET "led_o" LOC="T3";
 NET "rst" LOC="D3" | PULLDOWN | TIG;
