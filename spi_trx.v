@@ -78,7 +78,7 @@ assign data_o = data_o_ff;
 reg [7:0] data_o_latchff;
 always @(posedge clk)
     if(ack_i)
-        data_o_latchff <= 8'hab;//data_i;
+        data_o_latchff <= data_i;
 
 reg [7:0] shiftreg_o;
 always @(posedge clk) begin

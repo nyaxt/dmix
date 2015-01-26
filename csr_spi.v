@@ -42,7 +42,7 @@ reg csr_we_ff;
 reg [7:0] csr_data_w_ff;
 wire [7:0] csr_data_o;
 
-csr #(.NUM_CH(NUM_CH)) csr(
+csr #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr(
     .clk(clk), .rst(rst),
     .addr_i(csr_addr_ff), .ack_i(csr_we_ff), .data_i(csr_data_w_ff), .data_o(csr_data_o),
     .vol_o(vol_o), .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
@@ -61,7 +61,7 @@ always @(posedge clk) begin
     csr_we_ff <= 0;
     csr_addr_inc_ff <= 0;
 
-    if(rst || spi_rst) begin
+    if(rst) begin
         state <= ST_INIT;
         csr_addr_ff <= 0;
         csr_data_w_ff <= 0;

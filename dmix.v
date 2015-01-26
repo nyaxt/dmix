@@ -57,8 +57,8 @@ wire [(NUM_CH-1):0] rst_ch;
 wire [(NUM_CH-1):0] fifo_ack;
 wire [(NUM_CH*24-1):0] fifo_data;
 
-wire [(NUM_SPDIF_IN*192):0] udata;
-wire [(NUM_SPDIF_IN*192):0] cdata;
+wire [(NUM_SPDIF_IN*192-1):0] udata;
+wire [(NUM_SPDIF_IN*192-1):0] cdata;
 
 csr_spi #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr_spi(
     .clk(clk491520),
