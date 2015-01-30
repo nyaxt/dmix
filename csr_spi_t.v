@@ -83,6 +83,7 @@ initial begin
     spi_cycle(8'b00_1_1_0000);
     spi_cycle(8'h03);
     spi_cycle(8'h99);
+    spi_cycle(8'h00); // NOP padding
     ss = 1;
 
     #(TCLK*3);
@@ -94,6 +95,7 @@ initial begin
     spi_cycle({4'b00_0_1, 4'h8}); // high 8
     spi_cycle(8'h01); //             low 01
     spi_cycle(8'h00); // read result 801
+    spi_cycle(8'h00); // NOP padding
     ss = 1;
     #(TCLK*3);
     $display("---");
@@ -105,12 +107,15 @@ initial begin
     spi_cycle(8'h00); // read result 001
     spi_cycle(8'h00); // read result 002
     spi_cycle(8'h00); // read result 003
+    spi_cycle(8'h00); // NOP padding
     ss = 1;
 
     $finish(2);
 end
 
 always @(posedge clk) begin
+    if(uut.spi_trx.ack_i)
+        $display("spi data tx: %x", uut.spi_trx.data_i);
     if(uut.spi_trx.ack_pop_o)
         $display("spi data rx: %x", uut.spi_trx.data_o);
 end

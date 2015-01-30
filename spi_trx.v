@@ -11,7 +11,8 @@ module spi_trx (
     output [7:0] data_o,
     output ack_pop_o,
 
-    input [7:0] data_i);
+    input [7:0] data_i,
+    input ack_i);
 
 // detect sck posedge
 reg [1:0] sck_hist_ff;
@@ -43,29 +44,26 @@ always @(posedge clk) begin
         shiftreg_i <= {shiftreg_i[6:0], mosi_hist_ff};
 end
 
-// count 8 posedge -> posedge8_ff
-reg posedge8_ff;
+// count 8 posedge -> posedge8
 reg [2:0] posedge_counter;
 always @(posedge clk) begin
-    posedge8_ff <= 0;
-
     if(ss_negedge)
         posedge_counter <= 0;
-    else if(sck_posedge) begin
-        if(posedge_counter == 7) begin
-            posedge8_ff <= 1;
-        end
-
+    else if(sck_posedge)
         posedge_counter <= posedge_counter + 1;
-    end
 end
+wire posedge8 = sck_posedge & (posedge_counter == 3'd7);
+reg posedge8_delayed;
+always @(posedge clk)
+    posedge8_delayed <= posedge8;
 
 // rx data -> {data_o, ack_pop_o}
 reg ack_o_ff;
 reg [7:0] data_o_ff;
 always @(posedge clk) begin
     ack_o_ff <= 0;
-    if(posedge8_ff) begin
+
+    if (posedge8_delayed) begin
         ack_o_ff <= 1;
         data_o_ff <= shiftreg_i;
     end
@@ -73,12 +71,26 @@ end
 assign ack_pop_o = ack_o_ff;
 assign data_o = data_o_ff;
 
-// data_i -> tx data
+// count 8 negedge -> negedge8
+reg [2:0] negedge_counter;
+always @(posedge clk) begin
+    if (ss_negedge)
+        negedge_counter <= 0;
+    else if(sck_negedge)
+        negedge_counter <= negedge_counter + 1;
+end
+wire negedge8 = sck_negedge & (negedge_counter == 3'd7);
+
+// {data_i, ack_i} -> tx data
+reg [7:0] data_o_latchff;
+always @(posedge clk)
+    if(ack_i)
+        data_o_latchff <= data_i;
+
 reg [7:0] shiftreg_o;
 always @(posedge clk) begin
-    if (posedge8_ff || ss_negedge) begin
-        $display("spi data tx: %x", data_i);
-        shiftreg_o <= data_i;
+    if(negedge8 || ss_negedge) begin
+        shiftreg_o <= data_o_latchff;
     end else if(sck_negedge) begin
         shiftreg_o <= {shiftreg_o[6:0], 1'b0};
     end
