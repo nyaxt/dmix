@@ -80,7 +80,7 @@ initial begin
 
     #(TCLK*3);
     ss = 0;
-    spi_cycle(8'h80);
+    spi_cycle(8'b00_1_1_0000);
     spi_cycle(8'h03);
     spi_cycle(8'h99);
     ss = 1;
@@ -91,35 +91,28 @@ initial begin
 
     #(TCLK*3);
     ss = 0;
-    spi_cycle(8'h00); // init read high  0
-    spi_cycle(8'h00); //      read  low 00
-    spi_cycle(8'h00); // read result 000
-    spi_cycle(8'h00); // read result 001
-    spi_cycle(8'h00); // read result 002
-    spi_cycle(8'h00); // read result 003
-    spi_cycle(8'h00); // read result 004
-    spi_cycle(8'h00); // read result 005
-    spi_cycle(8'h00); // read result 006
-    spi_cycle(8'h00); // read result 007
+    spi_cycle({4'b00_0_1, 4'h8}); // high 8
+    spi_cycle(8'h01); //             low 01
+    spi_cycle(8'h00); // read result 801
     ss = 1;
     #(TCLK*3);
     $display("---");
     #(TCLK*3);
     ss = 0;
-    spi_cycle(8'h08); // init read high  8
-    spi_cycle(8'h01); //            low 01
-    spi_cycle(8'h00); // read result 102
-    spi_cycle(8'h00); // read result 103
+    spi_cycle(8'b01_0_1_0000); 
+    spi_cycle(8'h00); // offset
+    spi_cycle(8'h00); // read result 000
+    spi_cycle(8'h00); // read result 001
+    spi_cycle(8'h00); // read result 002
+    spi_cycle(8'h00); // read result 003
     ss = 1;
 
     $finish(2);
 end
 
 always @(posedge clk) begin
-    if(uut.spi_trx.ack_i)
-        $display("uut.data_i: %x", uut.spi_trx.data_i);
     if(uut.spi_trx.ack_pop_o)
-        $display("uut.data_o: %x", uut.spi_trx.data_o);
+        $display("spi data rx: %x", uut.spi_trx.data_o);
 end
 
 endmodule

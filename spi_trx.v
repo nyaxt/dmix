@@ -11,8 +11,7 @@ module spi_trx (
     output [7:0] data_o,
     output ack_pop_o,
 
-    input [7:0] data_i,
-    input ack_i);
+    input [7:0] data_i);
 
 // detect sck posedge
 reg [1:0] sck_hist_ff;
@@ -74,16 +73,12 @@ end
 assign ack_pop_o = ack_o_ff;
 assign data_o = data_o_ff;
 
-// {data_i, ack_i} -> tx data
-reg [7:0] data_o_latchff;
-always @(posedge clk)
-    if(ack_i)
-        data_o_latchff <= data_i;
-
+// data_i -> tx data
 reg [7:0] shiftreg_o;
 always @(posedge clk) begin
-    if(posedge8_ff || ss_negedge) begin
-        shiftreg_o <= data_o_latchff;
+    if (posedge8_ff || ss_negedge) begin
+        $display("spi data tx: %x", data_i);
+        shiftreg_o <= data_i;
     end else if(sck_negedge) begin
         shiftreg_o <= {shiftreg_o[6:0], 1'b0};
     end

@@ -1,3 +1,26 @@
+module csr_cmd_decoder(
+    input [7:0] cmd,
+    output [7:0] nrep,
+    output we,
+    output target_csr,
+    output [3:0] ch);
+
+function [7:0] decode_nrep(input [1:0] encoded);
+    case (encoded)
+    2'b00: decode_nrep = 8'd0;
+    2'b01: decode_nrep = 8'd3;
+    2'b10: decode_nrep = 8'd63;
+    2'b11: decode_nrep = 8'd255;
+    endcase
+endfunction
+
+assign nrep = decode_nrep(cmd[7:6]);
+assign we = cmd[5];
+assign target_csr = cmd[4];
+assign ch = cmd[3:0];
+
+endmodule
+
 module csr_spi #(
     parameter NUM_CH = 8,
     parameter NUM_SPDIF_IN = 3,
@@ -28,79 +51,98 @@ wire spi_rst;
 wire [7:0] spi_data_rx;
 wire spi_ack_pop_o;
 wire [7:0] spi_data_tx;
-reg spi_ack_i_ff;
 
 spi_trx spi_trx(
     .clk(clk),
     .sck(sck), .miso(miso), .mosi(mosi), .ss(ss),
     .rst_o(spi_rst),
     .data_o(spi_data_rx), .ack_pop_o(spi_ack_pop_o),
-    .data_i(spi_data_tx), .ack_i(spi_ack_i_ff));
+    .data_i(spi_data_tx)); // valid data always present
 
-reg [11:0] csr_addr_ff;
-reg csr_we_ff;
-reg [7:0] csr_data_w_ff;
+wire [7:0] dec_nrep;
+wire dec_we;
+wire dec_target_csr;
+wire [3:0] dec_ch;
+csr_cmd_decoder csr_cmd_decoder(
+    .cmd(spi_data_rx),
+    .nrep(dec_nrep), .we(dec_we), .target_csr(dec_target_csr), .ch(dec_ch));
+
+reg [7:0] nrep_counter;
+reg cmd_we_ff;
+reg [3:0] cmd_ch_ff;
+reg [7:0] csr_addr_low_ff;
+
 wire [7:0] csr_data_o;
 
-csr #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr(
-    .clk(clk), .rst(rst),
-    .addr_i(csr_addr_ff), .ack_i(csr_we_ff), .data_i(csr_data_w_ff), .data_o(csr_data_o),
-    .vol_o(vol_o), .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
-assign spi_data_tx = csr_data_o;
-
-reg csr_addr_inc_ff;
-
+reg [15:0] state_ff;
 parameter ST_INIT = 0;
-parameter ST_W_ADDR_IN = 1;
-parameter ST_W_DATA_IN = 2;
-parameter ST_R_ADDR_IN = 3;
-parameter ST_R_DATA_OUT_CONT = 4;
-reg [7:0] state;
+parameter ST_PENDING_CSR_ADDR = 1;
+parameter ST_PENDING_CSR_DATA = 2;
+parameter ST_RESPOND_CSR_DATA = 3;
+parameter ST_PENDING_XCHG_DATA = 4;
+
+// FIXME: split always for data_tx
+reg [7:0] data_tx_ff;
+assign spi_data_tx = data_tx_ff;
+
 always @(posedge clk) begin
-    spi_ack_i_ff <= 0;
-    csr_we_ff <= 0;
-    csr_addr_inc_ff <= 0;
-
     if(rst) begin
-        state <= ST_INIT;
-        csr_addr_ff <= 0;
-        csr_data_w_ff <= 0;
-    end else if (csr_addr_inc_ff) begin
-        csr_addr_ff <= csr_addr_ff + 1;
-    end else if (spi_ack_pop_o) begin
-        case (state)
+        state_ff <= ST_INIT;
+        data_tx_ff <= 8'h00;
+    end else begin
+        case (state_ff)
             ST_INIT: begin
-                csr_addr_ff[11:8] <= spi_data_rx[3:0];
+                data_tx_ff <= 8'hcc;
 
-                if(spi_data_rx[7])
-                    state <= ST_W_ADDR_IN;
+                if (spi_ack_pop_o) begin
+                    nrep_counter <= dec_nrep;        
+                    cmd_ch_ff <= dec_ch;
+                    cmd_we_ff <= dec_we;
+
+                    if (dec_target_csr)
+                        state_ff <= ST_PENDING_CSR_ADDR;
+                    else
+                        state_ff <= ST_PENDING_XCHG_DATA;
+                end else
+                    state_ff <= ST_INIT;
+            end
+            ST_PENDING_CSR_ADDR: begin
+                if (spi_ack_pop_o) begin
+                    csr_addr_low_ff[7:0] <= spi_data_rx[7:0];
+
+                    state_ff <= ST_PENDING_CSR_DATA;
+                end else
+                    state_ff <= ST_PENDING_CSR_ADDR;
+            end
+            ST_PENDING_CSR_DATA: begin
+                if (spi_ack_pop_o) begin
+                    state_ff <= ST_RESPOND_CSR_DATA;
+                end else
+                    state_ff <= ST_PENDING_CSR_DATA;
+            end
+            ST_RESPOND_CSR_DATA: begin
+                data_tx_ff <= csr_data_o;
+
+                csr_addr_low_ff <= csr_addr_low_ff + 1;
+
+                nrep_counter <= nrep_counter - 1;
+                if (nrep_counter != 0)
+                    state_ff <= ST_PENDING_CSR_DATA;
                 else
-                    state <= ST_R_ADDR_IN;
+                    state_ff <= ST_INIT;
             end
-            ST_W_ADDR_IN: begin
-                csr_addr_ff[7:0] <= spi_data_rx[7:0];
-                state <= ST_W_DATA_IN;
-            end
-            ST_W_DATA_IN: begin
-                csr_data_w_ff <= spi_data_rx;
-                csr_addr_inc_ff <= 1;
-                csr_we_ff <= 1;
-            end
-            ST_R_ADDR_IN: begin
-                csr_addr_ff[7:0] <= spi_data_rx[7:0];
-                spi_ack_i_ff <= 1;
-                csr_addr_inc_ff <= 1;
-
-                state <= ST_R_DATA_OUT_CONT;
-            end
-            ST_R_DATA_OUT_CONT: begin
-                spi_ack_i_ff <= 1;
-                csr_addr_inc_ff <= 1;
-            end
+            //ST_PENDING_XCHG_DATA: // unimpl
             default:
-                state <= ST_INIT;
+                state_ff <= ST_INIT;
         endcase
     end
 end
+
+wire [11:0] csr_addr = {cmd_ch_ff, csr_addr_low_ff};
+wire csr_ack_i = state_ff == ST_PENDING_CSR_DATA && spi_ack_pop_o == 1'b1 && cmd_we_ff == 1'b1;
+csr #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr(
+    .clk(clk), .rst(rst),
+    .addr_i(csr_addr), .ack_i(csr_ack_i), .data_i(spi_data_rx), .data_o(csr_data_o),
+    .vol_o(vol_o), .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
 
 endmodule
