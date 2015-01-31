@@ -35,7 +35,7 @@ void SPI::doSendRecvImpl(const uint8_t* txBuf, uint8_t* rxBuf, size_t len) {
 
 	Chip_SSP_DMA_Enable(LPC_SSP1);
 
-	checkAlign(reinterpret_cast<void*>(len));
+	//checkAlign(reinterpret_cast<void*>(len));
 	checkAlign(txBuf);
 	Chip_GPDMA_Transfer(LPC_GPDMA, m_dmaTx,
 			reinterpret_cast<uint32_t>(txBuf),
@@ -66,10 +66,14 @@ bool SPI::callCallbackIfDone() {
 	if (!m_isTransactionActive) return false;
 	if (!isTransactionDone()) return false;
 
-	m_callback();
-	m_callback.reset();
-
 	m_isTransactionActive = false;
+	Chip_GPDMA_Stop(LPC_GPDMA, m_dmaTx);
+	Chip_GPDMA_Stop(LPC_GPDMA, m_dmaRx);
 	Chip_SSP_DMA_Disable(LPC_SSP1);
+
+	m_callback();
+	if (!m_isTransactionActive)
+        m_callback.reset();
+
 	return true;
 }
