@@ -1,0 +1,12 @@
+dump: decimator_t.lxt
+	gtkwave decimator_t.lxt &
+
+runsim: decimator_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+decimator_t.vvp: decimator.v decimator_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp
