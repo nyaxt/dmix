@@ -176,10 +176,9 @@ class USBDeviceHandle : noncopyable {
 
 void USBDeviceHandle::sendBulk(const uint8_t* data, size_t len) {
   if (len > MAX_BULK_LEN)
-    throw std::runtime_error("txdata too long for a feature report");
+    throw std::runtime_error("txdata too long for a bulk tx");
 
   if (FLAGS_verbose) {
-    printf("to: %d\n", timeout_);
     printf("Tx bulk: %s ... ",
            formatHex(std::vector<uint8_t>(data, data + len)).c_str());
     fflush(stdout);
@@ -189,7 +188,7 @@ void USBDeviceHandle::sendBulk(const uint8_t* data, size_t len) {
   int success = libusb_bulk_transfer(
       devhandle_, 0x01,
       const_cast<uint8_t*>(data), static_cast<uint16_t>(len), &txlen, timeout_);
-  if (success < 0) throw LibUSBError("libusb_control_transfer Tx", txlen);
+  if (success < 0) throw LibUSBError("libusb_bulk_transfer Tx", success);
   if (txlen < len) throw std::runtime_error("sent data shorter than expected");
   if (FLAGS_verbose) printf("success!\n");
 }
@@ -198,17 +197,16 @@ std::vector<uint8_t> USBDeviceHandle::recvBulk(size_t len) {
   std::vector<uint8_t> rxdata(len);
 
   if (FLAGS_verbose) {
-    printf("Rx feature report... ");
+    printf("Rx bulk... ");
     fflush(stdout);
   }
   int rxlen = 0;
   int success = libusb_bulk_transfer(
-      devhandle_, 0x82,
+      devhandle_, 0x81,
       rxdata.data(), static_cast<uint16_t>(len),
       &rxlen, timeout_);
-  if (success < 0) throw LibUSBError("libusb_control_transfer Rx", rxlen);
-  if (rxlen < len)
-    throw std::runtime_error("received data shorter than expected");
+  if (success < 0) throw LibUSBError("libusb_bulk_transfer Rx", success);
+  rxdata.resize(rxlen);
   if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxdata).c_str());
 
   return std::move(rxdata);
@@ -254,8 +252,7 @@ USBDeviceHandle findDevice() {
 
     if (devhandle.getDescriptor().idVendor != USBI2C_VENDOR_ID) continue;
     if (devhandle.getDescriptor().idProduct != USBI2C_PRODUCT_ID) continue;
-    // if (devhandle.getProductStringDescriptor() != "usbi2c") continue;
-    printf("found device: %s\n", devhandle.getProductStringDescriptor().c_str());
+    if (devhandle.getProductStringDescriptor() != "dmix_lpc") continue;
 
     return std::move(devhandle);
   }
@@ -275,7 +272,8 @@ std::vector<uint8_t> doTest(USBDeviceHandle* devhandle,
     throw std::runtime_error("test txdata too long.");
 
   devhandle->sendBulk(txdata);
-  std::vector<uint8_t> rxdata = devhandle->recvBulk(MAX_BULK_LEN);
+  sleep(1);
+  std::vector<uint8_t> rxdata = devhandle->recvBulk(4096);
   return std::move(rxdata);
 }
 
