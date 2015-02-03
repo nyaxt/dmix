@@ -109,6 +109,17 @@ initial begin
     spi_cycle(8'h00); // read result 003
     spi_cycle(8'h00); // NOP padding
     ss = 1;
+    #(TCLK*3);
+    $display("---");
+    #(TCLK*3);
+    ss = 0;
+    spi_cycle(8'b01_1_0_0010); 
+    spi_cycle(8'h56); // data[0] little endian
+    spi_cycle(8'h34); // data[0]
+    spi_cycle(8'h12); // data[0]
+    spi_cycle(8'hff); // dummy
+    spi_cycle(8'h00); // NOP padding
+    ss = 1;
 
     $finish(2);
 end
