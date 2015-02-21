@@ -26,6 +26,9 @@ initial begin
     simple_increment_ff = 0;
     simple_increment_ff2 = 24'hffffff;
 
+    uut.data_latch = 48'b0;
+    uut.subframe_shiftreg = 28'b0;
+
     clk = 1'b0;
     ack_i = 2'b00;
 

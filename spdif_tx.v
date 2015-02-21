@@ -113,11 +113,11 @@ reg [1:0] encoded;
 begin
     case({phase, subframe_bit})
         2'b0_0: 
-            encoded = 2'b11;
+            encoded = 2'b00;
         2'b0_1:
             encoded = 2'b10;
         2'b1_0:
-            encoded = 2'b00;
+            encoded = 2'b11;
         2'b1_1:
             encoded = 2'b01;
     endcase
@@ -133,14 +133,14 @@ reg phase_ff;
 always @(posedge clk) begin
     if (rst)
         phase_ff <= 0;
-    if (halfbit)
-        phase_ff <= subframe_bit ^ phase_ff;
+    else if (halfbit)
+        phase_ff <= ~(phase_ff ^ subframe_bit);
 end
 assign phase = phase_ff;
 
-reg [1:0] spdif_out_ff;
+reg spdif_out_ff;
 always @(posedge clk)
-    spdif_out_ff<= spdif_tbo;
+    spdif_out_ff <= spdif_tbo;
 assign spdif_o = spdif_out_ff;
 
 assign pop_o = prepare_subframe ? {pop_ch, ~pop_ch} : 2'b0;
