@@ -1,0 +1,12 @@
+dump: spdif_tx_t.lxt
+	gtkwave spdif_tx_t.lxt &
+
+runsim: spdif_tx_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+spdif_tx_t.vvp: spdif_tx.v spdif_tx_t.v
+	iverilog -o $@ $^
+
+.SUFFIXES: .lxt .vvp
