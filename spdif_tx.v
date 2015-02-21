@@ -46,7 +46,7 @@ wire prepare_subframe = halfbit & (subframe_pos_counter_ff == 5'd3);
 wire prepare_synccode_type = ~halfbit & (subframe_pos_counter_ff == 5'd31);
 wire prepare_synccode = halfbit & (subframe_pos_counter_ff == 5'd31);
 
-wire phase;
+wire prev_subframe_end;
 
 reg [2:0] synccode_type_ff;
 parameter SYNCCODE_TYPE_B = 0;
@@ -80,11 +80,11 @@ always @(posedge clk) begin
     if (prepare_synccode) begin
         case (synccode_type_ff)
         SYNCCODE_TYPE_B:
-            synccode_shiftreg <= phase ? SYNCCODE_B0 : SYNCCODE_B1;
+            synccode_shiftreg <= prev_subframe_end ? SYNCCODE_B0 : SYNCCODE_B1;
         SYNCCODE_TYPE_W:
-            synccode_shiftreg <= phase ? SYNCCODE_W0 : SYNCCODE_W1;
+            synccode_shiftreg <= prev_subframe_end ? SYNCCODE_W0 : SYNCCODE_W1;
         SYNCCODE_TYPE_M:
-            synccode_shiftreg <= phase ? SYNCCODE_M0 : SYNCCODE_M1;
+            synccode_shiftreg <= prev_subframe_end ? SYNCCODE_M0 : SYNCCODE_M1;
         endcase
     end else
         synccode_shiftreg <= {synccode_shiftreg[6:0], 1'b0};
@@ -105,38 +105,15 @@ end
 
 wire subframe_bit = subframe_shiftreg[27];
 
-function bmc_enc(
-    input phase,
-    input subframe_bit,
-    input halfbit);
-reg [1:0] encoded;
-begin
-    case({phase, subframe_bit})
-        2'b0_0: 
-            encoded = 2'b00;
-        2'b0_1:
-            encoded = 2'b10;
-        2'b1_0:
-            encoded = 2'b11;
-        2'b1_1:
-            encoded = 2'b01;
-    endcase
-    bmc_enc = encoded[halfbit];
-end
-endfunction
-
-wire encoded_subframe = bmc_enc(phase, subframe_bit, halfbit_ff);
-
-wire spdif_tbo = send_synccode ? synccode_shiftreg[7] : encoded_subframe;
-
-reg phase_ff;
+reg encoded_subframe_ff;
 always @(posedge clk) begin
     if (rst)
-        phase_ff <= 0;
-    else if (halfbit)
-        phase_ff <= ~(phase_ff ^ subframe_bit);
+        encoded_subframe_ff <= 0;
+    else
+        encoded_subframe_ff <= (subframe_bit | halfbit) ^ encoded_subframe_ff;
 end
-assign phase = phase_ff;
+wire spdif_tbo = send_synccode ? synccode_shiftreg[7] : encoded_subframe_ff;
+assign prev_subframe_end = encoded_subframe_ff;
 
 reg spdif_out_ff;
 always @(posedge clk)
