@@ -15,7 +15,8 @@ reg [47:0] data_i;
 
 spdif_tx uut(
     .clk(clk), .rst(rst),
-    .ack_i(ack_i), .data_i(data_i));
+    .ack_i(ack_i), .data_i(data_i),
+    .udata_i(192'b0), .cdata_i(192'b0));
 
 integer i;
 initial begin

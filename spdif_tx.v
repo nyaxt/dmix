@@ -6,6 +6,9 @@ module spdif_tx(
 	input [47:0] data_i,
     output [1:0] pop_o,
 
+    input [191:0] udata_i,
+    input [191:0] cdata_i,
+
     output spdif_o
 );
 
@@ -42,6 +45,7 @@ always @(posedge clk) begin
     end
 end
 wire send_synccode = subframe_pos_counter_ff < 5'd4;
+wire send_parity = subframe_pos_counter_ff == 5'd31;
 wire prepare_subframe = halfbit & (subframe_pos_counter_ff == 5'd3);
 wire prepare_synccode_type = ~halfbit & (subframe_pos_counter_ff == 5'd31);
 wire prepare_synccode = halfbit & (subframe_pos_counter_ff == 5'd31);
@@ -53,21 +57,22 @@ parameter SYNCCODE_TYPE_B = 0;
 parameter SYNCCODE_TYPE_W = 1;
 parameter SYNCCODE_TYPE_M = 2;
 reg [7:0] frame_counter_ff;
+wire end_of_frame = frame_counter_ff == 8'd191;
 always @(posedge clk) begin
     if (rst) begin
         synccode_type_ff <= SYNCCODE_TYPE_B;
-        frame_counter_ff <= 8'd0;
+        frame_counter_ff <= 8'd191;
     end else if (prepare_synccode_type) begin
         case (synccode_type_ff)
         SYNCCODE_TYPE_B:
             synccode_type_ff <= SYNCCODE_TYPE_W;
         SYNCCODE_TYPE_W:
-            synccode_type_ff <= (frame_counter_ff == 8'd191) ? SYNCCODE_TYPE_B : SYNCCODE_TYPE_M;
+            synccode_type_ff <= end_of_frame ? SYNCCODE_TYPE_B : SYNCCODE_TYPE_M;
         SYNCCODE_TYPE_M:
             synccode_type_ff <= SYNCCODE_TYPE_W;
         endcase
 
-        if (frame_counter_ff <= 8'd191)
+        if (end_of_frame)
             frame_counter_ff <= 8'd0;
         else
             frame_counter_ff <= frame_counter_ff + 1;
@@ -91,26 +96,50 @@ always @(posedge clk) begin
 end
 
 // FIXME
-wire us = 1'b0;
-wire cs = 1'b0;
-wire parity = 1'b0;
+wire [23:0] data_active = pop_ch ? data_latch[47:24] : data_latch[23:0];
 
-reg [27:0] subframe_shiftreg;
+// {User,Control} data
+reg [191:0] udata_shiftreg;
+reg [191:0] cdata_shiftreg;
 always @(posedge clk) begin
-    if (prepare_subframe) begin
-        subframe_shiftreg <= {data_latch[23:0], 1'b1, us, cs, parity};
-    end else if (halfbit)
-        subframe_shiftreg <= {subframe_shiftreg[26:0], 1'b0};
+    if (end_of_frame)
+        udata_shiftreg <= udata_i;
+    else if (prepare_subframe)
+        udata_shiftreg <= {udata_shiftreg[190:0], 1'b0};
+
+    if (end_of_frame)
+        cdata_shiftreg <= cdata_i;
+    else if (prepare_subframe)
+        cdata_shiftreg <= {cdata_shiftreg[190:0], 1'b0};
 end
 
-wire subframe_bit = subframe_shiftreg[27];
+reg [26:0] subframe_shiftreg;
+always @(posedge clk) begin
+    if (prepare_subframe) begin
+        subframe_shiftreg <= {data_active, 1'b1, udata_shiftreg[191], cdata_shiftreg[191]};
+    end else if (halfbit)
+        subframe_shiftreg <= {subframe_shiftreg[25:0], 1'b0};
+end
+
+wire subframe_bit = subframe_shiftreg[26];
+
+reg parity_ff;
+always @(posedge clk) begin
+    if (prepare_subframe)
+        parity_ff <= 0;
+    else if (halfbit)
+        parity_ff <= parity_ff ^ subframe_bit;
+end
+wire parity = parity_ff;
+
+wire subframe_or_parity_bit = send_parity ? parity : subframe_shiftreg[26];
 
 reg encoded_subframe_ff;
 always @(posedge clk) begin
     if (rst)
         encoded_subframe_ff <= 0;
     else
-        encoded_subframe_ff <= (subframe_bit | halfbit) ^ encoded_subframe_ff;
+        encoded_subframe_ff <= (subframe_or_parity_bit | halfbit) ^ encoded_subframe_ff;
 end
 wire spdif_tbo = send_synccode ? synccode_shiftreg[7] : encoded_subframe_ff;
 assign prev_subframe_end = encoded_subframe_ff;
