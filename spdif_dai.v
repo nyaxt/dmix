@@ -31,9 +31,9 @@ always @(posedge clk)
 
 reg lvl_probe_ff;
 always @(posedge clk)
-    if(lvl_history_ff == 2'b00)
+    if(lvl_history_ff[(HIST_LEN-1):(HIST_LEN-2)] == 2'b00)
         lvl_probe_ff <= 0;
-    else if (lvl_history_ff == 2'b11)
+    else if (lvl_history_ff[(HIST_LEN-1):(HIST_LEN-2)] == 2'b11)
         lvl_probe_ff <= 1;
 
 wire lvl_probe = lvl_probe_ff;

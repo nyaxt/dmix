@@ -6,7 +6,7 @@ runsim: spdif_tx_t.lxt
 .vvp.lxt:
 	vvp $< -lxt2
 
-spdif_tx_t.vvp: spdif_tx.v spdif_tx_t.v
+spdif_tx_t.vvp: spdif_tx.v spdif_tx_t.v spdif_dai.v
 	iverilog -o $@ $^
 
 .SUFFIXES: .lxt .vvp
