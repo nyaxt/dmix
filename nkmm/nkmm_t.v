@@ -10,7 +10,7 @@ reg clk;
 reg rst;
 
 reg [`ACCUM_WIDTH-1:0] cpu_data_ff;
-reg [`PROG_WIDTH-1:0] cpu_prog_data_ff;
+reg [`INSN_WIDTH-1:0] cpu_prog_data_ff;
 nkmm_cpu cpu(
     .clk(clk),
     .rst(rst),

@@ -5,15 +5,22 @@
 * SP: Stack pointer ADDR_WIDTH-bit
 * PC: Program counter ADDR_WIDTH-bit
 
+## General
+REG_D <- ALU[ALUSEL](REG_A, REG_B or IMM)
+or
+REG_D <- MEM(ALU[ALUSEL](REG_A, REG_B or IMM))
+or
+MEM(ALU[ALUSEL](REG_A, REG_B or IMM)) <- REG_D
+
 ## Load
 REG <- 0 + REG
 REG <- 0 + IMM8
 
 ## Fetch
-REG <- [REG]
+REG <- [ALU]
 
 ## Store
-[REG] <- REG
+[ALU] <- REG
 
 ## Add
 REG <- REG + REG
@@ -102,10 +109,11 @@ ALU_R <- ALU(ALU_A, ALU_B, IMM8)
 
 ### MEM
 ```
+IO_DATA_O <- ALU_R
 if (MWR)
   IO_WR <- 1
-  IO_DATA_O <- ALU_R
-else if (MRD)
+
+if (MRD)
   MEM_R <- IO_DATA_R
 else
   MEM_R <- ALU_R
@@ -120,8 +128,6 @@ REGMUX_D <- MEM_R
 
 ## Instruction Encoding
 ```
-16 + 7bit
-
-31   30  29 28 27  26 25 24    23 22 21  20 19 18  17    15     0
-REPZ_MWR_DSEL[2:0]_ALUSEL[2:0]_ASEL[2:0]_BSEL[2:0]_IMMEN_IMM8[7:0]
+31   30  29  28 27 26  25 24 23    22 21 20  19 18 17  16    15        0
+REPZ_MWR_MRD_DSEL[2:0]_ALUSEL[2:0]_ASEL[2:0]_BSEL[2:0]_IMMEN_IMM16[15:0]
 ```

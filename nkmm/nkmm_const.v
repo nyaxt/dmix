@@ -1,5 +1,5 @@
 `define ACCUM_WIDTH 24
-`define PROG_WIDTH 32
+`define INSN_WIDTH 32
 `define ADDR_WIDTH 16
 `define OPSEL_WIDTH 4
 `define REGSEL_WIDTH 3
