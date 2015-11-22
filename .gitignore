@@ -2,6 +2,7 @@
 *.vvp
 .DS_Store
 *.o
+*.hi
 controller/controller
 dspsw/resample
 dspsw/resample.dSYM
