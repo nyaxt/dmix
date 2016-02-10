@@ -1,6 +1,8 @@
 module Main(main) where
 
-import Text.ParserCombinators.Parsec
+import Text.Parsec
+import Text.Parsec.Char
+import Text.Parsec.String (Parser)
 
 data RegSel = R0 | R1 | R2 | R3 | R4 | R5 | SP | PC deriving Show
 data ALUSel = OpAdd | OpSub | OpOr | OpAnd | OpXor | OpNot | OpShift deriving Show
@@ -15,12 +17,12 @@ data Insn =
         imm :: Maybe Int} deriving Show
 type Object = [Insn]
 
-regsel :: GenParser Char st RegSel
+regsel :: Parser RegSel
 regsel = do x <- string "R1"
             return R1
          <?> "register"
 
-insn :: GenParser Char st Insn
+insn :: Parser Insn
 insn = 
   let memw = False
       memr = False
@@ -29,10 +31,11 @@ insn =
       bsel = R5
       imm = Just 42
   in do dsel <- regsel
+        
         return Insn { memw = memw, memr = memr, dsel = dsel, alu = alu, asel = asel, bsel = bsel, imm = imm }
      <?> "instruction"
 
-nkmm :: GenParser Char st Object
+nkmm :: Parser Object
 nkmm = do is <- many insn
           eof
           return is
