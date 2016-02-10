@@ -32,21 +32,26 @@ data Insn =
         dsel :: RegSel,
         alue :: AluExprT }
 instance Show Insn where
-  show (Insn {memw = False, memr = False, dsel = dsel, alue = alue}) =
-    show dsel++" <- "++show alue
-  show (Insn {memw = False, memr = True, dsel = dsel, alue = alue}) =
-    show dsel++" <- ["++show alue++"]"
-  show (Insn {memw = True, memr = False, dsel = dsel, alue = alue}) =
-    "["++show alue++"] <- "++show dsel
-  show (Insn {memw = True, memr = True, dsel = dsel, alue = alue}) =
-    "Insn {memw = True, memr = True}" -- Error!!
+  show (Insn {memw = w, memr = r, dsel = d, alue = a}) =
+    "Insn{M["++(if w then "W" else "-")++(if r then "R" else "-")++"] "++
+    (show d)++" "++(show a)++"}"
+
+-- instance Show Insn where
+--   show (Insn {memw = False, memr = False, dsel = dsel, alue = alue}) =
+--     show dsel++" <- "++show alue
+--   show (Insn {memw = False, memr = True, dsel = dsel, alue = alue}) =
+--     show dsel++" <- ["++show alue++"]"
+--   show (Insn {memw = True, memr = False, dsel = dsel, alue = alue}) =
+--     "["++show alue++"] <- "++show dsel
+--   show (Insn {memw = True, memr = True, dsel = dsel, alue = alue}) =
+--     "Insn {memw = True, memr = True}" -- Error!!
 
 type Object = [Insn]
 
 lexer :: P.TokenParser ()
 lexer = P.makeTokenParser style
   where style = emptyDef {
-    P.reservedOpNames = ["<-", "+", "-", "|", "&", "^", "!", ";"],
+    P.reservedOpNames = ["<-", "+", "-", "|", "&", "^", "!", ";", "[", "]"],
     P.reservedNames = ["R0", "R1", "R2", "R3", "R4", "R5", "SP", "PC"],
     P.commentLine = "#" }
 
@@ -100,16 +105,28 @@ aluExpr = (try $ makeAluExpr (reservedOp "+") OpAdd)
         <|> notExpr
         <|> loadExpr
 
+mWriteInsn :: Parser Insn
+mWriteInsn = do reservedOp "["
+                alue <- aluExpr
+		reservedOp "]"
+                reservedOp "<-"
+                dsel <- regSel
+                reservedOp ";"
+                return Insn { memw = True, memr = False, dsel = dsel, alue = alue }
+             <?> "mWriteInsn"
+
+mrReadInsn :: Parser Insn
+mrReadInsn = do dsel <- regSel
+                reservedOp "<-"
+		memr <- option False (reservedOp "[" >> return True)
+                alue <- aluExpr
+		when memr (reservedOp "]")
+                reservedOp ";"
+                return Insn { memw = False, memr = memr, dsel = dsel, alue = alue }
+             <?> "mrReadInsn"
+            
 insn :: Parser Insn
-insn = 
-  let memw = False
-      memr = False
-  in do dsel <- regSel
-        reservedOp "<-"
-	alue <- aluExpr
-        reservedOp ";"
-        return Insn { memw = memw, memr = memr, dsel = dsel, alue = alue }
-     <?> "instruction"
+insn = choice [mWriteInsn, mrReadInsn]
  
 nkmm :: Parser Object
 nkmm = do is <- many1 insn
