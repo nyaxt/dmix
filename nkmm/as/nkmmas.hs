@@ -1,25 +1,47 @@
 module Main(main) where
 
 import Control.Monad
+import Data.List
 import Text.Parsec
 import Text.Parsec.Char
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as P
 
-data RegSel = R0 | RegA | RegB | RegC | RegD | RegE | SP | PC deriving Show
-data ALUSel = OpAdd | OpSub | OpOr | OpAnd | OpXor | OpNot | OpShift deriving Show
+data RegSel = R0 | RegA | RegB | RegC | RegD | RegE | SP | PC 
+instance Show RegSel where
+  show R0 = "R0"
+  show RegA = "A"
+  show RegB = "B"
+  show RegC = "C"
+  show RegD = "D"
+  show RegE = "E"
+  show SP = "SP"
+  show PC = "PC"
+
+data AluSel = OpAdd | OpSub | OpOr | OpAnd | OpXor | OpNot | OpShift deriving Show
+
+data AluExprT = AluExpr AluSel RegSel (Either RegSel Integer)
+instance Show AluExprT where
+  show (AluExpr alu asel (Left bsel)) = (show alu)++"("++(show asel)++", "++(show bsel)++")"
+  show (AluExpr alu asel (Right imm)) = (show alu)++"("++(show asel)++", imm "++(show imm)++")"
 
 data Insn =
   Insn {memw :: Bool,
         memr :: Bool,
         dsel :: RegSel,
-        alu :: ALUSel,
-        asel :: RegSel,
-        bsel :: Either RegSel Integer} deriving Show
-type Object = [Insn]
+        alue :: AluExprT }
+instance Show Insn where
+  show (Insn {memw = False, memr = False, dsel = dsel, alue = alue}) =
+    show dsel++" <- "++show alue
+  show (Insn {memw = False, memr = True, dsel = dsel, alue = alue}) =
+    show dsel++" <- ["++show alue++"]"
+  show (Insn {memw = True, memr = False, dsel = dsel, alue = alue}) =
+    "["++show alue++"] <- "++show dsel
+  show (Insn {memw = True, memr = True, dsel = dsel, alue = alue}) =
+    "Insn {memw = True, memr = True}" -- Error!!
 
-type AluExpr = (ALUSel, RegSel, Either RegSel Integer)
+type Object = [Insn]
 
 lexer :: P.TokenParser ()
 lexer = P.makeTokenParser style
@@ -51,25 +73,25 @@ imm = P.natural lexer
 regImm :: Parser (Either RegSel Integer)
 regImm = liftM Left regSel <|> liftM Right imm
 
-loadExpr :: Parser AluExpr
+loadExpr :: Parser AluExprT
 loadExpr = do bsel <- regImm
-              return (OpAdd, R0, bsel)
+              return $ AluExpr OpAdd R0 bsel
            <?> "loadExpr"
 
 notExpr = do reservedOp "!"
              bsel <- regImm
-             return (OpNot, R0, bsel)
+             return $ AluExpr OpNot R0 bsel
            <?> "notExpr"
 
 
-makeAluExpr :: (Parser ()) -> ALUSel -> Parser AluExpr
+makeAluExpr :: (Parser ()) -> AluSel -> Parser AluExprT
 makeAluExpr opP alu = do asel <- regSel
 	                 opP
                          bsel <- regImm
-                         return (alu, asel, bsel)
+                         return $ AluExpr alu asel bsel
                       <?> "aluExpr"
 
-aluExpr :: Parser AluExpr
+aluExpr :: Parser AluExprT
 aluExpr = (try $ makeAluExpr (reservedOp "+") OpAdd)
         <|> (try $ makeAluExpr (reservedOp "-") OpSub)
         <|> (try $ makeAluExpr (reservedOp "|") OpOr)
@@ -82,13 +104,11 @@ insn :: Parser Insn
 insn = 
   let memw = False
       memr = False
-      alu = OpAdd
-      imm = Just 42
   in do dsel <- regSel
         reservedOp "<-"
-	(alu, asel, bsel) <- aluExpr
+	alue <- aluExpr
         reservedOp ";"
-        return Insn { memw = memw, memr = memr, dsel = dsel, alu = alu, asel = asel, bsel = bsel }
+        return Insn { memw = memw, memr = memr, dsel = dsel, alue = alue }
      <?> "instruction"
  
 nkmm :: Parser Object
@@ -99,6 +119,11 @@ nkmm = do is <- many1 insn
 parseNkmmAs :: String -> Either ParseError Object
 parseNkmmAs = parse nkmm "(unknown)"
 
+showObj :: Object -> String
+showObj obj = intercalate "\n" $ map show obj
+
 main :: IO ()
 main = do src <- getContents
-          putStrLn $ show $ parseNkmmAs src
+	  case (parseNkmmAs src) of
+	    (Left err) -> putStrLn $ show err
+	    (Right obj) -> putStrLn $ showObj obj 
