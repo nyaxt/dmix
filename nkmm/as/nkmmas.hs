@@ -52,7 +52,7 @@ lexer :: P.TokenParser ()
 lexer = P.makeTokenParser style
   where style = emptyDef {
     P.reservedOpNames = ["<-", "+", "-", "|", "&", "^", "!", ";", "[", "]"],
-    P.reservedNames = ["R0", "R1", "R2", "R3", "R4", "R5", "SP", "PC"],
+    P.reservedNames = ["R0", "A", "B", "C", "D", "E", "SP", "PC"],
     P.commentLine = "#" }
 
 reserved :: String -> Parser ()
