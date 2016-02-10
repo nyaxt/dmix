@@ -1,5 +1,8 @@
 .PHONY: clean
 
+test: nkmmas 
+	./nkmmas < hoge.S
+
 nkmmas: nkmmas.hs
 	ghc $<
 
