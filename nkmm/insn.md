@@ -1,7 +1,8 @@
 # NKMM CPU Instruction Set
 
 ## Registers
-* R0-R5: General purpose registers ACCUM_WIDTH-bit
+* R0: Program counter ADDR_WIDTH-bit
+* A-E: General purpose registers ACCUM_WIDTH-bit
 * SP: Stack pointer ADDR_WIDTH-bit
 * PC: Program counter ADDR_WIDTH-bit
 
