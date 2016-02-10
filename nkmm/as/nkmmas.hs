@@ -1,5 +1,6 @@
 module Main(main) where
 
+import Control.Monad
 import Text.Parsec
 import Text.Parsec.Char
 import Text.Parsec.String (Parser)
@@ -15,14 +16,15 @@ data Insn =
         dsel :: RegSel,
         alu :: ALUSel,
         asel :: RegSel,
-        bsel :: RegSel,
-        imm :: Maybe Int} deriving Show
+        bsel :: Either RegSel Integer} deriving Show
 type Object = [Insn]
+
+type AluExpr = (ALUSel, RegSel, Either RegSel Integer)
 
 lexer :: P.TokenParser ()
 lexer = P.makeTokenParser style
   where style = emptyDef {
-    P.reservedOpNames = ["<-", "+", ";"],
+    P.reservedOpNames = ["<-", "+", "-", "|", "&", "^", "!", ";"],
     P.reservedNames = ["R0", "R1", "R2", "R3", "R4", "R5", "SP", "PC"],
     P.commentLine = "#" }
 
@@ -32,8 +34,8 @@ reserved = P.reserved lexer
 reservedOp :: String -> Parser ()
 reservedOp = P.reservedOp lexer
 
-regsel :: Parser RegSel
-regsel = (reserved "R0" >> return R0)
+regSel :: Parser RegSel
+regSel = (reserved "R0" >> return R0)
        <|> (reserved "A" >> return RegA)
        <|> (reserved "B" >> return RegB)
        <|> (reserved "C" >> return RegC)
@@ -43,19 +45,50 @@ regsel = (reserved "R0" >> return R0)
        <|> (reserved "PC" >> return PC)
        <?> "register"
 
+imm :: Parser Integer
+imm = P.natural lexer
+
+regImm :: Parser (Either RegSel Integer)
+regImm = liftM Left regSel <|> liftM Right imm
+
+loadExpr :: Parser AluExpr
+loadExpr = do bsel <- regImm
+              return (OpAdd, R0, bsel)
+           <?> "loadExpr"
+
+notExpr = do reservedOp "!"
+             bsel <- regImm
+             return (OpNot, R0, bsel)
+           <?> "notExpr"
+
+
+makeAluExpr :: (Parser ()) -> ALUSel -> Parser AluExpr
+makeAluExpr opP alu = do asel <- regSel
+	                 opP
+                         bsel <- regImm
+                         return (alu, asel, bsel)
+                      <?> "aluExpr"
+
+aluExpr :: Parser AluExpr
+aluExpr = (try $ makeAluExpr (reservedOp "+") OpAdd)
+        <|> (try $ makeAluExpr (reservedOp "-") OpSub)
+        <|> (try $ makeAluExpr (reservedOp "|") OpOr)
+        <|> (try $ makeAluExpr (reservedOp "&") OpAnd)
+        <|> (try $ makeAluExpr (reservedOp "^") OpXor)
+        <|> notExpr
+        <|> loadExpr
+
 insn :: Parser Insn
 insn = 
   let memw = False
       memr = False
       alu = OpAdd
       imm = Just 42
-  in do dsel <- regsel
+  in do dsel <- regSel
         reservedOp "<-"
-        asel <- regsel
-        reservedOp "+"
-        bsel <- regsel
+	(alu, asel, bsel) <- aluExpr
         reservedOp ";"
-        return Insn { memw = memw, memr = memr, dsel = dsel, alu = alu, asel = asel, bsel = bsel, imm = imm }
+        return Insn { memw = memw, memr = memr, dsel = dsel, alu = alu, asel = asel, bsel = bsel }
      <?> "instruction"
  
 nkmm :: Parser Object
