@@ -36,12 +36,11 @@ module nkmm_cpu(
     input [`INSN_WIDTH-1:0] prog_data_i,
     output [`ADDR_WIDTH-1:0] prog_addr_o);
 
-reg [`ACCUM_WIDTH-1:0] r0_ff;
-reg [`ACCUM_WIDTH-1:0] r1_ff;
-reg [`ACCUM_WIDTH-1:0] r2_ff;
-reg [`ACCUM_WIDTH-1:0] r3_ff;
-reg [`ACCUM_WIDTH-1:0] r4_ff;
-reg [`ACCUM_WIDTH-1:0] r5_ff;
+reg [`ACCUM_WIDTH-1:0] ra_ff;
+reg [`ACCUM_WIDTH-1:0] rb_ff;
+reg [`ACCUM_WIDTH-1:0] rc_ff;
+reg [`ACCUM_WIDTH-1:0] rd_ff;
+reg [`ACCUM_WIDTH-1:0] re_ff;
 reg [`ACCUM_WIDTH-1:0] sp_ff;
 reg [`ADDR_WIDTH-1:0] pc_ff;
 
@@ -98,16 +97,15 @@ nkmm_insn_decoder decoder(
     .imm_en_o(dcd_imm_en));
 
 parameter SEL_R0 = 3'b000;
-parameter SEL_R1 = 3'b001;
-parameter SEL_R2 = 3'b010;
-parameter SEL_R3 = 3'b011;
-parameter SEL_R4 = 3'b100;
-parameter SEL_R5 = 3'b101;
+parameter SEL_RA = 3'b001;
+parameter SEL_RB = 3'b010;
+parameter SEL_RC = 3'b011;
+parameter SEL_RD = 3'b100;
+parameter SEL_RE = 3'b101;
 parameter SEL_SP = 3'b110;
 parameter SEL_PC = 3'b111;
 function [`ACCUM_WIDTH-1:0] dcd_reg_sel(
     input [2:0] sel,
-    input [`ACCUM_WIDTH-1:0] r0,
     input [`ACCUM_WIDTH-1:0] r1,
     input [`ACCUM_WIDTH-1:0] r2,
     input [`ACCUM_WIDTH-1:0] r3,
@@ -117,16 +115,16 @@ function [`ACCUM_WIDTH-1:0] dcd_reg_sel(
     input [`ADDR_WIDTH-1:0] pc);
     case (sel)
         SEL_R0:
-            dcd_reg_sel = r0;
-        SEL_R1:
+            dcd_reg_sel = 0;
+        SEL_RA:
             dcd_reg_sel = r1;
-        SEL_R2:
+        SEL_RB:
             dcd_reg_sel = r2;
-        SEL_R3:
+        SEL_RC:
             dcd_reg_sel = r3;
-        SEL_R4:
+        SEL_RD:
             dcd_reg_sel = r4;
-        SEL_R5:
+        SEL_RE:
             dcd_reg_sel = r5;
         SEL_SP:
             dcd_reg_sel = sp;
@@ -139,21 +137,25 @@ endfunction
 
 always @(posedge clk) begin
     if (rst) begin
+        dcd_mem_write_ff <= 0;
+        dcd_mem_read_ff <= 0;
         dcd_op_sel_ff <= 0;
         dcd_alu_a_ff <= 0;
         dcd_alu_b_ff <= 0;
         dcd_reg_d_ff <= 0;
         dcd_d_sel_ff <= 0;
     end else begin
+        dcd_mem_write_ff <= dcd_mem_write;
+        dcd_mem_read_ff <= dcd_mem_read;
         dcd_op_sel_ff <= dcd_op_sel;
-        dcd_alu_a_ff <= dcd_reg_sel(dcd_a_sel, r0_ff, r1_ff, r2_ff, r3_ff, r4_ff, r5_ff, sp_ff, pc_ff);
+        dcd_alu_a_ff <= dcd_reg_sel(dcd_a_sel, ra_ff, rb_ff, rc_ff, rd_ff, re_ff, sp_ff, pc_ff);
         if (dcd_imm_en) begin
             dcd_alu_b_ff[`ACCUM_WIDTH-1:`IMM_WIDTH] <= 0;
             dcd_alu_b_ff[`IMM_WIDTH-1:0] <= dcd_imm;
         end else begin
-            dcd_alu_b_ff <= dcd_reg_sel(dcd_b_sel, r0_ff, r1_ff, r2_ff, r3_ff, r4_ff, r5_ff, sp_ff, pc_ff);
+            dcd_alu_b_ff <= dcd_reg_sel(dcd_b_sel, ra_ff, rb_ff, rc_ff, rd_ff, re_ff, sp_ff, pc_ff);
         end
-        dcd_reg_d_ff <= dcd_reg_sel(dcd_d_sel, r0_ff, r1_ff, r2_ff, r3_ff, r4_ff, r5_ff, sp_ff, pc_ff);
+        dcd_reg_d_ff <= dcd_reg_sel(dcd_d_sel, ra_ff, rb_ff, rc_ff, rd_ff, re_ff, sp_ff, pc_ff);
         dcd_d_sel_ff <= dcd_d_sel;
     end
 end
@@ -215,25 +217,25 @@ reg [`REGSEL_WIDTH-1:0] mio_d_sel_ff;
 wire [`ACCUM_WIDTH-1:0] mio_r;
 
 reg mio_mem_read_ff;
-reg [`ACCUM_WIDTH-1:0] mio_alu_d_ff;
+reg [`ACCUM_WIDTH-1:0] mio_alu_r_ff;
 
-assign data_o[`ACCUM_WIDTH-1:0] = ex_alu_r_ff;
-assign addr_o[`ADDR_WIDTH-1:0] = ex_reg_d_ff[`ADDR_WIDTH-1:0];
+assign data_o[`ACCUM_WIDTH-1:0] = ex_reg_d_ff;
+assign addr_o[`ADDR_WIDTH-1:0] = ex_alu_r_ff[`ADDR_WIDTH-1:0];
 assign we_o = ex_mem_write_ff;
 
 always @(posedge clk) begin
     if (rst) begin
         mio_d_sel_ff <= 0;
         mio_mem_read_ff <= 1'b0;
-        mio_alu_d_ff <= 0;
+        mio_alu_r_ff <= 0;
     end else begin
         mio_d_sel_ff <= ex_d_sel_ff;
         mio_mem_read_ff <= ex_mem_read_ff;
-        mio_alu_d_ff <= ex_reg_d_ff;
+        mio_alu_r_ff <= ex_alu_r_ff;
     end
 end
 
-assign mio_r[`ACCUM_WIDTH-1:0] = mio_mem_read_ff ? data_i : mio_alu_d_ff;
+assign mio_r[`ACCUM_WIDTH-1:0] = mio_mem_read_ff ? data_i : mio_alu_r_ff;
 
 // STAGE wb: Writeback
 // OUTPUT:
@@ -245,30 +247,27 @@ always @(posedge clk) begin
         mio_jump_en_ff <= 1'b0;
         mio_jump_addr_ff <= 0;
 
-        r0_ff <= 0;
-        r1_ff <= 0;
-        r2_ff <= 0;
-        r3_ff <= 0;
-        r4_ff <= 0;
-        r5_ff <= 0;
+        ra_ff <= 0;
+        rb_ff <= 0;
+        rc_ff <= 0;
+        rd_ff <= 0;
+        re_ff <= 0;
         sp_ff <= 0;
     end else begin
         mio_jump_en_ff <= (mio_d_sel_ff == SEL_PC) ? 1'b1 : 1'b0;
         mio_jump_addr_ff <= mio_r[`ADDR_WIDTH-1:0];
 
         case (mio_d_sel_ff)
-            SEL_R0:
-                r0_ff <= mio_r;
-            SEL_R1:
-                r1_ff <= mio_r;
-            SEL_R2:
-                r2_ff <= mio_r;
-            SEL_R3:
-                r3_ff <= mio_r;
-            SEL_R4:
-                r4_ff <= mio_r;
-            SEL_R5:
-                r5_ff <= mio_r;
+            SEL_RA:
+                ra_ff <= mio_r;
+            SEL_RB:
+                rb_ff <= mio_r;
+            SEL_RC:
+                rc_ff <= mio_r;
+            SEL_RD:
+                rd_ff <= mio_r;
+            SEL_RE:
+                re_ff <= mio_r;
             SEL_SP:
                 sp_ff <= mio_r;
         endcase

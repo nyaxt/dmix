@@ -16,7 +16,7 @@ showObj obj = intercalate "\n" $ map show obj
 processInsn :: Word -> Insn -> String
 processInsn addr insn =
   let asm = assemble insn
-  in printf "// %s\n16'h%04x: data_ff <= 32'h%08x\n" (show insn) addr asm
+  in printf "// %s\n16'h%04x: data_ff <= 32'h%08x;\n" (show insn) addr asm
 
 processObj :: Word -> Object -> String
 processObj startAddr is = concat $ map (uncurry processInsn) $ zip [startAddr..] is
