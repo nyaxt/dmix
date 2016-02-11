@@ -2,33 +2,27 @@ module Main(main) where
 
 import Parser
 import Insn
+import Mnemonic (assemble)
 
-import Numeric (showHex, showIntAtBase)
-import System.IO
+import Text.Printf (printf)
 import Data.List
-import Data.Word (Word32)
-import Data.Bits
+import Data.Word (Word, Word32)
+import System.IO
 -- import Options.Applicative
-
-assemble :: Insn -> Word32 
-assemble Insn {memw = w, memr = r, dsel = d, alue = (AluExpr alu asel (Left bsel))} =
-  1234
-assemble Insn {memw = w, memr = r, dsel = d, alue = (AluExpr alu asel (Right imm))} =
-  4321
 
 showObj :: Object -> String
 showObj obj = intercalate "\n" $ map show obj
 
-processInsn :: Insn -> String
-processInsn insn =
-  "// "++ show insn ++ "\n"++
-  "16'h"++(showHex 123 "")++": data_ff <= 32'h"++(showHex (assemble insn) "")++";\n"
+processInsn :: Word -> Insn -> String
+processInsn addr insn =
+  let asm = assemble insn
+  in printf "// %s\n16'h%04x: data_ff <= 32'h%08x\n" (show insn) addr asm
 
-processObj :: Object -> String
-processObj = concatMap processInsn
+processObj :: Word -> Object -> String
+processObj startAddr is = concat $ map (uncurry processInsn) $ zip [startAddr..] is
 
 main :: IO ()
 main = do src <- getContents
 	  case (parseNkmmAs src) of
 	    (Left err) -> hPutStrLn stderr $ show err
-	    (Right obj) -> putStr $ processObj obj 
+	    (Right obj) -> putStr $ processObj 0 obj 
