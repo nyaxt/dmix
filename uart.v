@@ -1,3 +1,4 @@
+// 8-N-1: 8bit no parity 1 stop bit
 module uart(
     input clk,
 
@@ -8,26 +9,41 @@ module uart(
     output ack_pop_o,
 
     input [7:0] data_i,
-    input ack_i);
+    input ack_i,
+    output pop_o);
 
 // trig_baud16 is 1 at 9600 * 16Hz = 153600Hz
 // 50MHz / 153600Hz = 325.52
 wire trig_baud16;
+wire trig_baud;
 `define UART_DIV 11'd325
 
-reg [10:0] counter_ff;
+reg [10:0] bauddiv_counter_ff;
 `ifdef SIMULATION
-initial counter_ff = 11'd567; // random
+initial bauddiv_counter_ff = 11'd567; // random
 `endif
 always @(posedge clk) begin
-    if (counter_ff == 0) begin
-        counter_ff <= `UART_DIV;
+    if (bauddiv_counter_ff == 0) begin
+        bauddiv_counter_ff <= `UART_DIV;
     end else begin
-        counter_ff <= counter_ff - 1;
+        bauddiv_counter_ff <= bauddiv_counter_ff - 1;
     end
 end
+assign trig_baud16 = (bauddiv_counter_ff == 4'd0);
 
-assign trig_baud16 = (counter_ff == 0);
+reg [3:0] baudrate_counter_ff;
+`ifdef SIMULATION
+initial baudrate_counter_ff = 4'd14; // random
+`endif
+always @(posedge clk) begin
+    if (trig_baud16)
+        baudrate_counter_ff <= baudrate_counter_ff + 1;
+end
+reg trig_baud_ff;
+always @(posedge clk) begin
+    trig_baud_ff <= trig_baud16 && (baudrate_counter_ff == 4'd0);
+end
+assign trig_baud = trig_baud_ff;
 
 // rx
 reg [1:0] rx_hist_ff;
@@ -70,26 +86,51 @@ end
 
 assign data_o = rxbuf_ff;
 
-reg [3:0] frame_counter_ff;
+reg [3:0] rx_frame_counter_ff;
 `ifdef SIMULATION
-initial frame_counter_ff = 4'd12; // random
+initial rx_frame_counter_ff = 4'd12; // random
 `endif
 always @(posedge clk) begin
     if (trig_next_uartbit) begin
-        if (frame_counter_ff > 4'd8) begin
+        if (rx_frame_counter_ff > 4'd8) begin
             if (rx_negedge) begin
-                frame_counter_ff <= 0;
+                rx_frame_counter_ff <= 0;
             end
         end else begin
-            frame_counter_ff <= frame_counter_ff + 1;
+            rx_frame_counter_ff <= rx_frame_counter_ff + 1;
         end
     end
 end
 
-reg pop_ff;
+reg rx_pop_ff;
 always @(posedge clk) begin
-    pop_ff <= trig_next_uartbit && frame_counter_ff == 4'd8;
+    rx_pop_ff <= trig_next_uartbit && rx_frame_counter_ff == 4'd8;
 end
-assign ack_pop_o = pop_ff;
+assign ack_pop_o = rx_pop_ff;
+
+// tx 
+reg [3:0] tx_frame_counter_ff;
+`ifdef SIMULATION
+initial tx_frame_counter_ff = 4'd13; // random
+`endif
+always @(posedge clk) begin
+    if (ack_i) begin
+        tx_frame_counter_ff <= 0;
+    end else if (trig_baud) begin
+        tx_frame_counter_ff <= tx_frame_counter_ff + 1;
+    end
+end
+assign pop_o = tx_frame_counter_ff > 4'd9;
+
+reg [10:0] txbuf_ff;
+always @(posedge clk) begin
+    if (ack_i) begin
+        //           stop          start, preserve H until next trig_baud
+        txbuf_ff <= {1'b1, data_i,  1'b0, 1'b1};
+    end else if (trig_baud) begin
+        txbuf_ff <= {1'b1, txbuf_ff[9:1]};
+    end
+end
+assign tx = txbuf_ff[0];
 
 endmodule

@@ -55,6 +55,8 @@ initial begin
     $dumpfile("uart_t.lxt");
     $dumpvars(0, uart_t);
 
+    data_i = 8'hZZ;
+    ack_i = 0;
     rx = 1;
     #(TCLK_BAUD*10);
 
@@ -74,8 +76,38 @@ initial begin
 end
 
 always @(posedge clk) begin
-    if(uut.ack_pop_o)
+    if (uut.ack_pop_o)
         $display("uut.data_o: %x", uut.data_o);
+end
+
+reg [7:0] send_data [0:31];
+initial begin
+    send_data[9'd00] = 8'h12;
+    send_data[9'd01] = 8'h34;
+    send_data[9'd02] = 8'h56;
+    send_data[9'd03] = 8'h78;
+    send_data[9'd04] = 8'hab;
+    send_data[9'd05] = 8'hcd;
+    send_data[9'd06] = 8'hef;
+    send_data[9'd07] = 8'hde;
+    send_data[9'd08] = 8'had;
+    send_data[9'd09] = 8'hbe;
+    send_data[9'd10] = 8'hef;
+end
+
+reg [7:0] iter;
+initial iter = 0;
+always @(posedge clk) begin
+    if (uut.pop_o) begin
+        #(TCLK);
+        data_i = send_data[iter];
+        iter = iter + 1;
+        ack_i = 1;
+        #(TCLK);
+        data_i = 8'hZZ;
+        iter = iter + 1;
+        ack_i = 0;
+    end
 end
 
 endmodule
