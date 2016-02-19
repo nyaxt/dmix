@@ -1,0 +1,12 @@
+dump: uart_t.lxt
+	gtkwave uart_t.lxt &
+
+runsim: uart_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+uart_t.vvp: uart.v uart_t.v
+	iverilog -DSIMULATION -o $@ $^
+
+.SUFFIXES: .lxt .vvp
