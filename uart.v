@@ -6,7 +6,7 @@ module uart(
     output tx,
 
     output [7:0] data_o,
-    output ack_pop_o,
+    output ack_o,
 
     input [7:0] data_i,
     input ack_i,
@@ -106,7 +106,7 @@ reg rx_pop_ff;
 always @(posedge clk) begin
     rx_pop_ff <= trig_next_uartbit && rx_frame_counter_ff == 4'd8;
 end
-assign ack_pop_o = rx_pop_ff;
+assign ack_o = rx_pop_ff;
 
 // tx 
 reg [3:0] tx_frame_counter_ff;

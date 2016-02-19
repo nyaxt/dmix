@@ -76,7 +76,7 @@ initial begin
 end
 
 always @(posedge clk) begin
-    if (uut.ack_pop_o)
+    if (uut.ack_o)
         $display("uut.data_o: %x", uut.data_o);
 end
 
