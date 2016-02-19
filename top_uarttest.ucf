@@ -1,0 +1,28 @@
+Net "clk_50mhz" LOC = "T9";
+NET "clk_50mhz" PERIOD = 20ns;
+
+NET "rx" LOC = "T13";
+NET "tx" LOC = "R13";
+
+NET "debug_led<0>" LOC = "K12";
+NET "debug_led<1>" LOC = "P14";
+NET "debug_led<2>" LOC = "L12";
+NET "debug_led<3>" LOC = "N14";
+NET "debug_led<4>" LOC = "P13";
+NET "debug_led<5>" LOC = "N12";
+NET "debug_led<6>" LOC = "P12";
+NET "debug_led<7>" LOC = "P11";
+
+NET "switch<0>" LOC = "F12";
+NET "switch<1>" LOC = "G12";
+NET "switch<2>" LOC = "H14";
+NET "switch<3>" LOC = "H13";
+NET "switch<4>" LOC = "J14";
+NET "switch<5>" LOC = "J13";
+NET "switch<6>" LOC = "K14";
+NET "switch<7>" LOC = "K13";
+
+NET "button<0>" LOC = "M13";
+NET "button<1>" LOC = "M14";
+NET "button<2>" LOC = "L13";
+NET "button<3>" LOC = "L14";
