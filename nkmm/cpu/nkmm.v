@@ -1,4 +1,4 @@
-`include "nkmm_const.v"
+`include "../nkmm_const.v"
 
 module nkmm_insn_decoder(
     input [`INSN_WIDTH-1:0] insn_i,

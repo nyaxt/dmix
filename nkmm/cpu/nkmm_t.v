@@ -1,4 +1,4 @@
-`include "nkmm_const.v"
+`include "../nkmm_const.v"
 
 `timescale 1ns / 1ps
 // `define NODUMP

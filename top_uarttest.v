@@ -17,7 +17,7 @@ uart uart(
     .data_i(switch), .ack_i(button[0]));
 
 reg [7:0] rxbuf_ff;
-always @(posedge clk) begin
+always @(posedge clk_50mhz) begin
     if (uart_ack_o)
         rxbuf_ff <= uart_data_o;
 end

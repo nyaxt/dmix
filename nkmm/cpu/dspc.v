@@ -1,3 +1,5 @@
+`ifdef DSPC_NOT_READY
+
 `define MPCAND_MEM_SIZE 256
 `define MPCAND_MEM_WIDTH 8
 `define MPLIER_MEM_SIZE 4096
@@ -164,3 +166,5 @@ always @(posedge clk) begin
 end
 
 endmodule
+
+`endif
