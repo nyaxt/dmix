@@ -1,3 +1,5 @@
+`include "../nkmm_const.v"
+
 module nkmm_debug(
     input clk,
     input rst,

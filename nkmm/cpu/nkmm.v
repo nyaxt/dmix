@@ -53,6 +53,10 @@ reg [`ADDR_WIDTH-1:0] mio_jump_addr_ff;
 // OUTPUT:
 wire [`INSN_WIDTH-1:0] if_inst = prog_data_i;
 
+wire if_stall;
+assign if_stall = (mio_d_sel_ff == dcd_a_sel) || (mio_d_sel_ff == dcd_b_sel)
+               || (ex_d_sel_ff == dcd_a_sel) || (ex_d_sel_ff == dcd_b_sel);
+
 assign prog_addr_o = pc_ff;
 always @(posedge clk) begin
     if (rst) begin
@@ -60,6 +64,8 @@ always @(posedge clk) begin
     end else begin
         if (mio_jump_en_ff) begin
             pc_ff <= mio_jump_addr_ff;
+        end else if (if_stall) begin
+            pc_ff <= pc_ff;
         end else begin
             pc_ff <= pc_ff + 1;
         end
@@ -68,6 +74,7 @@ end
 
 // STAGE dcd: Decode instruction, fetch registers to be used in ALU
 // OUTPUT:
+reg dcd_stall_ff;
 reg dcd_mem_write_ff;
 reg dcd_mem_read_ff;
 reg [`OPSEL_WIDTH-1:0] dcd_op_sel_ff;
@@ -137,6 +144,7 @@ endfunction
 
 always @(posedge clk) begin
     if (rst) begin
+        dcd_stall_ff <= 0;
         dcd_mem_write_ff <= 0;
         dcd_mem_read_ff <= 0;
         dcd_op_sel_ff <= 0;
@@ -145,6 +153,7 @@ always @(posedge clk) begin
         dcd_reg_d_ff <= 0;
         dcd_d_sel_ff <= 0;
     end else begin
+        dcd_stall_ff <= if_stall;
         dcd_mem_write_ff <= dcd_mem_write;
         dcd_mem_read_ff <= dcd_mem_read;
         dcd_op_sel_ff <= dcd_op_sel;
@@ -162,6 +171,7 @@ end
 
 // STAGE ex: Execute ALU Operation
 // OUTPUT:
+reg ex_stall_ff;
 reg ex_mem_read_ff;
 reg ex_mem_write_ff;
 reg [`ACCUM_WIDTH-1:0] ex_alu_r_ff;
@@ -197,12 +207,14 @@ endfunction
 
 always @(posedge clk) begin
     if (rst) begin
+        ex_stall_ff <= 1'b0;
         ex_mem_read_ff <= 1'b0;
         ex_mem_write_ff <= 1'b0;
         ex_alu_r_ff <= 0;
         ex_reg_d_ff <= 0;
         ex_d_sel_ff <= 0;
     end else begin
+        ex_stall_ff <= dcd_stall_ff;
         ex_mem_read_ff <= dcd_mem_read_ff;
         ex_mem_write_ff <= dcd_mem_write_ff;
         ex_alu_r_ff <= alu(dcd_op_sel_ff, dcd_alu_a_ff, dcd_alu_b_ff);
@@ -213,6 +225,7 @@ end
 
 // STAGE mio: Memory read/write
 // OUTPUT:
+reg mio_stall_ff;
 reg [`REGSEL_WIDTH-1:0] mio_d_sel_ff;
 wire [`ACCUM_WIDTH-1:0] mio_r;
 
@@ -221,14 +234,16 @@ reg [`ACCUM_WIDTH-1:0] mio_alu_r_ff;
 
 assign data_o[`ACCUM_WIDTH-1:0] = ex_reg_d_ff;
 assign addr_o[`ADDR_WIDTH-1:0] = ex_alu_r_ff[`ADDR_WIDTH-1:0];
-assign we_o = ex_mem_write_ff;
+assign we_o = ex_mem_write_ff && !ex_stall_ff;
 
 always @(posedge clk) begin
     if (rst) begin
+        mio_stall_ff <= 1'b0;
         mio_d_sel_ff <= 0;
         mio_mem_read_ff <= 1'b0;
         mio_alu_r_ff <= 0;
     end else begin
+        mio_stall_ff <= ex_stall_ff;
         mio_d_sel_ff <= ex_d_sel_ff;
         mio_mem_read_ff <= ex_mem_read_ff;
         mio_alu_r_ff <= ex_alu_r_ff;
@@ -253,7 +268,7 @@ always @(posedge clk) begin
         rd_ff <= 0;
         re_ff <= 0;
         sp_ff <= 0;
-    end else begin
+    end else if (!mio_stall_ff) begin
         mio_jump_en_ff <= (mio_d_sel_ff == SEL_PC) ? 1'b1 : 1'b0;
         mio_jump_addr_ff <= mio_r[`ADDR_WIDTH-1:0];
 
