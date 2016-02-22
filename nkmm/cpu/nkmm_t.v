@@ -37,7 +37,7 @@ initial begin
     #TCLK;
 
 `ifndef NODUMP
-    #100_000;
+    #(TCLK*15);
     $finish(2);
 `endif
 end

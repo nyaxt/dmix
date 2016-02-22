@@ -46,8 +46,8 @@ reg [`ADDR_WIDTH-1:0] pc_ff;
 
 // STAGE wb: Writeback
 // OUTPUT:
-reg mio_jump_en_ff;
-reg [`ADDR_WIDTH-1:0] mio_jump_addr_ff;
+reg wb_jump_en_ff;
+reg [`ADDR_WIDTH-1:0] wb_jump_addr_ff;
 
 // STAGE if: Instruction Fetch
 // OUTPUT:
@@ -62,8 +62,8 @@ always @(posedge clk) begin
     if (rst) begin
         pc_ff <= 0;
     end else begin
-        if (mio_jump_en_ff) begin
-            pc_ff <= mio_jump_addr_ff;
+        if (wb_jump_en_ff) begin
+            pc_ff <= wb_jump_addr_ff;
         end else if (if_stall) begin
             pc_ff <= pc_ff;
         end else begin
@@ -254,13 +254,13 @@ assign mio_r[`ACCUM_WIDTH-1:0] = mio_mem_read_ff ? data_i : mio_alu_r_ff;
 
 // STAGE wb: Writeback
 // OUTPUT:
-// reg mio_jump_en_ff;
-// reg [`ADDR_WIDTH-1:0] mio_jump_addr_ff;
+// reg wb_jump_en_ff;
+// reg [`ADDR_WIDTH-1:0] wb_jump_addr_ff;
 
 always @(posedge clk) begin
     if (rst) begin
-        mio_jump_en_ff <= 1'b0;
-        mio_jump_addr_ff <= 0;
+        wb_jump_en_ff <= 1'b0;
+        wb_jump_addr_ff <= 0;
 
         ra_ff <= 0;
         rb_ff <= 0;
@@ -269,8 +269,8 @@ always @(posedge clk) begin
         re_ff <= 0;
         sp_ff <= 0;
     end else if (!mio_stall_ff) begin
-        mio_jump_en_ff <= (mio_d_sel_ff == SEL_PC) ? 1'b1 : 1'b0;
-        mio_jump_addr_ff <= mio_r[`ADDR_WIDTH-1:0];
+        wb_jump_en_ff <= (mio_d_sel_ff == SEL_PC) ? 1'b1 : 1'b0;
+        wb_jump_addr_ff <= mio_r[`ADDR_WIDTH-1:0];
 
         case (mio_d_sel_ff)
             SEL_RA:
@@ -288,5 +288,19 @@ always @(posedge clk) begin
         endcase
     end
 end
+
+`ifdef SIMULATION
+always @(posedge clk) begin
+    $display("= nkmm CPU state dump ========================================================");
+    $display(" IF out. stall: %b pc_ff: %h", if_stall, pc_ff);
+    $display("DCD  in. inst: %h mr,w: %b,%b opsel: %h d,a,bsel: %h,%h,%h imm: %h,%b", if_inst, dcd_mem_read, dcd_mem_write, dcd_op_sel, dcd_d_sel, dcd_a_sel, dcd_b_sel, dcd_imm, dcd_imm_en);
+    $display("DCD out. stall: %b mr,w: %b,%b opsel: %h, alu_a,b: %h,%h, reg_d,d_sel: %h,%h", dcd_stall_ff, dcd_mem_read_ff, dcd_mem_write_ff, dcd_op_sel_ff, dcd_alu_a_ff, dcd_alu_b_ff, dcd_reg_d_ff, dcd_d_sel_ff);
+    $display(" EX out. stall: %b mr,w: %b,%b alu_r: %h, reg_d,d_sel: %h,%h", ex_stall_ff, ex_mem_read_ff, ex_mem_write_ff, ex_alu_r_ff, ex_reg_d_ff, ex_d_sel_ff);
+    $display("MIO  in. data_o: %h addr_o: %h we_o: %b", data_o, addr_o, we_o);
+    $display("MIO out. stall: %b mr: %b d_sel: %h alu_r: %h mio_r: %h", mio_stall_ff, mio_mem_read_ff, mio_d_sel_ff, mio_alu_r_ff, mio_r);
+    $display(" WB out. jump_en: %b jump_addr: %h", wb_jump_en_ff, wb_jump_addr_ff);
+    $display("==============================================================================");
+end
+`endif
 
 endmodule
