@@ -170,8 +170,13 @@ function [`ACCUM_WIDTH-1:0] dcd_reg_sel(
     endcase
 endfunction
 
-assign dcd_invalid = (mio_d_sel_ff != 0 && (mio_d_sel_ff == dcd_a_sel || mio_d_sel_ff == dcd_b_sel))
-                  || (ex_d_sel_ff != 0 && (ex_d_sel_ff == dcd_a_sel || ex_d_sel_ff == dcd_b_sel));
+wire dcd_dcd_conflict = dcd_invalid_ff == 1'b0 && dcd_d_sel_ff != 0 && (dcd_d_sel_ff == dcd_a_sel || dcd_d_sel_ff == dcd_b_sel);
+wire dcd_dcd_conflict_mw = dcd_mem_write == 1'b1 && dcd_invalid_ff == 1'b0 && dcd_d_sel_ff != 0 && dcd_d_sel_ff == dcd_d_sel;
+wire dcd_ex_conflict = ex_invalid_ff == 1'b0 && ex_d_sel_ff != 0 && (ex_d_sel_ff == dcd_a_sel || ex_d_sel_ff == dcd_b_sel);
+wire dcd_ex_conflict_mw = dcd_mem_write == 1'b1 && ex_invalid_ff == 1'b0 && ex_d_sel_ff != 0 && ex_d_sel_ff == dcd_d_sel;
+wire dcd_mio_conflict = mio_invalid_ff == 1'b0 && mio_d_sel_ff != 0 && (mio_d_sel_ff == dcd_a_sel || mio_d_sel_ff == dcd_b_sel);
+wire dcd_mio_conflict_mw = dcd_mem_write == 1'b1 && mio_invalid_ff == 1'b0 && mio_d_sel_ff != 0 && mio_d_sel_ff == dcd_d_sel;
+assign dcd_invalid = dcd_dcd_conflict || dcd_dcd_conflict_mw || dcd_ex_conflict || dcd_ex_conflict_mw || dcd_mio_conflict || dcd_mio_conflict_mw;
 
 always @(posedge clk) begin
     if (rst) begin
