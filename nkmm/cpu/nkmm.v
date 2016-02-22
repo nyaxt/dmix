@@ -51,11 +51,17 @@ reg [`ADDR_WIDTH-1:0] wb_jump_addr_ff;
 
 // STAGE if: Instruction Fetch
 // OUTPUT:
-wire [`INSN_WIDTH-1:0] if_inst = prog_data_i;
+wire [`INSN_WIDTH-1:0] if_inst;
 
-wire if_stall;
-assign if_stall = (mio_d_sel_ff == dcd_a_sel) || (mio_d_sel_ff == dcd_b_sel)
-               || (ex_d_sel_ff == dcd_a_sel) || (ex_d_sel_ff == dcd_b_sel);
+wire if_stall = dcd_invalid;
+
+reg if_prev_stall_ff; // should degenerate with dcd_invalid_ff
+always @(posedge clk) begin
+    if (rst)
+        if_prev_stall_ff <= 1'b0;
+    else
+        if_prev_stall_ff <= if_stall;
+end
 
 assign prog_addr_o = pc_ff;
 always @(posedge clk) begin
@@ -72,9 +78,25 @@ always @(posedge clk) begin
     end
 end
 
+reg [`INSN_WIDTH-1:0] if_prev_inst_ff;
+
+assign if_inst = if_prev_stall_ff ? if_prev_inst_ff : prog_data_i;
+always @(posedge clk) begin
+    if_prev_inst_ff <= if_inst;
+end
+`ifdef SIMULATION
+reg [`ADDR_WIDTH-1:0] if_inst_addr_ff;
+always @(posedge clk) begin
+    if (if_stall)
+        if_inst_addr_ff <= if_inst_addr_ff;
+    else
+        if_inst_addr_ff <= pc_ff;
+end
+`endif
+
 // STAGE dcd: Decode instruction, fetch registers to be used in ALU
 // OUTPUT:
-reg dcd_stall_ff;
+reg dcd_invalid_ff;
 reg dcd_mem_write_ff;
 reg dcd_mem_read_ff;
 reg [`OPSEL_WIDTH-1:0] dcd_op_sel_ff;
@@ -82,6 +104,12 @@ reg [`ACCUM_WIDTH-1:0] dcd_alu_a_ff;
 reg [`ACCUM_WIDTH-1:0] dcd_alu_b_ff;
 reg [`ACCUM_WIDTH-1:0] dcd_reg_d_ff;
 reg [`REGSEL_WIDTH-1:0] dcd_d_sel_ff;
+`ifdef SIMULATION
+reg [`ADDR_WIDTH-1:0] dcd_inst_addr_ff;
+always @(posedge clk) begin
+    dcd_inst_addr_ff <= if_inst_addr_ff;
+end
+`endif
 
 //  instruction decode
 wire dcd_mem_write;
@@ -142,9 +170,12 @@ function [`ACCUM_WIDTH-1:0] dcd_reg_sel(
     endcase
 endfunction
 
+assign dcd_invalid = (mio_d_sel_ff != 0 && (mio_d_sel_ff == dcd_a_sel || mio_d_sel_ff == dcd_b_sel))
+                  || (ex_d_sel_ff != 0 && (ex_d_sel_ff == dcd_a_sel || ex_d_sel_ff == dcd_b_sel));
+
 always @(posedge clk) begin
     if (rst) begin
-        dcd_stall_ff <= 0;
+        dcd_invalid_ff <= 0;
         dcd_mem_write_ff <= 0;
         dcd_mem_read_ff <= 0;
         dcd_op_sel_ff <= 0;
@@ -153,7 +184,7 @@ always @(posedge clk) begin
         dcd_reg_d_ff <= 0;
         dcd_d_sel_ff <= 0;
     end else begin
-        dcd_stall_ff <= if_stall;
+        dcd_invalid_ff <= dcd_invalid;
         dcd_mem_write_ff <= dcd_mem_write;
         dcd_mem_read_ff <= dcd_mem_read;
         dcd_op_sel_ff <= dcd_op_sel;
@@ -171,12 +202,18 @@ end
 
 // STAGE ex: Execute ALU Operation
 // OUTPUT:
-reg ex_stall_ff;
+reg ex_invalid_ff;
 reg ex_mem_read_ff;
 reg ex_mem_write_ff;
 reg [`ACCUM_WIDTH-1:0] ex_alu_r_ff;
 reg [`ACCUM_WIDTH-1:0] ex_reg_d_ff;
 reg [`REGSEL_WIDTH-1:0] ex_d_sel_ff;
+`ifdef SIMULATION
+reg [`ADDR_WIDTH-1:0] ex_inst_addr_ff;
+always @(posedge clk) begin
+    ex_inst_addr_ff <= dcd_inst_addr_ff;
+end
+`endif
 
 function [`ACCUM_WIDTH-1:0] alu(
     input [`OPSEL_WIDTH-1:0] opsel,
@@ -207,14 +244,14 @@ endfunction
 
 always @(posedge clk) begin
     if (rst) begin
-        ex_stall_ff <= 1'b0;
+        ex_invalid_ff <= 1'b0;
         ex_mem_read_ff <= 1'b0;
         ex_mem_write_ff <= 1'b0;
         ex_alu_r_ff <= 0;
         ex_reg_d_ff <= 0;
         ex_d_sel_ff <= 0;
     end else begin
-        ex_stall_ff <= dcd_stall_ff;
+        ex_invalid_ff <= dcd_invalid_ff;
         ex_mem_read_ff <= dcd_mem_read_ff;
         ex_mem_write_ff <= dcd_mem_write_ff;
         ex_alu_r_ff <= alu(dcd_op_sel_ff, dcd_alu_a_ff, dcd_alu_b_ff);
@@ -225,25 +262,31 @@ end
 
 // STAGE mio: Memory read/write
 // OUTPUT:
-reg mio_stall_ff;
+reg mio_invalid_ff;
 reg [`REGSEL_WIDTH-1:0] mio_d_sel_ff;
 wire [`ACCUM_WIDTH-1:0] mio_r;
+`ifdef SIMULATION
+reg [`ADDR_WIDTH-1:0] mio_inst_addr_ff;
+always @(posedge clk) begin
+    mio_inst_addr_ff <= ex_inst_addr_ff;
+end
+`endif
 
 reg mio_mem_read_ff;
 reg [`ACCUM_WIDTH-1:0] mio_alu_r_ff;
 
 assign data_o[`ACCUM_WIDTH-1:0] = ex_reg_d_ff;
 assign addr_o[`ADDR_WIDTH-1:0] = ex_alu_r_ff[`ADDR_WIDTH-1:0];
-assign we_o = ex_mem_write_ff && !ex_stall_ff;
+assign we_o = ex_mem_write_ff && !ex_invalid_ff;
 
 always @(posedge clk) begin
     if (rst) begin
-        mio_stall_ff <= 1'b0;
+        mio_invalid_ff <= 1'b0;
         mio_d_sel_ff <= 0;
         mio_mem_read_ff <= 1'b0;
         mio_alu_r_ff <= 0;
     end else begin
-        mio_stall_ff <= ex_stall_ff;
+        mio_invalid_ff <= ex_invalid_ff;
         mio_d_sel_ff <= ex_d_sel_ff;
         mio_mem_read_ff <= ex_mem_read_ff;
         mio_alu_r_ff <= ex_alu_r_ff;
@@ -256,6 +299,12 @@ assign mio_r[`ACCUM_WIDTH-1:0] = mio_mem_read_ff ? data_i : mio_alu_r_ff;
 // OUTPUT:
 // reg wb_jump_en_ff;
 // reg [`ADDR_WIDTH-1:0] wb_jump_addr_ff;
+`ifdef SIMULATION
+reg [`ADDR_WIDTH-1:0] wb_inst_addr_ff;
+always @(posedge clk) begin
+    wb_inst_addr_ff <= mio_inst_addr_ff;
+end
+`endif
 
 always @(posedge clk) begin
     if (rst) begin
@@ -268,7 +317,7 @@ always @(posedge clk) begin
         rd_ff <= 0;
         re_ff <= 0;
         sp_ff <= 0;
-    end else if (!mio_stall_ff) begin
+    end else if (!mio_invalid_ff) begin
         wb_jump_en_ff <= (mio_d_sel_ff == SEL_PC) ? 1'b1 : 1'b0;
         wb_jump_addr_ff <= mio_r[`ADDR_WIDTH-1:0];
 
@@ -292,13 +341,14 @@ end
 `ifdef SIMULATION
 always @(posedge clk) begin
     $display("= nkmm CPU state dump ========================================================");
-    $display(" IF out. stall: %b pc_ff: %h", if_stall, pc_ff);
-    $display("DCD  in. inst: %h mr,w: %b,%b opsel: %h d,a,bsel: %h,%h,%h imm: %h,%b", if_inst, dcd_mem_read, dcd_mem_write, dcd_op_sel, dcd_d_sel, dcd_a_sel, dcd_b_sel, dcd_imm, dcd_imm_en);
-    $display("DCD out. stall: %b mr,w: %b,%b opsel: %h, alu_a,b: %h,%h, reg_d,d_sel: %h,%h", dcd_stall_ff, dcd_mem_read_ff, dcd_mem_write_ff, dcd_op_sel_ff, dcd_alu_a_ff, dcd_alu_b_ff, dcd_reg_d_ff, dcd_d_sel_ff);
-    $display(" EX out. stall: %b mr,w: %b,%b alu_r: %h, reg_d,d_sel: %h,%h", ex_stall_ff, ex_mem_read_ff, ex_mem_write_ff, ex_alu_r_ff, ex_reg_d_ff, ex_d_sel_ff);
+    $display(" IF  in. pc_ff: %h", pc_ff);
+    $display(" IF out. addr: %h stall: %b inst: %h", if_inst_addr_ff, if_stall, if_inst);
+    $display("DCD  in. mr,w: %b,%b opsel: %h d,a,bsel: %h,%h,%h imm: %h,%b", dcd_mem_read, dcd_mem_write, dcd_op_sel, dcd_d_sel, dcd_a_sel, dcd_b_sel, dcd_imm, dcd_imm_en);
+    $display("DCD out. addr: %h inval: %b mr,w: %b,%b opsel: %h, alu_a,b: %h,%h, reg_d,d_sel: %h,%h", dcd_inst_addr_ff, dcd_invalid_ff, dcd_mem_read_ff, dcd_mem_write_ff, dcd_op_sel_ff, dcd_alu_a_ff, dcd_alu_b_ff, dcd_reg_d_ff, dcd_d_sel_ff);
+    $display(" EX out. addr: %h inval: %b mr,w: %b,%b alu_r: %h, reg_d,d_sel: %h,%h", ex_inst_addr_ff, ex_invalid_ff, ex_mem_read_ff, ex_mem_write_ff, ex_alu_r_ff, ex_reg_d_ff, ex_d_sel_ff);
     $display("MIO  in. data_o: %h addr_o: %h we_o: %b", data_o, addr_o, we_o);
-    $display("MIO out. stall: %b mr: %b d_sel: %h alu_r: %h mio_r: %h", mio_stall_ff, mio_mem_read_ff, mio_d_sel_ff, mio_alu_r_ff, mio_r);
-    $display(" WB out. jump_en: %b jump_addr: %h", wb_jump_en_ff, wb_jump_addr_ff);
+    $display("MIO out. addr: %h inval: %b mr: %b d_sel: %h alu_r: %h mio_r: %h", mio_inst_addr_ff, mio_invalid_ff, mio_mem_read_ff, mio_d_sel_ff, mio_alu_r_ff, mio_r);
+    $display(" WB out. addr: %h jump_en: %b jump_addr: %h", wb_inst_addr_ff, wb_jump_en_ff, wb_jump_addr_ff);
     $display("==============================================================================");
 end
 `endif
