@@ -44,6 +44,36 @@ reg [`ACCUM_WIDTH-1:0] re_ff;
 reg [`ACCUM_WIDTH-1:0] sp_ff;
 reg [`ADDR_WIDTH-1:0] pc_ff;
 
+// STAGE if: Instruction Fetch
+// OUTPUT:
+wire [`INSN_WIDTH-1:0] if_inst;
+
+// STAGE dcd: Decode instruction, fetch registers to be used in ALU
+// OUTPUT:
+reg dcd_invalid_ff;
+reg dcd_mem_write_ff;
+reg dcd_mem_read_ff;
+reg [`OPSEL_WIDTH-1:0] dcd_op_sel_ff;
+reg [`ACCUM_WIDTH-1:0] dcd_alu_a_ff;
+reg [`ACCUM_WIDTH-1:0] dcd_alu_b_ff;
+reg [`ACCUM_WIDTH-1:0] dcd_reg_d_ff;
+reg [`REGSEL_WIDTH-1:0] dcd_d_sel_ff;
+
+// STAGE ex: Execute ALU Operation
+// OUTPUT:
+reg ex_invalid_ff;
+reg ex_mem_read_ff;
+reg ex_mem_write_ff;
+reg [`ACCUM_WIDTH-1:0] ex_alu_r_ff;
+reg [`ACCUM_WIDTH-1:0] ex_reg_d_ff;
+reg [`REGSEL_WIDTH-1:0] ex_d_sel_ff;
+
+// STAGE mio: Memory read/write
+// OUTPUT:
+reg mio_invalid_ff;
+reg [`REGSEL_WIDTH-1:0] mio_d_sel_ff;
+wire [`ACCUM_WIDTH-1:0] mio_r;
+
 // STAGE wb: Writeback
 // OUTPUT:
 reg wb_jump_en_ff;
@@ -51,14 +81,15 @@ reg [`ADDR_WIDTH-1:0] wb_jump_addr_ff;
 
 // STAGE if: Instruction Fetch
 // OUTPUT:
-wire [`INSN_WIDTH-1:0] if_inst;
+// wire [`INSN_WIDTH-1:0] if_inst;
 
+wire dcd_invalid;
 wire if_stall = dcd_invalid;
 
 reg if_prev_stall_ff; // should degenerate with dcd_invalid_ff
 always @(posedge clk) begin
     if (rst)
-        if_prev_stall_ff <= 1'b0;
+        if_prev_stall_ff <= 1'b1;
     else
         if_prev_stall_ff <= if_stall;
 end
@@ -96,14 +127,14 @@ end
 
 // STAGE dcd: Decode instruction, fetch registers to be used in ALU
 // OUTPUT:
-reg dcd_invalid_ff;
-reg dcd_mem_write_ff;
-reg dcd_mem_read_ff;
-reg [`OPSEL_WIDTH-1:0] dcd_op_sel_ff;
-reg [`ACCUM_WIDTH-1:0] dcd_alu_a_ff;
-reg [`ACCUM_WIDTH-1:0] dcd_alu_b_ff;
-reg [`ACCUM_WIDTH-1:0] dcd_reg_d_ff;
-reg [`REGSEL_WIDTH-1:0] dcd_d_sel_ff;
+// reg dcd_invalid_ff;
+// reg dcd_mem_write_ff;
+// reg dcd_mem_read_ff;
+// reg [`OPSEL_WIDTH-1:0] dcd_op_sel_ff;
+// reg [`ACCUM_WIDTH-1:0] dcd_alu_a_ff;
+// reg [`ACCUM_WIDTH-1:0] dcd_alu_b_ff;
+// reg [`ACCUM_WIDTH-1:0] dcd_reg_d_ff;
+// reg [`REGSEL_WIDTH-1:0] dcd_d_sel_ff;
 `ifdef SIMULATION
 reg [`ADDR_WIDTH-1:0] dcd_inst_addr_ff;
 always @(posedge clk) begin
@@ -180,7 +211,7 @@ assign dcd_invalid = dcd_dcd_conflict || dcd_dcd_conflict_mw || dcd_ex_conflict 
 
 always @(posedge clk) begin
     if (rst) begin
-        dcd_invalid_ff <= 0;
+        dcd_invalid_ff <= 1'b1;
         dcd_mem_write_ff <= 0;
         dcd_mem_read_ff <= 0;
         dcd_op_sel_ff <= 0;
@@ -207,12 +238,12 @@ end
 
 // STAGE ex: Execute ALU Operation
 // OUTPUT:
-reg ex_invalid_ff;
-reg ex_mem_read_ff;
-reg ex_mem_write_ff;
-reg [`ACCUM_WIDTH-1:0] ex_alu_r_ff;
-reg [`ACCUM_WIDTH-1:0] ex_reg_d_ff;
-reg [`REGSEL_WIDTH-1:0] ex_d_sel_ff;
+// reg ex_invalid_ff;
+// reg ex_mem_read_ff;
+// reg ex_mem_write_ff;
+// reg [`ACCUM_WIDTH-1:0] ex_alu_r_ff;
+// reg [`ACCUM_WIDTH-1:0] ex_reg_d_ff;
+// reg [`REGSEL_WIDTH-1:0] ex_d_sel_ff;
 `ifdef SIMULATION
 reg [`ADDR_WIDTH-1:0] ex_inst_addr_ff;
 always @(posedge clk) begin
@@ -267,9 +298,9 @@ end
 
 // STAGE mio: Memory read/write
 // OUTPUT:
-reg mio_invalid_ff;
-reg [`REGSEL_WIDTH-1:0] mio_d_sel_ff;
-wire [`ACCUM_WIDTH-1:0] mio_r;
+// reg mio_invalid_ff;
+// reg [`REGSEL_WIDTH-1:0] mio_d_sel_ff;
+// wire [`ACCUM_WIDTH-1:0] mio_r;
 `ifdef SIMULATION
 reg [`ADDR_WIDTH-1:0] mio_inst_addr_ff;
 always @(posedge clk) begin
