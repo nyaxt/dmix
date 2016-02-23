@@ -113,7 +113,11 @@ reg [`INSN_WIDTH-1:0] if_prev_inst_ff;
 
 assign if_inst = if_prev_stall_ff ? if_prev_inst_ff : prog_data_i;
 always @(posedge clk) begin
-    if_prev_inst_ff <= if_inst;
+    if (rst) begin
+        if_prev_inst_ff <= 0;
+    end else begin
+        if_prev_inst_ff <= if_inst;
+    end
 end
 `ifdef SIMULATION
 reg [`ADDR_WIDTH-1:0] if_inst_addr_ff;
