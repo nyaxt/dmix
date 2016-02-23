@@ -95,37 +95,38 @@ always @(posedge clk) begin
 end
 
 assign prog_addr_o = pc_ff;
+
+// assign if_inst = if_prev_stall_ff ? if_prev_inst_ff : prog_data_i;
+reg [`INSN_WIDTH-1:0] if_inst_ff;
 always @(posedge clk) begin
     if (rst) begin
-        pc_ff <= 0;
+        if_inst_ff <= 0;
     end else begin
-        if (wb_jump_en_ff) begin
-            pc_ff <= wb_jump_addr_ff;
-        end else if (if_stall) begin
-            pc_ff <= pc_ff;
+        if (if_stall) begin
+            if_inst_ff <= if_inst_ff;
         end else begin
-            pc_ff <= pc_ff + 1;
+            if_inst_ff <= prog_data_i;
         end
     end
 end
+assign if_inst = if_inst_ff;
 
 reg [`INSN_WIDTH-1:0] if_prev_inst_ff;
-
-assign if_inst = if_prev_stall_ff ? if_prev_inst_ff : prog_data_i;
 always @(posedge clk) begin
     if (rst) begin
         if_prev_inst_ff <= 0;
     end else begin
-        if_prev_inst_ff <= if_inst;
+        if_prev_inst_ff <= if_inst_ff;
     end
 end
 `ifdef SIMULATION
+reg [`ADDR_WIDTH-1:0] if_fetch_inst_addr_ff;
+always @(posedge clk) begin
+    if_fetch_inst_addr_ff <= pc_ff;
+end
 reg [`ADDR_WIDTH-1:0] if_inst_addr_ff;
 always @(posedge clk) begin
-    if (if_stall)
-        if_inst_addr_ff <= if_inst_addr_ff;
-    else
-        if_inst_addr_ff <= pc_ff;
+    if_inst_addr_ff <= if_fetch_inst_addr_ff;
 end
 `endif
 
@@ -284,7 +285,7 @@ endfunction
 
 always @(posedge clk) begin
     if (rst) begin
-        ex_invalid_ff <= 1'b0;
+        ex_invalid_ff <= 1'b1;
         ex_mem_read_ff <= 1'b0;
         ex_mem_write_ff <= 1'b0;
         ex_alu_r_ff <= 0;
@@ -321,7 +322,7 @@ assign we_o = ex_mem_write_ff && !ex_invalid_ff;
 
 always @(posedge clk) begin
     if (rst) begin
-        mio_invalid_ff <= 1'b0;
+        mio_invalid_ff <= 1'b1;
         mio_d_sel_ff <= 0;
         mio_mem_read_ff <= 1'b0;
         mio_alu_r_ff <= 0;
@@ -358,9 +359,6 @@ always @(posedge clk) begin
         re_ff <= 0;
         sp_ff <= 0;
     end else if (!mio_invalid_ff) begin
-        wb_jump_en_ff <= (mio_d_sel_ff == SEL_PC) ? 1'b1 : 1'b0;
-        wb_jump_addr_ff <= mio_r[`ADDR_WIDTH-1:0];
-
         case (mio_d_sel_ff)
             SEL_RA:
                 ra_ff <= mio_r;
@@ -377,11 +375,25 @@ always @(posedge clk) begin
         endcase
     end
 end
+always @(posedge clk) begin
+    if (rst) begin
+        pc_ff <= 0;
+    end else begin
+        if (mio_d_sel_ff == SEL_PC) begin
+            pc_ff <= mio_r[`ADDR_WIDTH-1:0];
+        end else if (if_stall) begin
+            pc_ff <= pc_ff;
+        end else begin
+            pc_ff <= pc_ff + 1;
+        end
+    end
+end
 
 `ifdef SIMULATION
 always @(posedge clk) begin
     $display("= nkmm CPU state dump ========================================================");
-    $display(" IF  in. pc_ff: %h", pc_ff);
+    $display(" IF  in. progmem fetch addr: %h", prog_addr_o);
+    $display(" IF  in. fetch inst: %h ", prog_data_i);
     $display(" IF out. addr: %h stall: %b inst: %h", if_inst_addr_ff, if_stall, if_inst);
     $display("DCD  in. mr,w: %b,%b opsel: %h d,a,bsel: %h,%h,%h imm: %h,%b", dcd_mem_read, dcd_mem_write, dcd_op_sel, dcd_d_sel, dcd_a_sel, dcd_b_sel, dcd_imm, dcd_imm_en);
     $display("DCD out. addr: %h inval: %b mr,w: %b,%b opsel: %h, alu_a,b: %h,%h, reg_d,d_sel: %h,%h", dcd_inst_addr_ff, dcd_invalid_ff, dcd_mem_read_ff, dcd_mem_write_ff, dcd_op_sel_ff, dcd_alu_a_ff, dcd_alu_b_ff, dcd_reg_d_ff, dcd_d_sel_ff);

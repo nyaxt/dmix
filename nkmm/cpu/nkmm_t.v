@@ -59,8 +59,8 @@ always @(posedge clk) begin
     16'h0004: cpu_prog_data_ff <= 32'h04260000;
     // Insn{M[W-] A OpAdd(R0, imm 61440)}
     16'h0005: cpu_prog_data_ff <= 32'h4401f000;
-    // Insn{M[--] D OpAdd(R0, imm 0)}
-    default: cpu_prog_data_ff <= 32'h10010000;
+    // Insn{M[--] D OpAdd(R0, imm 1)}
+    default: cpu_prog_data_ff <= 32'h10010001;
     endcase
 end
 
