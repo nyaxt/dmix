@@ -1,5 +1,5 @@
 Net "clk" LOC = "T9";
-NET "clk" PERIOD = 20ns;
+NET "clk" PERIOD = 5ns;
 
 # NET "button<0>" LOC = "M13";
 NET "rst" LOC = "M13";

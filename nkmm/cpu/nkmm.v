@@ -42,108 +42,113 @@ reg [`ACCUM_WIDTH-1:0] rc_ff;
 reg [`ACCUM_WIDTH-1:0] rd_ff;
 reg [`ACCUM_WIDTH-1:0] re_ff;
 reg [`ACCUM_WIDTH-1:0] sp_ff;
-reg [`ADDR_WIDTH-1:0] pc_ff;
+reg [`ADDR_WIDTH-1:0] wb_if_pc_ff;
+
+// il_dcd: Instruction Latch -> instructiion DeCoDe
+reg [`INSN_WIDTH-1:0] il_dcd_inst_ff;
+
+// dcd_ex: instructiion DeCoDe -> EXecute alu
+reg dcd_ex_invalid_ff;
+reg dcd_ex_mem_write_ff;
+reg dcd_ex_mem_read_ff;
+reg [`OPSEL_WIDTH-1:0] dcd_ex_op_sel_ff;
+reg [`ACCUM_WIDTH-1:0] dcd_ex_alu_a_ff;
+reg [`ACCUM_WIDTH-1:0] dcd_ex_alu_b_ff;
+reg [`ACCUM_WIDTH-1:0] dcd_ex_reg_d_ff;
+reg [`REGSEL_WIDTH-1:0] dcd_ex_d_sel_ff;
+
+// ex_mio: EXecute alu -> Memory I/O
+reg ex_mio_invalid_ff;
+reg ex_mio_mem_read_ff;
+reg ex_mio_mem_write_ff;
+reg [`ACCUM_WIDTH-1:0] ex_mio_alu_r_ff;
+reg [`ACCUM_WIDTH-1:0] ex_mio_reg_d_ff;
+reg [`REGSEL_WIDTH-1:0] ex_mio_d_sel_ff;
+
+// mio_wb: Memory I/O -> Write Back
+reg mio_wb_invalid_ff;
+reg [`REGSEL_WIDTH-1:0] mio_wb_d_sel_ff;
+wire [`ACCUM_WIDTH-1:0] mio_wb_r;
 
 // STAGE if: Instruction Fetch
 // OUTPUT:
-wire [`INSN_WIDTH-1:0] if_inst;
-
-// STAGE dcd: Decode instruction, fetch registers to be used in ALU
-// OUTPUT:
-reg dcd_invalid_ff;
-reg dcd_mem_write_ff;
-reg dcd_mem_read_ff;
-reg [`OPSEL_WIDTH-1:0] dcd_op_sel_ff;
-reg [`ACCUM_WIDTH-1:0] dcd_alu_a_ff;
-reg [`ACCUM_WIDTH-1:0] dcd_alu_b_ff;
-reg [`ACCUM_WIDTH-1:0] dcd_reg_d_ff;
-reg [`REGSEL_WIDTH-1:0] dcd_d_sel_ff;
-
-// STAGE ex: Execute ALU Operation
-// OUTPUT:
-reg ex_invalid_ff;
-reg ex_mem_read_ff;
-reg ex_mem_write_ff;
-reg [`ACCUM_WIDTH-1:0] ex_alu_r_ff;
-reg [`ACCUM_WIDTH-1:0] ex_reg_d_ff;
-reg [`REGSEL_WIDTH-1:0] ex_d_sel_ff;
-
-// STAGE mio: Memory read/write
-// OUTPUT:
-reg mio_invalid_ff;
-reg [`REGSEL_WIDTH-1:0] mio_d_sel_ff;
-wire [`ACCUM_WIDTH-1:0] mio_r;
-
-// STAGE wb: Writeback
-// OUTPUT:
-reg wb_jump_en_ff;
-reg [`ADDR_WIDTH-1:0] wb_jump_addr_ff;
-
-// STAGE if: Instruction Fetch
-// OUTPUT:
-// wire [`INSN_WIDTH-1:0] if_inst;
+// reg [`INSN_WIDTH-1:0] il_dcd_inst_ff;
 
 wire dcd_invalid;
 wire if_stall = dcd_invalid;
 
-reg if_prev_stall_ff; // should degenerate with dcd_invalid_ff
+reg if_prev_stall_ff; // should degenerate with dcd_ex_invalid_ff
 always @(posedge clk) begin
     if (rst)
-        if_prev_stall_ff <= 1'b1;
+        if_prev_stall_ff <= 1'b0;
     else
         if_prev_stall_ff <= if_stall;
 end
 
-assign prog_addr_o = pc_ff;
-
-// assign if_inst = if_prev_stall_ff ? if_prev_inst_ff : prog_data_i;
-reg [`INSN_WIDTH-1:0] if_inst_ff;
-always @(posedge clk) begin
-    if (rst) begin
-        if_inst_ff <= 0;
-    end else begin
-        if (if_stall) begin
-            if_inst_ff <= if_inst_ff;
-        end else begin
-            if_inst_ff <= prog_data_i;
-        end
-    end
-end
-assign if_inst = if_inst_ff;
+assign prog_addr_o = wb_if_pc_ff;
 
 reg [`INSN_WIDTH-1:0] if_prev_inst_ff;
 always @(posedge clk) begin
-    if (rst) begin
+    if (rst)
         if_prev_inst_ff <= 0;
+    else
+        if (if_prev_stall_ff)
+            if_prev_inst_ff <= if_prev_inst_ff;
+        else
+            if_prev_inst_ff <= prog_data_i;
+end
+
+always @(posedge clk) begin
+    if (rst) begin
+        il_dcd_inst_ff <= 0;
     end else begin
-        if_prev_inst_ff <= if_inst_ff;
+        if (if_stall) begin
+            il_dcd_inst_ff <= il_dcd_inst_ff;
+        end else begin
+            il_dcd_inst_ff <= if_prev_stall_ff ? if_prev_inst_ff : prog_data_i;
+        end
     end
 end
+
 `ifdef SIMULATION
-reg [`ADDR_WIDTH-1:0] if_fetch_inst_addr_ff;
+reg [`ADDR_WIDTH-1:0] if_il_inst_addr_ff;
 always @(posedge clk) begin
-    if_fetch_inst_addr_ff <= pc_ff;
+    if (rst) begin
+        if_il_inst_addr_ff <= 0;
+    end else begin
+        if (if_stall)
+            if_il_inst_addr_ff <= if_il_inst_addr_ff;
+        else
+            if_il_inst_addr_ff <= wb_if_pc_ff;
+    end
 end
-reg [`ADDR_WIDTH-1:0] if_inst_addr_ff;
+reg [`ADDR_WIDTH-1:0] il_dcd_inst_addr_ff;
 always @(posedge clk) begin
-    if_inst_addr_ff <= if_fetch_inst_addr_ff;
+    if (rst) begin
+        il_dcd_inst_addr_ff <= 0;
+    end else begin
+        if (if_stall)
+            il_dcd_inst_addr_ff <= il_dcd_inst_addr_ff;
+        else
+            il_dcd_inst_addr_ff <= if_il_inst_addr_ff;
+    end
 end
 `endif
 
 // STAGE dcd: Decode instruction, fetch registers to be used in ALU
 // OUTPUT:
-// reg dcd_invalid_ff;
-// reg dcd_mem_write_ff;
-// reg dcd_mem_read_ff;
-// reg [`OPSEL_WIDTH-1:0] dcd_op_sel_ff;
-// reg [`ACCUM_WIDTH-1:0] dcd_alu_a_ff;
-// reg [`ACCUM_WIDTH-1:0] dcd_alu_b_ff;
-// reg [`ACCUM_WIDTH-1:0] dcd_reg_d_ff;
-// reg [`REGSEL_WIDTH-1:0] dcd_d_sel_ff;
+// reg dcd_ex_invalid_ff;
+// reg dcd_ex_mem_write_ff;
+// reg dcd_ex_mem_read_ff;
+// reg [`OPSEL_WIDTH-1:0] dcd_ex_op_sel_ff;
+// reg [`ACCUM_WIDTH-1:0] dcd_ex_alu_a_ff;
+// reg [`ACCUM_WIDTH-1:0] dcd_ex_alu_b_ff;
+// reg [`ACCUM_WIDTH-1:0] dcd_ex_reg_d_ff;
+// reg [`REGSEL_WIDTH-1:0] dcd_ex_d_sel_ff;
 `ifdef SIMULATION
-reg [`ADDR_WIDTH-1:0] dcd_inst_addr_ff;
+reg [`ADDR_WIDTH-1:0] dcd_ex_inst_addr_ff;
 always @(posedge clk) begin
-    dcd_inst_addr_ff <= if_inst_addr_ff;
+    dcd_ex_inst_addr_ff <= il_dcd_inst_addr_ff;
 end
 `endif
 
@@ -157,7 +162,7 @@ wire [`REGSEL_WIDTH-1:0] dcd_b_sel;
 wire [`IMM_WIDTH-1:0] dcd_imm;
 wire dcd_imm_en;
 nkmm_insn_decoder decoder(
-    .insn_i(if_inst),
+    .insn_i(il_dcd_inst_ff),
     .mem_write_o(dcd_mem_write),
     .mem_read_o(dcd_mem_read),
     .op_sel_o(dcd_op_sel),
@@ -206,53 +211,53 @@ function [`ACCUM_WIDTH-1:0] dcd_reg_sel(
     endcase
 endfunction
 
-wire dcd_dcd_conflict = dcd_invalid_ff == 1'b0 && dcd_d_sel_ff != 0 && (dcd_d_sel_ff == dcd_a_sel || dcd_d_sel_ff == dcd_b_sel);
-wire dcd_dcd_conflict_mw = dcd_mem_write == 1'b1 && dcd_invalid_ff == 1'b0 && dcd_d_sel_ff != 0 && dcd_d_sel_ff == dcd_d_sel;
-wire dcd_ex_conflict = ex_invalid_ff == 1'b0 && ex_d_sel_ff != 0 && (ex_d_sel_ff == dcd_a_sel || ex_d_sel_ff == dcd_b_sel);
-wire dcd_ex_conflict_mw = dcd_mem_write == 1'b1 && ex_invalid_ff == 1'b0 && ex_d_sel_ff != 0 && ex_d_sel_ff == dcd_d_sel;
-wire dcd_mio_conflict = mio_invalid_ff == 1'b0 && mio_d_sel_ff != 0 && (mio_d_sel_ff == dcd_a_sel || mio_d_sel_ff == dcd_b_sel);
-wire dcd_mio_conflict_mw = dcd_mem_write == 1'b1 && mio_invalid_ff == 1'b0 && mio_d_sel_ff != 0 && mio_d_sel_ff == dcd_d_sel;
+wire dcd_dcd_conflict = dcd_ex_invalid_ff == 1'b0 && dcd_ex_d_sel_ff != 0 && (dcd_ex_d_sel_ff == dcd_a_sel || dcd_ex_d_sel_ff == dcd_b_sel);
+wire dcd_dcd_conflict_mw = dcd_mem_write == 1'b1 && dcd_ex_invalid_ff == 1'b0 && dcd_ex_d_sel_ff != 0 && dcd_ex_d_sel_ff == dcd_d_sel;
+wire dcd_ex_conflict = ex_mio_invalid_ff == 1'b0 && ex_mio_d_sel_ff != 0 && (ex_mio_d_sel_ff == dcd_a_sel || ex_mio_d_sel_ff == dcd_b_sel);
+wire dcd_ex_conflict_mw = dcd_mem_write == 1'b1 && ex_mio_invalid_ff == 1'b0 && ex_mio_d_sel_ff != 0 && ex_mio_d_sel_ff == dcd_d_sel;
+wire dcd_mio_conflict = mio_wb_invalid_ff == 1'b0 && mio_wb_d_sel_ff != 0 && (mio_wb_d_sel_ff == dcd_a_sel || mio_wb_d_sel_ff == dcd_b_sel);
+wire dcd_mio_conflict_mw = dcd_mem_write == 1'b1 && mio_wb_invalid_ff == 1'b0 && mio_wb_d_sel_ff != 0 && mio_wb_d_sel_ff == dcd_d_sel;
 assign dcd_invalid = dcd_dcd_conflict || dcd_dcd_conflict_mw || dcd_ex_conflict || dcd_ex_conflict_mw || dcd_mio_conflict || dcd_mio_conflict_mw;
 
 always @(posedge clk) begin
     if (rst) begin
-        dcd_invalid_ff <= 1'b1;
-        dcd_mem_write_ff <= 0;
-        dcd_mem_read_ff <= 0;
-        dcd_op_sel_ff <= 0;
-        dcd_alu_a_ff <= 0;
-        dcd_alu_b_ff <= 0;
-        dcd_reg_d_ff <= 0;
-        dcd_d_sel_ff <= 0;
+        dcd_ex_invalid_ff <= 1'b1;
+        dcd_ex_mem_write_ff <= 0;
+        dcd_ex_mem_read_ff <= 0;
+        dcd_ex_op_sel_ff <= 0;
+        dcd_ex_alu_a_ff <= 0;
+        dcd_ex_alu_b_ff <= 0;
+        dcd_ex_reg_d_ff <= 0;
+        dcd_ex_d_sel_ff <= 0;
     end else begin
-        dcd_invalid_ff <= dcd_invalid;
-        dcd_mem_write_ff <= dcd_mem_write;
-        dcd_mem_read_ff <= dcd_mem_read;
-        dcd_op_sel_ff <= dcd_op_sel;
-        dcd_alu_a_ff <= dcd_reg_sel(dcd_a_sel, ra_ff, rb_ff, rc_ff, rd_ff, re_ff, sp_ff, pc_ff);
+        dcd_ex_invalid_ff <= dcd_invalid;
+        dcd_ex_mem_write_ff <= dcd_mem_write;
+        dcd_ex_mem_read_ff <= dcd_mem_read;
+        dcd_ex_op_sel_ff <= dcd_op_sel;
+        dcd_ex_alu_a_ff <= dcd_reg_sel(dcd_a_sel, ra_ff, rb_ff, rc_ff, rd_ff, re_ff, sp_ff, wb_if_pc_ff);
         if (dcd_imm_en) begin
-            dcd_alu_b_ff[`ACCUM_WIDTH-1:`IMM_WIDTH] <= 0;
-            dcd_alu_b_ff[`IMM_WIDTH-1:0] <= dcd_imm;
+            dcd_ex_alu_b_ff[`ACCUM_WIDTH-1:`IMM_WIDTH] <= 0;
+            dcd_ex_alu_b_ff[`IMM_WIDTH-1:0] <= dcd_imm;
         end else begin
-            dcd_alu_b_ff <= dcd_reg_sel(dcd_b_sel, ra_ff, rb_ff, rc_ff, rd_ff, re_ff, sp_ff, pc_ff);
+            dcd_ex_alu_b_ff <= dcd_reg_sel(dcd_b_sel, ra_ff, rb_ff, rc_ff, rd_ff, re_ff, sp_ff, wb_if_pc_ff);
         end
-        dcd_reg_d_ff <= dcd_reg_sel(dcd_d_sel, ra_ff, rb_ff, rc_ff, rd_ff, re_ff, sp_ff, pc_ff);
-        dcd_d_sel_ff <= dcd_d_sel;
+        dcd_ex_reg_d_ff <= dcd_reg_sel(dcd_d_sel, ra_ff, rb_ff, rc_ff, rd_ff, re_ff, sp_ff, wb_if_pc_ff);
+        dcd_ex_d_sel_ff <= dcd_d_sel;
     end
 end
 
 // STAGE ex: Execute ALU Operation
 // OUTPUT:
-// reg ex_invalid_ff;
-// reg ex_mem_read_ff;
-// reg ex_mem_write_ff;
-// reg [`ACCUM_WIDTH-1:0] ex_alu_r_ff;
-// reg [`ACCUM_WIDTH-1:0] ex_reg_d_ff;
-// reg [`REGSEL_WIDTH-1:0] ex_d_sel_ff;
+// reg ex_mio_invalid_ff;
+// reg ex_mio_mem_read_ff;
+// reg ex_mio_mem_write_ff;
+// reg [`ACCUM_WIDTH-1:0] ex_mio_alu_r_ff;
+// reg [`ACCUM_WIDTH-1:0] ex_mio_reg_d_ff;
+// reg [`REGSEL_WIDTH-1:0] ex_mio_d_sel_ff;
 `ifdef SIMULATION
-reg [`ADDR_WIDTH-1:0] ex_inst_addr_ff;
+reg [`ADDR_WIDTH-1:0] ex_mio_inst_addr_ff;
 always @(posedge clk) begin
-    ex_inst_addr_ff <= dcd_inst_addr_ff;
+    ex_mio_inst_addr_ff <= dcd_ex_inst_addr_ff;
 end
 `endif
 
@@ -266,18 +271,18 @@ begin
     shl = b[2];
     shi = b[1:0];
     case (opsel)
-        `OP_ADD: alu = dcd_alu_a_ff + dcd_alu_b_ff;
-        `OP_SUB: alu = dcd_alu_a_ff - dcd_alu_b_ff; // FIXME: should use adder: a - b = a + ~b + 1
-        `OP_OR:  alu = dcd_alu_a_ff | dcd_alu_b_ff;
-        `OP_AND: alu = dcd_alu_a_ff & dcd_alu_b_ff;
-        `OP_XOR: alu = dcd_alu_a_ff ^ dcd_alu_b_ff;
-        `OP_NOT: alu = ~dcd_alu_b_ff;
+        `OP_ADD: alu = dcd_ex_alu_a_ff + dcd_ex_alu_b_ff;
+        `OP_SUB: alu = dcd_ex_alu_a_ff - dcd_ex_alu_b_ff; // FIXME: should use adder: a - b = a + ~b + 1
+        `OP_OR:  alu = dcd_ex_alu_a_ff | dcd_ex_alu_b_ff;
+        `OP_AND: alu = dcd_ex_alu_a_ff & dcd_ex_alu_b_ff;
+        `OP_XOR: alu = dcd_ex_alu_a_ff ^ dcd_ex_alu_b_ff;
+        `OP_NOT: alu = ~dcd_ex_alu_b_ff;
         `OP_SHI:
             case (shi)
-            `SHI_1: alu = shl ? (dcd_alu_a_ff << 1) : (dcd_alu_a_ff >> 1);
-            `SHI_2: alu = shl ? (dcd_alu_a_ff << 2) : (dcd_alu_a_ff >> 2);
-            `SHI_4: alu = shl ? (dcd_alu_a_ff << 4) : (dcd_alu_a_ff >> 4);
-            `SHI_8: alu = shl ? (dcd_alu_a_ff << 8) : (dcd_alu_a_ff >> 8);
+            `SHI_1: alu = shl ? (dcd_ex_alu_a_ff << 1) : (dcd_ex_alu_a_ff >> 1);
+            `SHI_2: alu = shl ? (dcd_ex_alu_a_ff << 2) : (dcd_ex_alu_a_ff >> 2);
+            `SHI_4: alu = shl ? (dcd_ex_alu_a_ff << 4) : (dcd_ex_alu_a_ff >> 4);
+            `SHI_8: alu = shl ? (dcd_ex_alu_a_ff << 8) : (dcd_ex_alu_a_ff >> 8);
             endcase
     endcase
 end
@@ -285,106 +290,100 @@ endfunction
 
 always @(posedge clk) begin
     if (rst) begin
-        ex_invalid_ff <= 1'b1;
-        ex_mem_read_ff <= 1'b0;
-        ex_mem_write_ff <= 1'b0;
-        ex_alu_r_ff <= 0;
-        ex_reg_d_ff <= 0;
-        ex_d_sel_ff <= 0;
+        ex_mio_invalid_ff <= 1'b1;
+        ex_mio_mem_read_ff <= 1'b0;
+        ex_mio_mem_write_ff <= 1'b0;
+        ex_mio_alu_r_ff <= 0;
+        ex_mio_reg_d_ff <= 0;
+        ex_mio_d_sel_ff <= 0;
     end else begin
-        ex_invalid_ff <= dcd_invalid_ff;
-        ex_mem_read_ff <= dcd_mem_read_ff;
-        ex_mem_write_ff <= dcd_mem_write_ff;
-        ex_alu_r_ff <= alu(dcd_op_sel_ff, dcd_alu_a_ff, dcd_alu_b_ff);
-        ex_reg_d_ff <= dcd_reg_d_ff;
-        ex_d_sel_ff <= dcd_d_sel_ff;
+        ex_mio_invalid_ff <= dcd_ex_invalid_ff;
+        ex_mio_mem_read_ff <= dcd_ex_mem_read_ff;
+        ex_mio_mem_write_ff <= dcd_ex_mem_write_ff;
+        ex_mio_alu_r_ff <= alu(dcd_ex_op_sel_ff, dcd_ex_alu_a_ff, dcd_ex_alu_b_ff);
+        ex_mio_reg_d_ff <= dcd_ex_reg_d_ff;
+        ex_mio_d_sel_ff <= dcd_ex_d_sel_ff;
     end
 end
 
 // STAGE mio: Memory read/write
 // OUTPUT:
-// reg mio_invalid_ff;
-// reg [`REGSEL_WIDTH-1:0] mio_d_sel_ff;
-// wire [`ACCUM_WIDTH-1:0] mio_r;
+// reg mio_wb_invalid_ff;
+// reg [`REGSEL_WIDTH-1:0] mio_wb_d_sel_ff;
+// wire [`ACCUM_WIDTH-1:0] mio_wb_r;
 `ifdef SIMULATION
-reg [`ADDR_WIDTH-1:0] mio_inst_addr_ff;
+reg [`ADDR_WIDTH-1:0] mio_wb_inst_addr_ff;
 always @(posedge clk) begin
-    mio_inst_addr_ff <= ex_inst_addr_ff;
+    mio_wb_inst_addr_ff <= ex_mio_inst_addr_ff;
 end
 `endif
 
-reg mio_mem_read_ff;
-reg [`ACCUM_WIDTH-1:0] mio_alu_r_ff;
+reg mio_wb_mem_read_ff;
+reg [`ACCUM_WIDTH-1:0] mio_wb_alu_r_ff;
 
-assign data_o[`ACCUM_WIDTH-1:0] = ex_reg_d_ff;
-assign addr_o[`ADDR_WIDTH-1:0] = ex_alu_r_ff[`ADDR_WIDTH-1:0];
-assign we_o = ex_mem_write_ff && !ex_invalid_ff;
+assign data_o[`ACCUM_WIDTH-1:0] = ex_mio_reg_d_ff;
+assign addr_o[`ADDR_WIDTH-1:0] = ex_mio_alu_r_ff[`ADDR_WIDTH-1:0];
+assign we_o = ex_mio_mem_write_ff && !ex_mio_invalid_ff;
 
 always @(posedge clk) begin
     if (rst) begin
-        mio_invalid_ff <= 1'b1;
-        mio_d_sel_ff <= 0;
-        mio_mem_read_ff <= 1'b0;
-        mio_alu_r_ff <= 0;
+        mio_wb_invalid_ff <= 1'b1;
+        mio_wb_d_sel_ff <= 0;
+        mio_wb_mem_read_ff <= 1'b0;
+        mio_wb_alu_r_ff <= 0;
     end else begin
-        mio_invalid_ff <= ex_invalid_ff;
-        mio_d_sel_ff <= ex_d_sel_ff;
-        mio_mem_read_ff <= ex_mem_read_ff;
-        mio_alu_r_ff <= ex_alu_r_ff;
+        mio_wb_invalid_ff <= ex_mio_invalid_ff;
+        mio_wb_d_sel_ff <= ex_mio_d_sel_ff;
+        mio_wb_mem_read_ff <= ex_mio_mem_read_ff;
+        mio_wb_alu_r_ff <= ex_mio_alu_r_ff;
     end
 end
 
-assign mio_r[`ACCUM_WIDTH-1:0] = mio_mem_read_ff ? data_i : mio_alu_r_ff;
+assign mio_wb_r[`ACCUM_WIDTH-1:0] = mio_wb_mem_read_ff ? data_i : mio_wb_alu_r_ff;
 
 // STAGE wb: Writeback
-// OUTPUT:
-// reg wb_jump_en_ff;
-// reg [`ADDR_WIDTH-1:0] wb_jump_addr_ff;
 `ifdef SIMULATION
-reg [`ADDR_WIDTH-1:0] wb_inst_addr_ff;
+reg [`ADDR_WIDTH-1:0] wb_if_inst_addr_ff;
 always @(posedge clk) begin
-    wb_inst_addr_ff <= mio_inst_addr_ff;
+    wb_if_inst_addr_ff <= mio_wb_inst_addr_ff;
 end
 `endif
 
 always @(posedge clk) begin
     if (rst) begin
-        wb_jump_en_ff <= 1'b0;
-        wb_jump_addr_ff <= 0;
-
         ra_ff <= 0;
         rb_ff <= 0;
         rc_ff <= 0;
         rd_ff <= 0;
         re_ff <= 0;
         sp_ff <= 0;
-    end else if (!mio_invalid_ff) begin
-        case (mio_d_sel_ff)
+    end else if (!mio_wb_invalid_ff) begin
+        case (mio_wb_d_sel_ff)
             SEL_RA:
-                ra_ff <= mio_r;
+                ra_ff <= mio_wb_r;
             SEL_RB:
-                rb_ff <= mio_r;
+                rb_ff <= mio_wb_r;
             SEL_RC:
-                rc_ff <= mio_r;
+                rc_ff <= mio_wb_r;
             SEL_RD:
-                rd_ff <= mio_r;
+                rd_ff <= mio_wb_r;
             SEL_RE:
-                re_ff <= mio_r;
+                re_ff <= mio_wb_r;
             SEL_SP:
-                sp_ff <= mio_r;
+                sp_ff <= mio_wb_r;
         endcase
     end
 end
 always @(posedge clk) begin
     if (rst) begin
-        pc_ff <= 0;
+        wb_if_pc_ff <= 0;
     end else begin
-        if (mio_d_sel_ff == SEL_PC) begin
-            pc_ff <= mio_r[`ADDR_WIDTH-1:0];
+        if (mio_wb_d_sel_ff == SEL_PC) begin
+            wb_if_pc_ff <= mio_wb_r[`ADDR_WIDTH-1:0];
         end else if (if_stall) begin
-            pc_ff <= pc_ff;
+            wb_if_pc_ff <= wb_if_pc_ff;
         end else begin
-            pc_ff <= pc_ff + 1;
+            wb_if_pc_ff <= wb_if_pc_ff + 1;
         end
     end
 end
@@ -392,15 +391,15 @@ end
 `ifdef SIMULATION
 always @(posedge clk) begin
     $display("= nkmm CPU state dump ========================================================");
-    $display(" IF  in. progmem fetch addr: %h", prog_addr_o);
-    $display(" IF  in. fetch inst: %h ", prog_data_i);
-    $display(" IF out. addr: %h stall: %b inst: %h", if_inst_addr_ff, if_stall, if_inst);
-    $display("DCD  in. mr,w: %b,%b opsel: %h d,a,bsel: %h,%h,%h imm: %h,%b", dcd_mem_read, dcd_mem_write, dcd_op_sel, dcd_d_sel, dcd_a_sel, dcd_b_sel, dcd_imm, dcd_imm_en);
-    $display("DCD out. addr: %h inval: %b mr,w: %b,%b opsel: %h, alu_a,b: %h,%h, reg_d,d_sel: %h,%h", dcd_inst_addr_ff, dcd_invalid_ff, dcd_mem_read_ff, dcd_mem_write_ff, dcd_op_sel_ff, dcd_alu_a_ff, dcd_alu_b_ff, dcd_reg_d_ff, dcd_d_sel_ff);
-    $display(" EX out. addr: %h inval: %b mr,w: %b,%b alu_r: %h, reg_d,d_sel: %h,%h", ex_inst_addr_ff, ex_invalid_ff, ex_mem_read_ff, ex_mem_write_ff, ex_alu_r_ff, ex_reg_d_ff, ex_d_sel_ff);
-    $display("MIO  in. data_o: %h addr_o: %h we_o: %b", data_o, addr_o, we_o);
-    $display("MIO out. addr: %h inval: %b mr: %b d_sel: %h alu_r: %h mio_r: %h", mio_inst_addr_ff, mio_invalid_ff, mio_mem_read_ff, mio_d_sel_ff, mio_alu_r_ff, mio_r);
-    $display(" WB out. addr: %h jump_en: %b jump_addr: %h", wb_inst_addr_ff, wb_jump_en_ff, wb_jump_addr_ff);
+    $display("WB/IF  addr: %h (pc_ff)", wb_if_pc_ff);
+    $display("IF/IL  addr: %h, progmem out inst, prev: %h, %h", if_il_inst_addr_ff, prog_data_i, if_prev_inst_ff);
+    $display("IL/DCD addr: %h, stall: %b inst: %h", il_dcd_inst_addr_ff, if_stall, il_dcd_inst_ff);
+    $display("DCD                mr,w: %b,%b opsel: %h d,a,bsel: %h,%h,%h imm: %h,%b", dcd_mem_read, dcd_mem_write, dcd_op_sel, dcd_d_sel, dcd_a_sel, dcd_b_sel, dcd_imm, dcd_imm_en);
+    $display("DCD/EX addr: %h, inval: %b mr,w: %b,%b opsel: %h, alu_a,b: %h,%h, reg_d,d_sel: %h,%h", dcd_ex_inst_addr_ff, dcd_ex_invalid_ff, dcd_ex_mem_read_ff, dcd_ex_mem_write_ff, dcd_ex_op_sel_ff, dcd_ex_alu_a_ff, dcd_ex_alu_b_ff, dcd_ex_reg_d_ff, dcd_ex_d_sel_ff);
+    $display("EX/MIO addr: %h, inval: %b mr,w: %b,%b alu_r: %h, reg_d,d_sel: %h,%h", ex_mio_inst_addr_ff, ex_mio_invalid_ff, ex_mio_mem_read_ff, ex_mio_mem_write_ff, ex_mio_alu_r_ff, ex_mio_reg_d_ff, ex_mio_d_sel_ff);
+    $display("MIO                data_o: %h addr_o: %h we_o: %b", data_o, addr_o, we_o);
+    $display("MIO/WB addr: %h, inval: %b mr: %b d_sel: %h alu_r: %h mio_wb_r: %h", mio_wb_inst_addr_ff, mio_wb_invalid_ff, mio_wb_mem_read_ff, mio_wb_d_sel_ff, mio_wb_alu_r_ff, mio_wb_r);
+    $display("WB/IF  addr: %h", wb_if_inst_addr_ff);
     $display("==============================================================================");
 end
 `endif
