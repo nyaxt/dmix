@@ -8,7 +8,7 @@ runsim: $(TARGET)_t.lxt
 .vvp.lxt:
 	vvp $< -lxt2
 
-$(TARGET)_t.vvp: $(TARGET)_t.v $(TARGET).v ../nkmm_const.v
+$(TARGET)_t.vvp: $(TARGET)_t.v $(TARGET).v ../nkmm_const.v nkmm_t_progrom.v
 	iverilog -Wall -DSIMULATION -o $@ $^
 
 .SUFFIXES: .lxt .vvp
