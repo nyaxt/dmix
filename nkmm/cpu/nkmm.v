@@ -42,7 +42,9 @@ reg [`ACCUM_WIDTH-1:0] rc_ff;
 reg [`ACCUM_WIDTH-1:0] rd_ff;
 reg [`ACCUM_WIDTH-1:0] re_ff;
 reg [`ACCUM_WIDTH-1:0] sp_ff;
+
 reg [`ADDR_WIDTH-1:0] wb_if_pc_ff;
+wire wb_branch_bubble;
 
 // il_dcd: Instruction Latch -> instructiion DeCoDe
 reg [`INSN_WIDTH-1:0] il_dcd_inst_ff;
@@ -75,7 +77,6 @@ wire [`ACCUM_WIDTH-1:0] mio_wb_r;
 // reg [`INSN_WIDTH-1:0] il_dcd_inst_ff;
 
 wire dcd_invalid;
-wire if_stall = dcd_invalid;
 
 reg if_prev_stall_ff; // should degenerate with dcd_ex_invalid_ff
 always @(posedge clk) begin
@@ -211,13 +212,19 @@ function [`ACCUM_WIDTH-1:0] dcd_reg_sel(
     endcase
 endfunction
 
+wire dcd_dcd_jump = dcd_ex_invalid_ff == 1'b0 && dcd_ex_d_sel_ff == SEL_PC;
 wire dcd_dcd_conflict = dcd_ex_invalid_ff == 1'b0 && dcd_ex_d_sel_ff != 0 && (dcd_ex_d_sel_ff == dcd_a_sel || dcd_ex_d_sel_ff == dcd_b_sel);
 wire dcd_dcd_conflict_mw = dcd_mem_write == 1'b1 && dcd_ex_invalid_ff == 1'b0 && dcd_ex_d_sel_ff != 0 && dcd_ex_d_sel_ff == dcd_d_sel;
 wire dcd_ex_conflict = ex_mio_invalid_ff == 1'b0 && ex_mio_d_sel_ff != 0 && (ex_mio_d_sel_ff == dcd_a_sel || ex_mio_d_sel_ff == dcd_b_sel);
 wire dcd_ex_conflict_mw = dcd_mem_write == 1'b1 && ex_mio_invalid_ff == 1'b0 && ex_mio_d_sel_ff != 0 && ex_mio_d_sel_ff == dcd_d_sel;
 wire dcd_mio_conflict = mio_wb_invalid_ff == 1'b0 && mio_wb_d_sel_ff != 0 && (mio_wb_d_sel_ff == dcd_a_sel || mio_wb_d_sel_ff == dcd_b_sel);
 wire dcd_mio_conflict_mw = dcd_mem_write == 1'b1 && mio_wb_invalid_ff == 1'b0 && mio_wb_d_sel_ff != 0 && mio_wb_d_sel_ff == dcd_d_sel;
-assign dcd_invalid = dcd_dcd_conflict || dcd_dcd_conflict_mw || dcd_ex_conflict || dcd_ex_conflict_mw || dcd_mio_conflict || dcd_mio_conflict_mw;
+
+assign if_stall =  dcd_dcd_conflict || dcd_dcd_conflict_mw
+                || dcd_ex_conflict || dcd_ex_conflict_mw
+                || dcd_mio_conflict || dcd_mio_conflict_mw;
+
+assign dcd_invalid = wb_branch_bubble || if_stall;
 
 always @(posedge clk) begin
     if (rst) begin
@@ -297,7 +304,7 @@ always @(posedge clk) begin
         ex_mio_reg_d_ff <= 0;
         ex_mio_d_sel_ff <= 0;
     end else begin
-        ex_mio_invalid_ff <= dcd_ex_invalid_ff;
+        ex_mio_invalid_ff <= dcd_ex_invalid_ff || wb_branch_bubble;
         ex_mio_mem_read_ff <= dcd_ex_mem_read_ff;
         ex_mio_mem_write_ff <= dcd_ex_mem_write_ff;
         ex_mio_alu_r_ff <= alu(dcd_ex_op_sel_ff, dcd_ex_alu_a_ff, dcd_ex_alu_b_ff);
@@ -332,7 +339,7 @@ always @(posedge clk) begin
         mio_wb_mem_read_ff <= 1'b0;
         mio_wb_alu_r_ff <= 0;
     end else begin
-        mio_wb_invalid_ff <= ex_mio_invalid_ff;
+        mio_wb_invalid_ff <= ex_mio_invalid_ff || wb_branch_bubble;
         mio_wb_d_sel_ff <= ex_mio_d_sel_ff;
         mio_wb_mem_read_ff <= ex_mio_mem_read_ff;
         mio_wb_alu_r_ff <= ex_mio_alu_r_ff;
@@ -378,7 +385,7 @@ always @(posedge clk) begin
     if (rst) begin
         wb_if_pc_ff <= 0;
     end else begin
-        if (mio_wb_d_sel_ff == SEL_PC) begin
+        if (!mio_wb_invalid_ff && mio_wb_d_sel_ff == SEL_PC) begin
             wb_if_pc_ff <= mio_wb_r[`ADDR_WIDTH-1:0];
         end else if (if_stall) begin
             wb_if_pc_ff <= wb_if_pc_ff;
@@ -388,10 +395,24 @@ always @(posedge clk) begin
     end
 end
 
+reg [1:0] wb_branch_bubble_counter_ff;
+always @(posedge clk) begin
+    if (rst) begin
+        wb_branch_bubble_counter_ff <= 0;
+    end else begin
+        if (mio_wb_d_sel_ff == SEL_PC) begin
+            wb_branch_bubble_counter_ff <= 2;
+        end else if (wb_branch_bubble_counter_ff > 0) begin
+            wb_branch_bubble_counter_ff <= wb_branch_bubble_counter_ff - 1;
+        end
+    end
+end
+assign wb_branch_bubble = wb_branch_bubble_counter_ff > 0;
+
 `ifdef SIMULATION
 always @(posedge clk) begin
     $display("= nkmm CPU state dump ========================================================");
-    $display("WB/IF  addr: %h (pc_ff)", wb_if_pc_ff);
+    $display("WB/IF  addr: %h (pc_ff) WB/DCD bubble cnt: %d", wb_if_pc_ff, wb_branch_bubble_counter_ff);
     $display("IF/IL  addr: %h, progmem out inst, prev: %h, %h", if_il_inst_addr_ff, prog_data_i, if_prev_inst_ff);
     $display("IL/DCD addr: %h, stall: %b inst: %h", il_dcd_inst_addr_ff, if_stall, il_dcd_inst_ff);
     $display("DCD                mr,w: %b,%b opsel: %h d,a,bsel: %h,%h,%h imm: %h,%b", dcd_mem_read, dcd_mem_write, dcd_op_sel, dcd_d_sel, dcd_a_sel, dcd_b_sel, dcd_imm, dcd_imm_en);
