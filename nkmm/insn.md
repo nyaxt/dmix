@@ -15,7 +15,7 @@ MEM(ALU[ALUSEL](REG_A, REG_B or IMM)) <- REG_D
 
 ## Load
 REG <- 0 + REG
-REG <- 0 + IMM8
+REG <- 0 + IMM16
 
 ## Fetch
 REG <- [ALU]
@@ -25,7 +25,7 @@ REG <- [ALU]
 
 ## Add
 REG <- REG + REG
-REG <- REG + IMM8
+REG <- REG + IMM16
 
 ## Shift L/R
 REG <- REG << {1,2,4,8,16}
@@ -48,10 +48,22 @@ REPZ INSN
 execute INSN iff R6 != 0
 
 ## Jump
-PC <- PC + IMM8
-PC <- PC - IMM8
+```
+PC <- IMM16
+PC <- PC + IMM16
 PC <- REG
 PC <- [REG]
+```
+
+## Branch
+```
+if (CMP[CMP_SEL](REG_SEL_A, REG_SEL_B)) PC <- PC + IMM16
+```
+
+## JUMP AND LINK
+```
+PC <- IMM16, [SP] <- PC, SP <- SP + 1
+```
 
 ## Instruction Decoded
 - Conditional Execution 3bit
@@ -97,16 +109,18 @@ PC <- [REG]
 ## Processor Pipeline
 
 ### IF
-I <- [PC]
-PC <- PC+4
+prog_addr_o <- [PC]
+
+### IL
+il <- prog_data_i
 
 ### DECODE
-{ALU_SEL, REG_SEL_A, REG_SEL_B, ...} <- DECODE(PC)
+{ALU_SEL, REG_SEL_A, REG_SEL_B, ...} <- DECODE(il)
 ALU_A <- REGMUX_A(REG_SEL_A, {R...})
 ALU_B <- REGMUX_B(REG_SEL_B, {R...})
 
 ### EXECUTE
-ALU_R <- ALU(ALU_A, ALU_B, IMM8)
+ALU_R <- ALU(ALU_A, ALU_B, IMM16)
 
 ### MEM
 ```
@@ -122,10 +136,7 @@ else
 
 ### WRITE BACK
 REGMUX_D <- MEM_R
-
-## FMULADD Pipeline
-
-
+PC <- PC+4
 
 ## Instruction Encoding
 ```
