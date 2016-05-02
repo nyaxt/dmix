@@ -1,9 +1,13 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Main(main) where
 
 import Parser
 import Insn
 import Mnemonic (assemble)
 
+import Control.Monad.State
+import Control.Applicative
 import Text.Printf (printf)
 import Data.List
 import Data.Word (Word, Word32)
@@ -54,12 +58,21 @@ data CompilerState = CompilerState { compiledObj :: Object }
 initialCompilerState :: CompilerState
 initialCompilerState = CompilerState { compiledObj = [] }
 
-compileStmt :: CompilerState -> Stmt -> CompilerState
-compileStmt state (StInsn insn) = CompilerState { compiledObj = (compiledObj state) ++ [insn] }
-compileStmt state (StLabel _) = state
+newtype Compiler a = Compiler { runCompiler :: State CompilerState a }
+  deriving (Functor, Applicative, Monad, MonadState CompilerState)
+
+compileStmt :: Stmt -> Compiler ()
+compileStmt (StInsn insn) = do
+  modify $ \s -> s { compiledObj = (compiledObj s) ++ [insn] }
+  return ()
+
+compileStmt (StLabel _) = return ()
+
+execCompiler :: Compiler a -> CompilerState
+execCompiler m = execState (runCompiler m) initialCompilerState
 
 compileProg :: Program -> Either String Object
-compileProg prog = Right $ compiledObj $ foldl' compileStmt initialCompilerState prog
+compileProg prog = Right $ compiledObj $ execCompiler $ mapM_ compileStmt prog
 
 handleProgram :: Program -> IO ()
 handleProgram prog = do case (compileProg prog) of
