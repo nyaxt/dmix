@@ -15,7 +15,7 @@ b :: Bool -> Word32
 b True  = b1
 b False = b0
 
-memSelBits :: AluSel -> Word32
+memSelBits :: MemSel -> Word32
 memSelBits MNone = 0x0
 memSelBits MR    = 0x1
 memSelBits MC    = 0x2

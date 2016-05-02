@@ -47,11 +47,27 @@ footerStr = unlines [
   "endmodule"]
 
 processObj :: Object -> String
-processObj obj = headerStr ++ objBody ++ footerStr
+processObj obj = objBody -- headerStr ++ objBody ++ footerStr
   where objBody = processObjBody 0 obj
+
+data CompilerState = CompilerState { compiledObj :: Object }
+initialCompilerState :: CompilerState
+initialCompilerState = CompilerState { compiledObj = [] }
+
+compileStmt :: CompilerState -> Stmt -> CompilerState
+compileStmt state (StInsn insn) = CompilerState { compiledObj = (compiledObj state) ++ [insn] }
+compileStmt state (StLabel _) = state
+
+compileProg :: Program -> Either String Object
+compileProg prog = Right $ compiledObj $ foldl' compileStmt initialCompilerState prog
+
+handleProgram :: Program -> IO ()
+handleProgram prog = do case (compileProg prog) of
+                          (Left err) -> hPutStrLn stderr $ show err
+			  (Right obj) -> putStr $ processObj obj
 
 main :: IO ()
 main = do src <- getContents
 	  case (parseNkmmAs src) of
 	    (Left err) -> hPutStrLn stderr $ show err
-	    (Right obj) -> putStr $ processObj obj
+	    (Right prog) -> handleProgram prog

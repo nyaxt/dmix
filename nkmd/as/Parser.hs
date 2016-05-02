@@ -3,6 +3,7 @@ module Parser (parseNkmmAs) where
 import Insn
 
 import Control.Monad
+import Data.Functor
 import Text.Parsec
 import Text.Parsec.Char
 import Text.Parsec.String (Parser)
@@ -12,15 +13,18 @@ import qualified Text.Parsec.Token as P
 lexer :: P.TokenParser ()
 lexer = P.makeTokenParser style
   where style = emptyDef {
-    P.reservedOpNames = ["=", "+", "-", "|", "&", "^", "!", ";", "[", "]"],
+    P.reservedOpNames = ["=", "+", "-", "|", "&", "^", "!", ";", "[", "]", ";"],
+    P.reservedNames = ["R", "C", "c0", "a", "b", "c", "d", "e", "f"],
     P.commentLine = "#" }
-    -- P.reservedNames = ["R0", "A", "B", "C", "D", "E", "SP", "PC"],
 
 reserved :: String -> Parser ()
 reserved = P.reserved lexer
 
 reservedOp :: String -> Parser ()
 reservedOp = P.reservedOp lexer
+
+identifier :: Parser String
+identifier = P.identifier lexer
 
 regSel :: Parser RegSel
 regSel = (reserved "c0" >> return Rc0)
@@ -90,26 +94,43 @@ memSel = (reserved "R" >> return MR)
        <|> (reserved "C" >> return MC)
 
 memrLBracket :: Parser MemSel
-memrLBracket = option MNone $
-               do reservedOp "["
-                  m <- memSel
+memrLBracket = do m <- memSel
+	          reservedOp "["
 		  return m
 
 rAssignInsn :: Parser Insn
 rAssignInsn = do rd <- regSel
                  reservedOp "="
-		 memr <- memrLBracket
+		 memr <- option MNone memrLBracket
                  alue <- aluExpr
-		 when (memr /= LEA) (reservedOp "]")
+		 when (memr /= MNone) (reservedOp "]")
+                 reservedOp ";"
 		 return Insn { memr = memr, memw = MNone, rd = rd, alue = alue }
 		 
+mAssignInsn :: Parser Insn
+mAssignInsn = do memw <- memrLBracket
+                 alue <- aluExpr
+		 reservedOp "]"
+		 reservedOp "="
+		 rd <- regSel
+		 reservedOp ";"
+		 return Insn { memr = MNone, memw = memw, rd = rd, alue = alue }
+
 insn :: Parser Insn
-insn = choice [rAssignInsn]
+insn = choice [rAssignInsn, mAssignInsn]
+
+labelp :: Parser String
+labelp = do l <- identifier
+            reservedOp ":"
+            return l
+
+stmt :: Parser Stmt
+stmt = choice [(liftM StInsn insn), (liftM StLabel labelp)]
  
-nkmm :: Parser Object
-nkmm = do is <- many1 insn
+nkmm :: Parser Program
+nkmm = do is <- many1 stmt 
           eof
           return is
 
-parseNkmmAs :: String -> Either ParseError Object
+parseNkmmAs :: String -> Either ParseError Program
 parseNkmmAs = parse nkmm "(unknown)"

@@ -17,7 +17,7 @@ instance Show AluExprT where
   show (AluExpr alu rs (Left rt)) = (show alu)++"("++(show rs)++", "++(show rt)++")"
   show (AluExpr alu rs (Right imm)) = (show alu)++"("++(show rs)++", imm "++(show imm)++")"
 
-data MemSel = MNone | MR | MC
+data MemSel = MNone | MR | MC deriving (Eq, Show)
 
 show1 :: MemSel -> String
 show1 MR    = "R"
@@ -45,3 +45,6 @@ instance Show Insn where
 --     "Insn {memw = True, memr = True}" -- Error!!
 
 type Object = [Insn]
+
+data Stmt = StInsn Insn | StLabel String
+type Program = [Stmt]
