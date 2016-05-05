@@ -54,6 +54,33 @@ processObj :: Object -> String
 processObj obj = objBody -- headerStr ++ objBody ++ footerStr
   where objBody = processObjBody 0 obj
 
+type Offset = Int
+data LabelInfo = LabelInfo { name :: String, offset :: Offset }
+
+data PreprocessorState = PreprocessorState { currOffset :: Offset, labels :: [LabelInfo] }
+initialPreprocessorState :: PreprocessorState
+initialPreprocessorState = PreprocessorState { currOffset = 0, labels = [] }
+
+newtype Preprocessor a = Preprocessor { runPreprocessor :: State PreprocessorState a }
+  deriving (Functor, Applicative, Monad, MonadState PreprocessorState)
+
+incrOffset :: Int -> Preprocessor ()
+incrOffset n = modify $ \s -> s { currOffset = (currOffset s) + 1 }
+
+preprocessStmt :: Stmt -> Preprocessor ()
+preprocessStmt (StInsn _) = do
+  incrOffset 1 
+  return ()
+
+preprocessStmt (StLabel name) = do
+  return ()
+
+execPreprocessor :: Preprocessor a -> PreprocessorState
+execPreprocessor m = execState (runPreprocessor m) initialPreprocessorState
+
+preprocessProg :: Program -> Either String PreprocessorState
+preprocessProg prog = Right $ execPreprocessor $ mapM_ preprocessStmt prog
+
 data CompilerState = CompilerState { compiledObj :: Object }
 initialCompilerState :: CompilerState
 initialCompilerState = CompilerState { compiledObj = [] }
@@ -71,13 +98,17 @@ compileStmt (StLabel _) = return ()
 execCompiler :: Compiler a -> CompilerState
 execCompiler m = execState (runCompiler m) initialCompilerState
 
-compileProg :: Program -> Either String Object
-compileProg prog = Right $ compiledObj $ execCompiler $ mapM_ compileStmt prog
+compileProg :: PreprocessorState -> Program -> Either String Object
+compileProg prep prog = Right $ compiledObj $ execCompiler $ mapM_ compileStmt prog
 
 handleProgram :: Program -> IO ()
-handleProgram prog = do case (compileProg prog) of
-                          (Left err) -> hPutStrLn stderr $ show err
-			  (Right obj) -> putStr $ processObj obj
+handleProgram prog = do
+  case (preprocessProg prog) of
+    (Left err) -> hPutStrLn stderr $ show err
+    (Right prep) ->
+      case (compileProg prep prog) of
+        (Left err) -> hPutStrLn stderr $ show err
+        (Right obj) -> putStr $ processObj obj
 
 main :: IO ()
 main = do src <- getContents
