@@ -2,6 +2,7 @@
 
 module Main (main) where
 
+import Expr
 import Parser
 import Insn
 import Program
@@ -9,11 +10,13 @@ import Mnemonic (assemble)
 import Control.Monad.State
 import Control.Applicative
 import Text.Printf (printf)
+import Data.Either.Unwrap (fromRight)
 import Data.List
+import qualified Data.Map.Strict as Map
 import Data.Word (Word, Word32)
 import System.IO
-
 -- import Options.Applicative
+--
 showObj :: Object -> String
 showObj obj = intercalate "\n" $ map show obj
 
@@ -60,15 +63,21 @@ type Offset = Int
 data LabelInfo =
   LabelInfo {name :: String
             ,offset :: Offset}
+  deriving Show
+
+type ConstExprMap = Map.Map String Expr
 
 data PreprocessorState =
   PreprocessorState {currOffset :: Offset
-                    ,labels :: [LabelInfo]}
+                    ,labels :: [LabelInfo]
+		    ,constexprs :: ConstExprMap}
+  deriving Show
 
 initialPreprocessorState :: PreprocessorState
 initialPreprocessorState = 
   PreprocessorState {currOffset = 0
-                    ,labels = []}
+                    ,labels = []
+		    ,constexprs = Map.empty}
 
 newtype Preprocessor a =
   Preprocessor {runPreprocessor :: State PreprocessorState a}
@@ -80,15 +89,20 @@ incrOffset n = modify $ \s -> s {currOffset = (currOffset s) + 1}
 addLabel :: LabelInfo -> Preprocessor ()
 addLabel l = modify $ \s -> s {labels = l:(labels s)}
 
+modifyConstExprs :: (ConstExprMap -> ConstExprMap) -> Preprocessor()
+modifyConstExprs f = modify $ \s -> s {constexprs = f (constexprs s)}
+
+insertConstExpr :: String -> Expr -> Preprocessor()
+insertConstExpr n e = modifyConstExprs $ Map.insert n e
+
 preprocessStmt :: Stmt -> Preprocessor ()
-preprocessStmt (StInsn _) = 
-  do incrOffset 1
-     return ()
+preprocessStmt (StInsn _) = incrOffset 1
 preprocessStmt (StLabel name) =
   do s <- get
      let newl = LabelInfo{name = name, offset = (currOffset s)} in
        addLabel newl
      return ()
+preprocessStmt (StConstExpr name expr) = insertConstExpr name expr
 
 execPreprocessor
   :: Preprocessor a -> PreprocessorState
@@ -97,6 +111,16 @@ execPreprocessor m = execState (runPreprocessor m) initialPreprocessorState
 preprocessProg
   :: Program -> Either String PreprocessorState
 preprocessProg prog = Right $ execPreprocessor $ mapM_ preprocessStmt prog
+
+resolveExpr :: PreprocessorState -> Expr -> Either String Expr
+resolveExpr p (ExprRef n) =
+  let ces = constexprs p
+      lu = Map.lookup n ces 
+  in case lu of
+      Nothing -> Left $ printf "Failed to resolve constexpr ref \"%s\"" n
+      Just e -> resolveExpr p e
+resolveExpr _ e | (resolved e) = Right e
+                | otherwise = Left $ printf "failed to resolve constexpr: %s" (show e)
 
 data CompilerState =
   CompilerState {preprocessorState :: PreprocessorState
@@ -109,10 +133,17 @@ newtype Compiler a =
   Compiler {runCompiler :: State CompilerState a}
   deriving (Functor,Applicative,Monad,MonadState CompilerState)
 
+appendInsn :: Insn -> Compiler ()
+appendInsn insn = modify $ \s -> s {compiledObj = (compiledObj s) ++ [insn]}
+
+--getPreprocessorState :: Compiler PreprocessorState
+--getPreprocessorState = get >>= liftM preprocessorState--getPreprocessorState
+
 compileStmt :: Stmt -> Compiler ()
-compileStmt (StInsn insn) = 
-  do modify $ \s -> s {compiledObj = (compiledObj s) ++ [insn]}
-     return ()
+compileStmt (StInsn insn) =
+  do s <- get
+     let prep = preprocessorState s
+       in appendInsn $ modifyInsnExpr (fromRight . (resolveExpr prep)) insn
 compileStmt _ = return ()
 
 execCompiler :: PreprocessorState -> Compiler a -> CompilerState
@@ -125,9 +156,10 @@ compileProg prep prog =
 
 handleProgram :: Program -> IO ()
 handleProgram prog = 
-  do case (preprocessProg prog) of
-       (Left err) -> hPutStrLn stderr $ show err
-       (Right prep) -> 
+  case (preprocessProg prog) of
+    (Left err) -> hPutStrLn stderr $ show err
+    (Right prep) -> 
+      do hPutStrLn stderr $ show prep
          case (compileProg prep prog) of
            (Left err) -> hPutStrLn stderr $ show err
            (Right obj) -> putStr $ processObj obj

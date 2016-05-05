@@ -41,6 +41,10 @@ instance Show AluExprT where
   show (AluExpr alu rs (Right imm)) = 
     (show alu) ++ "(" ++ (show rs) ++ ", imm " ++ (show imm) ++ ")"
 
+modifyAlueExpr :: (Expr -> Expr) -> AluExprT -> AluExprT
+modifyAlueExpr f (AluExpr asel rsel (Right e)) = AluExpr asel rsel (Right (f e))
+modifyAlueExpr _ alue = alue
+
 data MemSel
   = MNone 
   | MR 
@@ -62,6 +66,9 @@ instance Show Insn where
   show (Insn{memw = w,memr = r,rd = d,alue = a}) = 
     "Insn{M[" ++
     (show1 w) ++ (show1 r) ++ "] " ++ (show d) ++ " " ++ (show a) ++ "}"
+
+modifyInsnExpr :: (Expr -> Expr) -> Insn -> Insn
+modifyInsnExpr f i = i { alue = (modifyAlueExpr f (alue i)) }
 
 -- instance Show Insn where
 --   show (Insn {memw = False, memr = False, dsel = dsel, alue = alue}) =

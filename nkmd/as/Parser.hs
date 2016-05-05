@@ -99,25 +99,6 @@ aluExpr =
   notExpr <|>
   loadExpr
 
--- mWriteInsn :: Parser Insn
--- mWriteInsn = do reservedOp "["
---                 alue <- aluExpr
--- 		reservedOp "]"
---                 reservedOp "<-"
---                 rd <- regSel
---                 reservedOp ";"
---                 return Insn { memw = True, memr = False, rd = rd, alue = alue }
---              <?> "mWriteInsn"
--- 
--- mrReadInsn :: Parser Insn
--- mrReadInsn = do rd <- regSel
---                 reservedOp "<-"
--- 		memr <- option False (reservedOp "[" >> return True)
---                 alue <- aluExpr
--- 		when memr (reservedOp "]")
---                 reservedOp ";"
---                 return Insn { memw = False, memr = memr, rd = rd, alue = alue }
---              <?> "mrReadInsn"
 memSel :: Parser MemSel
 memSel = (reserved "R" >> return MR) <|> (reserved "C" >> return MC)
 
@@ -170,7 +151,7 @@ constp =
      reservedOp "="
      e <- expr
      reservedOp ";"
-     return $ StConst n e
+     return (StConstExpr n e)
 
 stmt :: Parser Stmt
 stmt = choice [(liftM StInsn insn), labelp, constp]

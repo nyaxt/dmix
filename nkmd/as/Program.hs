@@ -6,7 +6,7 @@ import Insn
 data Stmt
   = StInsn Insn
   | StLabel String
-  | StConst String Expr
+  | StConstExpr String Expr
   deriving Show
 
 type Program = [Stmt]
