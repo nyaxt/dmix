@@ -40,6 +40,7 @@ regSelBits Rd = 0x4
 regSelBits Re = 0x5
 regSelBits Rf = 0x6
 
+{-
 assembleBSel :: (Either RegSel Integer) -> Word32
 assembleBSel (Left bsel) = (regSelBits bsel) `shiftL` 17
 assembleBSel (Right imm) = (b1 `shiftL` 16) .|. (fromInteger imm)
@@ -52,3 +53,6 @@ assembleAluE (AluExpr alu asel b) =
 assemble :: Insn -> Word32
 assemble Insn{memw = w,memr = r,rd = d,alue = alue} = 
   (memwrBits w r) .|. ((regSelBits d) `shiftL` 26) .|. assembleAluE alue
+-}
+assemble :: Insn -> Word32
+assemble _ = 0xdead

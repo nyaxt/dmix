@@ -4,6 +4,7 @@ module Main (main) where
 
 import Parser
 import Insn
+import Program
 import Mnemonic (assemble)
 import Control.Monad.State
 import Control.Applicative
@@ -76,11 +77,18 @@ newtype Preprocessor a =
 incrOffset :: Int -> Preprocessor ()
 incrOffset n = modify $ \s -> s {currOffset = (currOffset s) + 1}
 
+addLabel :: LabelInfo -> Preprocessor ()
+addLabel l = modify $ \s -> s {labels = l:(labels s)}
+
 preprocessStmt :: Stmt -> Preprocessor ()
 preprocessStmt (StInsn _) = 
   do incrOffset 1
      return ()
-preprocessStmt (StLabel name) = do return ()
+preprocessStmt (StLabel name) =
+  do s <- get
+     let newl = LabelInfo{name = name, offset = (currOffset s)} in
+       addLabel newl
+     return ()
 
 execPreprocessor
   :: Preprocessor a -> PreprocessorState
@@ -91,10 +99,11 @@ preprocessProg
 preprocessProg prog = Right $ execPreprocessor $ mapM_ preprocessStmt prog
 
 data CompilerState =
-  CompilerState {compiledObj :: Object}
+  CompilerState {preprocessorState :: PreprocessorState
+                ,compiledObj :: Object}
 
-initialCompilerState :: CompilerState
-initialCompilerState = CompilerState {compiledObj = []}
+initialCompilerState :: PreprocessorState -> CompilerState
+initialCompilerState prep = CompilerState {preprocessorState = prep, compiledObj = []}
 
 newtype Compiler a =
   Compiler {runCompiler :: State CompilerState a}
@@ -104,15 +113,15 @@ compileStmt :: Stmt -> Compiler ()
 compileStmt (StInsn insn) = 
   do modify $ \s -> s {compiledObj = (compiledObj s) ++ [insn]}
      return ()
-compileStmt (StLabel _) = return ()
+compileStmt _ = return ()
 
-execCompiler :: Compiler a -> CompilerState
-execCompiler m = execState (runCompiler m) initialCompilerState
+execCompiler :: PreprocessorState -> Compiler a -> CompilerState
+execCompiler prep m = execState (runCompiler m) (initialCompilerState prep)
 
 compileProg
   :: PreprocessorState -> Program -> Either String Object
 compileProg prep prog = 
-  Right $ compiledObj $ execCompiler $ mapM_ compileStmt prog
+  Right $ compiledObj $ execCompiler prep $ mapM_ compileStmt prog
 
 handleProgram :: Program -> IO ()
 handleProgram prog = 

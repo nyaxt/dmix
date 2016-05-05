@@ -1,5 +1,7 @@
 module Insn where
 
+import Expr
+
 data RegSel
   = Rc0 
   | Ra 
@@ -26,12 +28,12 @@ data AluSel
   | OpXor 
   | OpNot 
   | OpShift 
-  deriving ((((Show))))
+  deriving Show
 
 data AluExprT =
   AluExpr AluSel
           RegSel
-          (Either RegSel Integer)
+          (Either RegSel Expr)
 
 instance Show AluExprT where
   show (AluExpr alu rs (Left rt)) = 
@@ -71,9 +73,3 @@ instance Show Insn where
 --   show (Insn {memw = True, memr = True, dsel = dsel, alue = alue}) =
 --     "Insn {memw = True, memr = True}" -- Error!!
 type Object = [Insn]
-
-data Stmt
-  = StInsn Insn
-  | StLabel String
-
-type Program = [Stmt]

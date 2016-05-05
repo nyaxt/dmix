@@ -1,6 +1,8 @@
 module Parser (parseNkmmAs) where
 
+import Expr
 import Insn
+import Program
 import Control.Monad
 import Data.Functor
 import Text.Parsec
@@ -14,7 +16,7 @@ lexer = P.makeTokenParser style
   where style = 
           emptyDef {P.reservedOpNames = 
                       ["=","+","-","|","&","^","!",";","[","]",";"]
-                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f"]
+                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f","const"]
                    ,P.commentLine = "#"}
 
 reserved :: String -> Parser ()
@@ -25,6 +27,21 @@ reservedOp = P.reservedOp lexer
 
 identifier :: Parser String
 identifier = P.identifier lexer
+
+exprInteger :: Parser Expr
+exprInteger =
+  do v <- P.natural lexer
+     return (ExprInteger v)
+    
+exprRef :: Parser Expr
+exprRef =
+  do i <- identifier
+     return (ExprRef i)
+
+expr :: Parser Expr
+expr =
+  (try exprInteger) <|>
+  (try exprRef)
 
 regSel :: Parser RegSel
 regSel = 
@@ -38,20 +55,20 @@ regSel =
 imm :: Parser Integer
 imm = P.natural lexer
 
-regImm :: Parser (Either RegSel Integer)
-regImm = liftM Left regSel <|> liftM Right imm
+regImm :: Parser (Either RegSel Expr)
+regImm = liftM Left regSel <|> liftM Right expr
 
 loadExpr :: Parser AluExprT
 loadExpr = 
   do bsel <- regImm
-     return $ AluExpr OpAdd Rc0 bsel <?>
-  "loadExpr"
+     return $ AluExpr OpAdd Rc0 bsel
+  <?> "loadExpr"
 
 notExpr = 
   do reservedOp "!"
      bsel <- regImm
-     return $ AluExpr OpNot Rc0 bsel <?>
-  "notExpr"
+     return $ AluExpr OpNot Rc0 bsel
+  <?> "notExpr"
 
 makeAluExpr
   :: (Parser ()) -> AluSel -> Parser AluExprT
@@ -59,8 +76,8 @@ makeAluExpr opP alu =
   do asel <- regSel
      opP
      bsel <- regImm
-     return $ AluExpr alu asel bsel <?>
-  "aluExpr"
+     return $ AluExpr alu asel bsel
+  <?> "aluExpr"
 
 aluExpr :: Parser AluExprT
 aluExpr = 
@@ -140,14 +157,23 @@ mAssignInsn =
 insn :: Parser Insn
 insn = choice [rAssignInsn,mAssignInsn]
 
-labelp :: Parser String
+labelp :: Parser Stmt
 labelp = 
   do l <- identifier
      reservedOp ":"
-     return l
+     return (StLabel l)
+
+constp :: Parser Stmt
+constp =
+  do reserved "const"
+     n <- identifier
+     reservedOp "="
+     e <- expr
+     reservedOp ";"
+     return $ StConst n e
 
 stmt :: Parser Stmt
-stmt = choice [(liftM StInsn insn),(liftM StLabel labelp)]
+stmt = choice [(liftM StInsn insn), labelp, constp]
 
 nkmm :: Parser Program
 nkmm = 
