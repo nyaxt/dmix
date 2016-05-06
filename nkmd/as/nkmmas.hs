@@ -15,6 +15,7 @@ import Data.List
 import qualified Data.Map.Strict as Map
 import Data.Word (Word, Word32)
 import System.IO
+
 -- import Options.Applicative
 --
 showObj :: Object -> String
@@ -63,21 +64,21 @@ type Offset = Int
 data LabelInfo =
   LabelInfo {name :: String
             ,offset :: Offset}
-  deriving Show
+  deriving (Show)
 
 type ConstExprMap = Map.Map String Expr
 
 data PreprocessorState =
   PreprocessorState {currOffset :: Offset
                     ,labels :: [LabelInfo]
-		    ,constexprs :: ConstExprMap}
-  deriving Show
+                    ,constexprs :: ConstExprMap}
+  deriving (Show)
 
 initialPreprocessorState :: PreprocessorState
 initialPreprocessorState = 
   PreprocessorState {currOffset = 0
                     ,labels = []
-		    ,constexprs = Map.empty}
+                    ,constexprs = Map.empty}
 
 newtype Preprocessor a =
   Preprocessor {runPreprocessor :: State PreprocessorState a}
@@ -87,21 +88,24 @@ incrOffset :: Int -> Preprocessor ()
 incrOffset n = modify $ \s -> s {currOffset = (currOffset s) + 1}
 
 addLabel :: LabelInfo -> Preprocessor ()
-addLabel l = modify $ \s -> s {labels = l:(labels s)}
+addLabel l = modify $ \s -> s {labels = l : (labels s)}
 
-modifyConstExprs :: (ConstExprMap -> ConstExprMap) -> Preprocessor()
+modifyConstExprs
+  :: (ConstExprMap -> ConstExprMap) -> Preprocessor ()
 modifyConstExprs f = modify $ \s -> s {constexprs = f (constexprs s)}
 
-insertConstExpr :: String -> Expr -> Preprocessor()
+insertConstExpr
+  :: String -> Expr -> Preprocessor ()
 insertConstExpr n e = modifyConstExprs $ Map.insert n e
 
 preprocessStmt :: Stmt -> Preprocessor ()
 preprocessStmt (StInsn _) = incrOffset 1
-preprocessStmt (StLabel name) =
+preprocessStmt (StLabel name) = 
   do s <- get
-     let newl = LabelInfo{name = name, offset = (currOffset s)} in
-       addLabel newl
-     return ()
+     let newl = 
+           LabelInfo {name = name
+                     ,offset = (currOffset s)}
+       in addLabel newl
 preprocessStmt (StConstExpr name expr) = insertConstExpr name expr
 
 execPreprocessor
@@ -112,22 +116,27 @@ preprocessProg
   :: Program -> Either String PreprocessorState
 preprocessProg prog = Right $ execPreprocessor $ mapM_ preprocessStmt prog
 
-resolveExpr :: PreprocessorState -> Expr -> Either String Expr
-resolveExpr p (ExprRef n) =
+resolveExpr
+  :: PreprocessorState -> Expr -> Either String Expr
+resolveExpr p (ExprRef n) = 
   let ces = constexprs p
-      lu = Map.lookup n ces 
+      lu = Map.lookup n ces
   in case lu of
-      Nothing -> Left $ printf "Failed to resolve constexpr ref \"%s\"" n
-      Just e -> resolveExpr p e
-resolveExpr _ e | (resolved e) = Right e
-                | otherwise = Left $ printf "failed to resolve constexpr: %s" (show e)
+       Nothing -> Left $ printf "Failed to resolve constexpr ref \"%s\"" n
+       Just e -> resolveExpr p e
+resolveExpr _ e
+  | (resolved e) = Right e
+  | otherwise = Left $ printf "failed to resolve constexpr: %s" (show e)
 
 data CompilerState =
   CompilerState {preprocessorState :: PreprocessorState
                 ,compiledObj :: Object}
 
-initialCompilerState :: PreprocessorState -> CompilerState
-initialCompilerState prep = CompilerState {preprocessorState = prep, compiledObj = []}
+initialCompilerState
+  :: PreprocessorState -> CompilerState
+initialCompilerState prep = 
+  CompilerState {preprocessorState = prep
+                ,compiledObj = []}
 
 newtype Compiler a =
   Compiler {runCompiler :: State CompilerState a}
@@ -137,13 +146,18 @@ appendInsn :: Insn -> Compiler ()
 appendInsn insn = modify $ \s -> s {compiledObj = (compiledObj s) ++ [insn]}
 
 compileStmt :: Stmt -> Compiler ()
-compileStmt (StInsn insn) =
+compileStmt (StInsn insn) = 
   do prep <- gets preprocessorState
-     appendInsn $ modifyInsnExpr (fromRight . (resolveExpr prep)) insn
+     appendInsn $
+       modifyInsnExpr (fromRight . (resolveExpr prep))
+                      insn
 compileStmt _ = return ()
 
-execCompiler :: PreprocessorState -> Compiler a -> CompilerState
-execCompiler prep m = execState (runCompiler m) (initialCompilerState prep)
+execCompiler
+  :: PreprocessorState -> Compiler a -> CompilerState
+execCompiler prep m = 
+  execState (runCompiler m)
+            (initialCompilerState prep)
 
 compileProg
   :: PreprocessorState -> Program -> Either String Object
