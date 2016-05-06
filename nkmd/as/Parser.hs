@@ -16,7 +16,7 @@ lexer = P.makeTokenParser style
   where style = 
           emptyDef {P.reservedOpNames = 
                       ["=","+","-","|","&","^","!",";","[","]",";"]
-                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f","const"]
+                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f","const","jmp"]
                    ,P.commentLine = "#"}
 
 reserved :: String -> Parser ()
@@ -135,8 +135,18 @@ mAssignInsn =
                  ,rd = rd
                  ,alue = alue}
 
+jmpInsn :: Parser Insn
+jmpInsn =
+  do reserved "jmp"
+     l <- identifier
+     reservedOp ";"
+     return Insn {memr = MNone
+                 ,memw = MNone
+		 ,rd = Rpc
+		 ,alue = AluExpr OpAdd Rc0 (Right (ExprRef l))}
+
 insn :: Parser Insn
-insn = choice [rAssignInsn,mAssignInsn]
+insn = choice [rAssignInsn,mAssignInsn,jmpInsn]
 
 labelp :: Parser Stmt
 labelp = 

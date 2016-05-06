@@ -10,6 +10,7 @@ data RegSel
   | Rd 
   | Re 
   | Rf 
+  | Rpc
 
 instance Show RegSel where
   show Rc0 = "c0"
@@ -19,6 +20,7 @@ instance Show RegSel where
   show Rd = "d"
   show Re = "e"
   show Rf = "f"
+  show Rpc = "PC"
 
 data AluSel
   = OpAdd 

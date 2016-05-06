@@ -61,23 +61,16 @@ processObj obj = objBody -- headerStr ++ objBody ++ footerStr
 
 type Offset = Int
 
-data LabelInfo =
-  LabelInfo {name :: String
-            ,offset :: Offset}
-  deriving (Show)
-
 type ConstExprMap = Map.Map String Expr
 
 data PreprocessorState =
   PreprocessorState {currOffset :: Offset
-                    ,labels :: [LabelInfo]
                     ,constexprs :: ConstExprMap}
   deriving (Show)
 
 initialPreprocessorState :: PreprocessorState
 initialPreprocessorState = 
   PreprocessorState {currOffset = 0
-                    ,labels = []
                     ,constexprs = Map.empty}
 
 newtype Preprocessor a =
@@ -86,9 +79,6 @@ newtype Preprocessor a =
 
 incrOffset :: Int -> Preprocessor ()
 incrOffset n = modify $ \s -> s {currOffset = (currOffset s) + 1}
-
-addLabel :: LabelInfo -> Preprocessor ()
-addLabel l = modify $ \s -> s {labels = l : (labels s)}
 
 modifyConstExprs
   :: (ConstExprMap -> ConstExprMap) -> Preprocessor ()
@@ -101,11 +91,8 @@ insertConstExpr n e = modifyConstExprs $ Map.insert n e
 preprocessStmt :: Stmt -> Preprocessor ()
 preprocessStmt (StInsn _) = incrOffset 1
 preprocessStmt (StLabel name) = 
-  do s <- get
-     let newl = 
-           LabelInfo {name = name
-                     ,offset = (currOffset s)}
-       in addLabel newl
+  do coff <- gets currOffset
+     insertConstExpr name (ExprInteger (toInteger coff))
 preprocessStmt (StConstExpr name expr) = insertConstExpr name expr
 
 execPreprocessor

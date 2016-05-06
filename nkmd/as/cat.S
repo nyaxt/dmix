@@ -4,4 +4,4 @@ const ASOUT = 0xf100;
 start:
 	a = R[ASIN];
 	R[ASOUT] = a;
-# jmp start
+	jmp start;
