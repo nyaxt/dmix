@@ -136,14 +136,10 @@ newtype Compiler a =
 appendInsn :: Insn -> Compiler ()
 appendInsn insn = modify $ \s -> s {compiledObj = (compiledObj s) ++ [insn]}
 
---getPreprocessorState :: Compiler PreprocessorState
---getPreprocessorState = get >>= liftM preprocessorState--getPreprocessorState
-
 compileStmt :: Stmt -> Compiler ()
 compileStmt (StInsn insn) =
-  do s <- get
-     let prep = preprocessorState s
-       in appendInsn $ modifyInsnExpr (fromRight . (resolveExpr prep)) insn
+  do prep <- gets preprocessorState
+     appendInsn $ modifyInsnExpr (fromRight . (resolveExpr prep)) insn
 compileStmt _ = return ()
 
 execCompiler :: PreprocessorState -> Compiler a -> CompilerState
