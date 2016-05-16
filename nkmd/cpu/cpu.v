@@ -77,6 +77,97 @@ assign jmprel_o = jmprel_ff;
 
 endmodule
 
+module nkmd_cpu_regfile(
+    input clk,
+    input rst,
+
+    input [`DCD_REGSEL_W-1:0] dcd_rssel_i,
+    input [`DCD_REGSEL_W-1:0] dcd_rtsel_i,
+    output [31:0] mem_rsval_o,
+    output [31:0] mem_rtval_o);
+
+reg [31:0] a_ff;
+reg [31:0] b_ff;
+reg [31:0] c_ff;
+reg [31:0] d_ff;
+reg [31:0] e_ff;
+reg [31:0] f_ff;
+reg [31:0] g_ff;
+reg [31:0] h_ff;
+reg [31:0] i_ff;
+reg [31:0] j_ff;
+reg [31:0] sl_ff;
+reg [31:0] sh_ff;
+reg [31:0] n_ff;
+
+function [31:0] nkmd_cpu_regfile_sel(
+    input [`DCD_REGSEL_W-1:0] sel,
+    input [31:0] a,
+    input [31:0] b,
+    input [31:0] c,
+    input [31:0] d,
+    input [31:0] e,
+    input [31:0] f,
+    input [31:0] g,
+    input [31:0] h,
+    input [31:0] i,
+    input [31:0] j,
+    input [31:0] sl,
+    input [31:0] sh,
+    input [31:0] n);
+begin
+    case (sel)
+    4'h0: nkmd_cpu_regfile_sel = 0;
+    4'h1: nkmd_cpu_regfile_sel = a;
+    4'h2: nkmd_cpu_regfile_sel = b;
+    4'h3: nkmd_cpu_regfile_sel = c;
+    4'h4: nkmd_cpu_regfile_sel = d;
+    4'h5: nkmd_cpu_regfile_sel = e;
+    4'h6: nkmd_cpu_regfile_sel = f;
+    4'h7: nkmd_cpu_regfile_sel = g;
+    4'h8: nkmd_cpu_regfile_sel = h;
+    4'h9: nkmd_cpu_regfile_sel = i;
+    4'ha: nkmd_cpu_regfile_sel = j;
+    4'hb: nkmd_cpu_regfile_sel = 32'hXXXX; // ra: ret addr
+    4'hc: nkmd_cpu_regfile_sel = sl;
+    4'hd: nkmd_cpu_regfile_sel = sh;
+    4'he: nkmd_cpu_regfile_sel = n;
+    4'hf: nkmd_cpu_regfile_sel = 32'hXXXX; // pc: program counter
+    endcase
+end
+endfunction
+
+reg [31:0] mem_rsval_ff;
+reg [31:0] mem_rtval_ff;
+always @(posedge clk) begin
+    mem_rsval_ff <= nkmd_cpu_regfile_sel(dcd_rssel_i,
+        a_ff, b_ff, c_ff, d_ff, e_ff, f_ff, g_ff, h_ff, i_ff, j_ff, sl_ff, sh_ff, n_ff);
+    mem_rtval_ff <= nkmd_cpu_regfile_sel(dcd_rtsel_i,
+        a_ff, b_ff, c_ff, d_ff, e_ff, f_ff, g_ff, h_ff, i_ff, j_ff, sl_ff, sh_ff, n_ff);
+end
+assign mem_rsval_o = mem_rsval_ff;
+assign mem_rtval_o = mem_rtval_ff;
+
+always @(posedge clk) begin
+    if (rst) begin
+        a_ff <= 31'd0;
+        b_ff <= 31'd0;
+        c_ff <= 31'd0;
+        d_ff <= 31'd0;
+        e_ff <= 31'd0;
+        f_ff <= 31'd0;
+        g_ff <= 31'd0;
+        h_ff <= 31'd0;
+        i_ff <= 31'd0;
+        j_ff <= 31'd0;
+        sl_ff <= 31'd0;
+        sh_ff <= 31'd0;
+        n_ff <= 31'd0;
+    end
+end
+
+endmodule
+
 module nkmd_cpu(
     input clk,
     input rst,
@@ -108,6 +199,14 @@ wire [`DCD_ALUSEL_W-1:0] dcd_mem_alusel;
 wire [`DCD_IMM_W-1:0] dcd_mem_imm;
 wire [`DCD_JMPREL_W-1:0] dcd_mem_jmprel;
 
+// DCD -> RF
+wire [`DCD_REGSEL_W-1:0] dcd_rf_rssel = dcd_mem_rssel;
+wire [`DCD_REGSEL_W-1:0] dcd_rf_rtsel = dcd_mem_rtsel;
+
+// RF -> MEM
+wire [31:0] rf_mem_rsval;
+wire [31:0] rf_mem_rtval;
+
 // WB -> IF
 wire [31:0] wb_if_next_pc;
 
@@ -129,5 +228,13 @@ nkmd_cpu_dcd nkmd_cpu_dcd(
     .alusel_o(dcd_mem_alusel),
     .imm_o(dcd_mem_imm),
     .jmprel_o(dcd_mem_jmprel));
+
+// RF: Register File
+nkmd_cpu_regfile nkmd_cpu_regfile(
+    .clk(clk), .rst(rst),
+    .dcd_rssel_i(dcd_rf_rssel),
+    .dcd_rtsel_i(dcd_rf_rtsel),
+    .mem_rsval_o(rf_mem_rsval),
+    .mem_rtval_o(rf_mem_rtval));
 
 endmodule
