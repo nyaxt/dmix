@@ -237,4 +237,24 @@ nkmd_cpu_regfile nkmd_cpu_regfile(
     .mem_rsval_o(rf_mem_rsval),
     .mem_rtval_o(rf_mem_rtval));
 
+// MEM: Memory fetch
+nkmd_cpu_mem nkmd_cpu_mem(
+    .clk(clk), .rst(rst),
+
+    .r_data_i(r_data_i),
+    .r_data_o(r_data_o),
+    .r_addr_o(r_addr_o),
+    .r_we_o(r_we_o),
+    .c_data_i(c_data_i),
+    .c_data_o(c_data_o),
+    .c_addc_o(c_addc_o),
+    .c_we_o(c_we_o),
+
+    .mem_r_addr_i(rf_mem_rsval),
+    .mem_r_read_en(dcd_mem_r_read_en),
+    .mem_r_data_o(mem_ex_sval),
+    .mem_c_addr_i(rf_mem_rtval),
+    .mem_c_read_en(dcd_mem_c_read_en),
+    .mem_c_data_o(mem_ex_tval));
+
 endmodule
