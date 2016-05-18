@@ -168,6 +168,43 @@ end
 
 endmodule
 
+module nkmd_cpu_mem(
+    input clk,
+    input rst,
+
+    // BUS R
+    input [31:0] r_data_i,
+    output [31:0] r_data_o,
+    output [31:0] r_addr_o,
+    output r_we_o,
+
+    // BUS C: RAM2
+    input [31:0] c_data_i,
+    output [31:0] c_data_o,
+    output [31:0] c_addr_o,
+    output c_we_o
+
+    // MEM stage
+    input [31:0] mem_r_addr_i,
+    input mem_r_read_en,
+    output [31:0] mem_r_data_o,
+    input [31:0] mem_c_addr_i,
+    input mem_c_read_en,
+    output [31:0] mem_c_data_o);
+
+// FIXME: would need arbitration with WB stage in future
+assign r_data_o = 32'b0; // FIXME
+assign r_addr_o = mem_r_addr_i;
+assign r_we_o = 1'b0;
+assign mem_r_data_o = r_data_i;
+
+assign c_data_o = 32'b0; // FIXME
+assign c_addr_o = mem_c_addr_i;
+assign c_we_o = 1'b0;
+assign mem_c_data_o = c_data_i;
+
+endmodule
+
 module nkmd_cpu(
     input clk,
     input rst,
@@ -206,6 +243,11 @@ wire [`DCD_REGSEL_W-1:0] dcd_rf_rtsel = dcd_mem_rtsel;
 // RF -> MEM
 wire [31:0] rf_mem_rsval;
 wire [31:0] rf_mem_rtval;
+
+// MEM -> EX
+wire [31:0] mem_ex_rsval;
+wire [31:0] mem_ex_rtval;
+wire [`DCD_ALUSEL_W-1:0] mem_ex_alusel;
 
 // WB -> IF
 wire [31:0] wb_if_next_pc;
@@ -247,7 +289,7 @@ nkmd_cpu_mem nkmd_cpu_mem(
     .r_we_o(r_we_o),
     .c_data_i(c_data_i),
     .c_data_o(c_data_o),
-    .c_addc_o(c_addc_o),
+    .c_addr_o(c_addr_o),
     .c_we_o(c_we_o),
 
     .mem_r_addr_i(rf_mem_rsval),
@@ -256,5 +298,15 @@ nkmd_cpu_mem nkmd_cpu_mem(
     .mem_c_addr_i(rf_mem_rtval),
     .mem_c_read_en(dcd_mem_c_read_en),
     .mem_c_data_o(mem_ex_tval));
+
+// EX: EXecute alu
+nkmd_cpu_ex nkmd_cpu_ex(
+    .clk(clk), .rst(rst),
+
+    .rsval_i(mem_ex_rsval),
+    .rtval_i(mem_ex_rtval),
+    .alusel_i(mem_ex_alusel),
+
+    
 
 endmodule
