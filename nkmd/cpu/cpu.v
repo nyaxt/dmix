@@ -205,6 +205,28 @@ assign mem_c_data_o = c_data_i;
 
 endmodule
 
+module nkmd_cpu_ex(
+    input clk,
+    input rst,
+    
+    input [31:0] val_i,
+
+    output [31:0] val_o,
+
+    // to regfile
+    output [`DCD_REGSEL_W-1:0] regex_sel_o,
+    output regex_write_en,
+
+    // to mem
+    output [31:0] memex_addr_o,
+    );
+
+always @(posedge clk) begin
+end
+
+endmodule
+
+
 module nkmd_cpu(
     input clk,
     input rst,
@@ -307,6 +329,6 @@ nkmd_cpu_ex nkmd_cpu_ex(
     .rtval_i(mem_ex_rtval),
     .alusel_i(mem_ex_alusel),
 
-    
+    .val_o(ex_wb_val));
 
 endmodule
