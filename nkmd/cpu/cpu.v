@@ -1,20 +1,5 @@
 `default_nettype none
 
-module nkmd_cpu_if(
-    input clk,
-    input rst,
-
-    input [31:0] p_data_i,
-    output [31:0] p_addr_o,
-
-    input [31:0] next_pc_i,
-    output [31:0] inst_o);
-
-assign p_addr_o = next_pc_i;
-assign inst_o = p_data_i ;
-
-endmodule
-
 `define DCD_REGSEL_W 4
 `define DCD_RSSEL 0
 `define DCD_RTSEL (`DCD_RSSEL + `DCD_REGSEL_W)
@@ -30,6 +15,30 @@ endmodule
 `define DCD_JMPREL (`DCD_IMM + `DCD_IMM_W)
 
 `define DCD_WIDTH (`DCD_JMPREL + `DCD_JMPREL_W)
+
+`define OP_ADD 3'h0
+`define OP_SUB 3'h1
+`define OP_OR 3'h2
+`define OP_AND 3'h3
+`define OP_XOR 3'h4
+`define OP_RESERVED 3'h5
+`define OP_CLAMP 3'h6
+`define OP_MUL 3'h7
+
+module nkmd_cpu_if(
+    input clk,
+    input rst,
+
+    input [31:0] p_data_i,
+    output [31:0] p_addr_o,
+
+    input [31:0] next_pc_i,
+    output [31:0] inst_o);
+
+assign p_addr_o = next_pc_i;
+assign inst_o = p_data_i ;
+
+endmodule
 
 module nkmd_cpu_dcd(
     input clk,
@@ -84,7 +93,10 @@ module nkmd_cpu_regfile(
     input [`DCD_REGSEL_W-1:0] dcd_rssel_i,
     input [`DCD_REGSEL_W-1:0] dcd_rtsel_i,
     output [31:0] mem_rsval_o,
-    output [31:0] mem_rtval_o);
+    output [31:0] mem_rtval_o,
+
+    input [`DCD_REGSEL_W-1:0] wb_sel_i,
+    input [31:0] wb_val_i);
 
 reg [31:0] a_ff;
 reg [31:0] b_ff;
@@ -150,19 +162,38 @@ assign mem_rtval_o = mem_rtval_ff;
 
 always @(posedge clk) begin
     if (rst) begin
-        a_ff <= 31'd0;
-        b_ff <= 31'd0;
-        c_ff <= 31'd0;
-        d_ff <= 31'd0;
-        e_ff <= 31'd0;
-        f_ff <= 31'd0;
-        g_ff <= 31'd0;
-        h_ff <= 31'd0;
-        i_ff <= 31'd0;
-        j_ff <= 31'd0;
-        sl_ff <= 31'd0;
-        sh_ff <= 31'd0;
-        n_ff <= 31'd0;
+        a_ff <= 32'd0;
+        b_ff <= 32'd0;
+        c_ff <= 32'd0;
+        d_ff <= 32'd0;
+        e_ff <= 32'd0;
+        f_ff <= 32'd0;
+        g_ff <= 32'd0;
+        h_ff <= 32'd0;
+        i_ff <= 32'd0;
+        j_ff <= 32'd0;
+        sl_ff <= 32'd0;
+        sh_ff <= 32'd0;
+        n_ff <= 32'd0;
+    end else begin
+        case (wb_sel_i)
+        4'h0: /* NOP */;
+        4'h1: a_ff <= wb_val_i;
+        4'h2: b_ff <= wb_val_i;
+        4'h3: c_ff <= wb_val_i;
+        4'h4: d_ff <= wb_val_i;
+        4'h5: e_ff <= wb_val_i;
+        4'h6: f_ff <= wb_val_i;
+        4'h7: g_ff <= wb_val_i;
+        4'h8: h_ff <= wb_val_i;
+        4'h9: i_ff <= wb_val_i;
+        4'ha: j_ff <= wb_val_i;
+        4'hb: /* NOP */; // ra: ret addr
+        4'hc: sl_ff <= wb_val_i;
+        4'hd: sh_ff <= wb_val_i;
+        4'he: n_ff <= wb_val_i;
+        4'hf: /* NOP */; // pc: program counter
+        endcase
     end
 end
 
@@ -182,7 +213,7 @@ module nkmd_cpu_mem(
     input [31:0] c_data_i,
     output [31:0] c_data_o,
     output [31:0] c_addr_o,
-    output c_we_o
+    output c_we_o,
 
     // MEM stage
     input [31:0] mem_r_addr_i,
@@ -208,21 +239,63 @@ endmodule
 module nkmd_cpu_ex(
     input clk,
     input rst,
-    
-    input [31:0] val_i,
 
-    output [31:0] val_o,
+    input [31:0] rsval_i,
+    input [31:0] rtval_i,
+    input [`DCD_ALUSEL-1:0] alusel_i,
 
-    // to regfile
-    output [`DCD_REGSEL_W-1:0] regex_sel_o,
-    output regex_write_en,
-
-    // to mem
-    output [31:0] memex_addr_o,
+    output [`DCD_REGSEL_W-1:0] regsel_o,
+    output [31:0] val_o
     );
 
+reg [31:0] val_ff;
+assign val_o = val_ff;
+
 always @(posedge clk) begin
+    if (rst) begin
+        val_ff <= 32'h0;
+    end else begin
+        case (alusel_i)
+        `OP_ADD:
+            val_ff <= rsval_i + rtval_i;
+        `OP_SUB:
+            val_ff <= rsval_i - rtval_i;
+        `OP_OR:
+            val_ff <= rsval_i | rtval_i;
+        `OP_AND:
+            val_ff <= rsval_i & rtval_i;
+        `OP_XOR:
+            val_ff <= rsval_i ^ rtval_i;
+        `OP_RESERVED, `OP_CLAMP, `OP_MUL:
+            val_ff <= 32'h0;
+        // FIXME: OP_CLAMP OP_MUL
+        endcase
+    end
 end
+
+reg [`DCD_REGSEL_W-1:0] regsel_ff;
+assign regsel_o = regsel_ff;
+// FIXME
+
+endmodule
+
+module nkmd_cpu_wb(
+    input clk,
+    input rst,
+    
+    input [`DCD_REGSEL_W-1:0] regsel_i,
+    input [31:0] val_i,
+
+    // to regfile
+    output [`DCD_REGSEL_W-1:0] rf_regsel_o,
+    output [31:0] rf_val_o,
+
+    /* FIXME
+    // to memaa
+    output [31:0] memex_addr_o */);
+
+assign rf_regsel_o = regsel_i;
+assign rf_val_o = val_i;
 
 endmodule
 
@@ -247,6 +320,8 @@ module nkmd_cpu(
     output [31:0] c_addr_o,
     output c_we_o);
 
+// *** Inter-stage wires ***
+
 // IF -> DCD: Instruction Fetch -> DeCoDe
 wire [31:0] if_dcd_inst;
 
@@ -258,6 +333,20 @@ wire [`DCD_ALUSEL_W-1:0] dcd_mem_alusel;
 wire [`DCD_IMM_W-1:0] dcd_mem_imm;
 wire [`DCD_JMPREL_W-1:0] dcd_mem_jmprel;
 
+// MEM -> EX
+wire [31:0] mem_ex_rsval;
+wire [31:0] mem_ex_rtval;
+wire [`DCD_ALUSEL_W-1:0] mem_ex_alusel;
+
+// EX -> WB
+wire [`DCD_REGSEL_W-1:0] ex_wb_regsel;
+wire [31:0] ex_wb_val;
+
+// WB -> IF
+wire [31:0] wb_if_next_pc;
+
+// *** Multistage components' wires ***
+
 // DCD -> RF
 wire [`DCD_REGSEL_W-1:0] dcd_rf_rssel = dcd_mem_rssel;
 wire [`DCD_REGSEL_W-1:0] dcd_rf_rtsel = dcd_mem_rtsel;
@@ -266,13 +355,11 @@ wire [`DCD_REGSEL_W-1:0] dcd_rf_rtsel = dcd_mem_rtsel;
 wire [31:0] rf_mem_rsval;
 wire [31:0] rf_mem_rtval;
 
-// MEM -> EX
-wire [31:0] mem_ex_rsval;
-wire [31:0] mem_ex_rtval;
-wire [`DCD_ALUSEL_W-1:0] mem_ex_alusel;
+// WB -> RF
+wire [`DCD_REGSEL_W-1:0] wb_rf_regsel;
+wire [31:0] wb_rf_val;
 
-// WB -> IF
-wire [31:0] wb_if_next_pc;
+// *** Pipeline stages ***
 
 // IF: Instruction Fetch
 nkmd_cpu_if nkmd_cpu_if(
@@ -292,14 +379,6 @@ nkmd_cpu_dcd nkmd_cpu_dcd(
     .alusel_o(dcd_mem_alusel),
     .imm_o(dcd_mem_imm),
     .jmprel_o(dcd_mem_jmprel));
-
-// RF: Register File
-nkmd_cpu_regfile nkmd_cpu_regfile(
-    .clk(clk), .rst(rst),
-    .dcd_rssel_i(dcd_rf_rssel),
-    .dcd_rtsel_i(dcd_rf_rtsel),
-    .mem_rsval_o(rf_mem_rsval),
-    .mem_rtval_o(rf_mem_rtval));
 
 // MEM: Memory fetch
 nkmd_cpu_mem nkmd_cpu_mem(
@@ -329,6 +408,33 @@ nkmd_cpu_ex nkmd_cpu_ex(
     .rtval_i(mem_ex_rtval),
     .alusel_i(mem_ex_alusel),
 
+    .regsel_o(ex_wb_regsel),
     .val_o(ex_wb_val));
+
+// WB: WriteBack to mem or regfile
+nkmd_cpu_wb nkmd_cpu_wb(
+    .clk(clk), .rst(rst),
+
+    .regsel_i(ex_wb_regsel),
+    .val_i(ex_wb_val),
+
+    .rf_regsel_o(wb_rf_regsel),
+    .rf_val_o(wb_rf_val));
+
+// *** Multistage components ***
+
+// RF: Register File
+nkmd_cpu_regfile nkmd_cpu_regfile(
+    .clk(clk), .rst(rst),
+
+    .dcd_rssel_i(dcd_rf_rssel),
+    .dcd_rtsel_i(dcd_rf_rtsel),
+    .mem_rsval_o(rf_mem_rsval),
+    .mem_rtval_o(rf_mem_rtval),
+
+    .wb_sel_i(wb_rf_regsel),
+    .wb_val_i(wb_rf_val));
+
+// MEMAA: MEMory Access Arbitrator
 
 endmodule
