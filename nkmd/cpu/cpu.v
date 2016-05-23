@@ -438,6 +438,16 @@ nkmd_cpu_wb nkmd_cpu_wb(
 
 // *** Multistage components ***
 
+// SEQ: SEQuencer
+nkmd_cpu_seq nkmd_cpu_seq(
+    .clk(clk), .rst(rst),
+
+    .rf_regn_is_zero_i(rf_seq_regn_is_zero),
+    .dcd_repn_i(dcd_seq_repn),
+
+    .if_stop_inc_o(seq_if_stop_inc),
+    .dcd_latch_curr_output_o(seq_dcd_latch_curr_output));
+
 // RF: Register File
 nkmd_cpu_regfile nkmd_cpu_regfile(
     .clk(clk), .rst(rst),
