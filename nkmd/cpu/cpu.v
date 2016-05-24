@@ -16,8 +16,9 @@
 
 `define DCD_R_READEN (`DCD_JMPREL + `DCD_JMPREL_W)
 `define DCD_C_READEN (`DCD_R_READEN + 1)
+`define DEC_REPN (`DCD_C_READEN + 1)
 
-`define DCD_WIDTH (`DCD_C_READEN + 1)
+`define DCD_WIDTH (`DEC_REPN + 1)
 
 `define OP_ADD 3'h0
 `define OP_SUB 3'h1
@@ -35,11 +36,25 @@ module nkmd_cpu_if(
     input [31:0] p_data_i,
     output [31:0] p_addr_o,
 
-    input [31:0] next_pc_i,
+    input seq_stop_inc_pc_i,
+    input [31:0] jmp_pc_i,
+    input jmp_pc_en_i,
     output [31:0] inst_o);
 
-assign p_addr_o = next_pc_i;
-assign inst_o = p_data_i ;
+assign p_addr_o = jmp_pc_i;
+assign inst_o = p_data_i;
+
+reg [31:0] pc_ff;
+always @(posedge clk) begin
+    if (rst) begin
+        pc_ff <= 32'h0;
+    end else begin
+        if (jmp_pc_en_i)
+            pc_ff <= jmp_pc_i;
+        else if (!seq_stop_inc_pc_i)
+            pc_ff <= pc_ff + 1;
+    end
+end
 
 endmodule
 
@@ -56,7 +71,8 @@ module nkmd_cpu_dcd(
     output [`DCD_IMM_W-1:0] imm_o,
     output [`DCD_JMPREL_W-1:0] jmprel_o,
     output r_read_en_o,
-    output c_read_en_o);
+    output c_read_en_o,
+    output repn_o);
 
 reg [`DCD_REGSEL_W-1:0] rssel_ff;
 reg [`DCD_REGSEL_W-1:0] rtsel_ff;
@@ -64,15 +80,18 @@ reg [`DCD_REGSEL_W-1:0] rdsel_ff;
 reg [`DCD_ALUSEL_W-1:0] alusel_ff;
 reg [`DCD_IMM_W-1:0] imm_ff;
 reg [`DCD_JMPREL_W-1:0] jmprel_ff;
-reg r_read_en;
-reg c_read_en;
+reg r_read_en_ff;
+reg c_read_en_ff;
+reg repn_ff;
 
 function [`DCD_WIDTH-1:0] nkmd_cpu_dcd_func(
     input [31:0] inst_i);
 
+reg jmpen;
 reg immen;
 
 begin
+    jmpen = inst_i[31];
     immen = inst_i[16];
     nkmd_cpu_dcd_func[`DCD_RSSEL+`DCD_REGSEL_W-1:`DCD_RSSEL] = inst_i[20:17];
     nkmd_cpu_dcd_func[`DCD_RTSEL+`DCD_REGSEL_W-1:`DCD_RTSEL] = inst_i[11:8];
@@ -80,13 +99,14 @@ begin
     nkmd_cpu_dcd_func[`DCD_ALUSEL+`DCD_ALUSEL_W-1:`DCD_ALUSEL] = inst_i[23:21];
     nkmd_cpu_dcd_func[`DCD_IMM+`DCD_IMM_W-1:`DCD_IMM] = {{17{inst_i[15]}}, inst_i[14:0]};
     nkmd_cpu_dcd_func[`DCD_JMPREL+`DCD_JMPREL_W-1:`DCD_JMPREL] = {{25{inst_i[15]}}, inst_i[7:0]};
-    nkmd_cpu_dcd_func[`DCD_R_READEN] = {immen == 1'b0} && inst_i[1];
-    nkmd_cpu_dcd_func[`DCD_C_READEN] = {immen == 1'b0} && inst_i[0];
+    nkmd_cpu_dcd_func[`DCD_R_READEN] = !jmpen && !immen && inst_i[1];
+    nkmd_cpu_dcd_func[`DCD_C_READEN] = !jmpen && !immen && inst_i[0];
+    nkmd_cpu_dcd_func[`DEC_REPN] = !jmpen && !immen && inst_i[12];
 end
 endfunction
 
 always @(posedge clk) begin
-    {rssel_ff, rtsel_ff, rdsel_ff, alusel_ff, imm_ff, jmprel_ff, r_read_en, c_read_en} <= nkmd_cpu_dcd_func(inst_i);
+    {rssel_ff, rtsel_ff, rdsel_ff, alusel_ff, imm_ff, jmprel_ff, r_read_en_ff, c_read_en_ff} <= nkmd_cpu_dcd_func(inst_i);
 end
 
 assign rssel_o = rssel_ff;
@@ -102,13 +122,16 @@ module nkmd_cpu_regfile(
     input clk,
     input rst,
 
+    input dcd_decn_i,
     input [`DCD_REGSEL_W-1:0] dcd_rssel_i,
     input [`DCD_REGSEL_W-1:0] dcd_rtsel_i,
     output [31:0] mem_rsval_o,
     output [31:0] mem_rtval_o,
 
     input [`DCD_REGSEL_W-1:0] wb_sel_i,
-    input [31:0] wb_val_i);
+    input [31:0] wb_val_i,
+
+    output seq_regn_is_zero_o);
 
 reg [31:0] a_ff;
 reg [31:0] b_ff;
@@ -203,11 +226,31 @@ always @(posedge clk) begin
         4'hb: /* NOP */; // ra: ret addr
         4'hc: sl_ff <= wb_val_i;
         4'hd: sh_ff <= wb_val_i;
-        4'he: n_ff <= wb_val_i;
+        4'he: /* NOP */; // handled below
         4'hf: /* NOP */; // pc: program counter
         endcase
+
+        if (wb_sel_i == 4'he)
+            n_ff <= wb_val_i;
+        else if (dcd_decn_i == 1'b1)
+            n_ff <= n_ff - 1;
     end
 end
+
+reg regn_is_zero_ff;
+always @(posedge clk) begin
+    if (rst) begin
+        regn_is_zero_ff <= 1'b1;
+    end else begin
+        if (wb_sel_i == 4'he)
+            regn_is_zero_ff <= (wb_val_i == 32'b0);
+        else if (dcd_decn_i == 1'b1)
+            regn_is_zero_ff <= (n_ff - 1 == 0);
+        else
+            regn_is_zero_ff <= (n_ff == 0);
+    end
+end
+assign seq_regn_is_zero_o = regn_is_zero_ff;
 
 endmodule
 
@@ -311,6 +354,20 @@ assign rf_val_o = val_i;
 
 endmodule
 
+module nkmd_cpu_seq(
+    input rf_regn_is_zero_i,
+    input dcd_repn_i,
+
+    output if_stop_inc_pc_o,
+    output dcd_latch_curr_output_o);
+
+wire stall = (dcd_repn_i == 1'b1) && (rf_regn_is_zero_i == 1'b0);
+
+assign if_stop_inc_pc_o = stall;
+assign dcd_latch_curr_output_o = stall;
+
+endmodule
+
 module nkmd_cpu(
     input clk,
     input rst,
@@ -356,13 +413,15 @@ wire [`DCD_REGSEL_W-1:0] ex_wb_regsel;
 wire [31:0] ex_wb_val;
 
 // WB -> IF
-wire [31:0] wb_if_next_pc;
+wire [31:0] wb_if_jmp_pc;
+wire wb_if_jmp_pc_en;
 
 // *** Multistage components' wires ***
 
 // DCD -> RF
 wire [`DCD_REGSEL_W-1:0] dcd_rf_rssel = dcd_mem_rssel;
 wire [`DCD_REGSEL_W-1:0] dcd_rf_rtsel = dcd_mem_rtsel;
+wire dcd_rf_decn;
 
 // RF -> MEM
 wire [31:0] rf_mem_rsval;
@@ -372,6 +431,18 @@ wire [31:0] rf_mem_rtval;
 wire [`DCD_REGSEL_W-1:0] wb_rf_regsel;
 wire [31:0] wb_rf_val;
 
+// RF -> SEQ
+wire rf_seq_regn_is_zero;
+
+// DCD -> SEQ
+wire dcd_seq_repn;
+
+// SEQ -> IF
+wire seq_if_stop_inc_pc;
+
+// SEQ -> DCD
+wire seq_dcd_latch_curr_output;
+
 // *** Pipeline stages ***
 
 // IF: Instruction Fetch
@@ -379,10 +450,13 @@ nkmd_cpu_if nkmd_cpu_if(
     .clk(clk), .rst(rst),
     .p_data_i(p_data_i),
     .p_addr_o(p_addr_o),
-    .next_pc_i(wb_if_next_pc),
+    .seq_stop_inc_pc_i(seq_if_stop_inc_pc),
+    .jmp_pc_i(wb_if_jmp_pc),
+    .jmp_pc_en_i(wb_if_jmp_pc_en),
     .inst_o(if_dcd_inst));
 
 // DCD: instruction DeCoDe
+wire dcd_repn_o;
 nkmd_cpu_dcd nkmd_cpu_dcd(
     .clk(clk), .rst(rst),
     .inst_i(if_dcd_inst),
@@ -393,7 +467,10 @@ nkmd_cpu_dcd nkmd_cpu_dcd(
     .imm_o(dcd_mem_imm),
     .jmprel_o(dcd_mem_jmprel),
     .r_read_en_o(dcd_mem_r_read_en),
-    .c_read_en_o(dcd_mem_c_read_en));
+    .c_read_en_o(dcd_mem_c_read_en),
+    .repn_o(dcd_repn_o));
+assign dcd_rf_decn = dcd_repn_o;
+assign dcd_seq_repn = dcd_repn_o;
 
 // MEM: Memory fetch
 nkmd_cpu_mem nkmd_cpu_mem(
@@ -440,25 +517,28 @@ nkmd_cpu_wb nkmd_cpu_wb(
 
 // SEQ: SEQuencer
 nkmd_cpu_seq nkmd_cpu_seq(
-    .clk(clk), .rst(rst),
+    /* .clk(clk), .rst(rst), */
 
     .rf_regn_is_zero_i(rf_seq_regn_is_zero),
     .dcd_repn_i(dcd_seq_repn),
 
-    .if_stop_inc_o(seq_if_stop_inc),
+    .if_stop_inc_pc_o(seq_if_stop_inc_pc),
     .dcd_latch_curr_output_o(seq_dcd_latch_curr_output));
 
 // RF: Register File
 nkmd_cpu_regfile nkmd_cpu_regfile(
     .clk(clk), .rst(rst),
 
+    .dcd_decn_i(dcd_rf_decn),
     .dcd_rssel_i(dcd_rf_rssel),
     .dcd_rtsel_i(dcd_rf_rtsel),
     .mem_rsval_o(rf_mem_rsval),
     .mem_rtval_o(rf_mem_rtval),
 
     .wb_sel_i(wb_rf_regsel),
-    .wb_val_i(wb_rf_val));
+    .wb_val_i(wb_rf_val),
+
+    .seq_regn_is_zero_o(rf_seq_regn_is_zero));
 
 // MEMAA: MEMory Access Arbitrator
 
