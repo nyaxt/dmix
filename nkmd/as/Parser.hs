@@ -52,8 +52,8 @@ regSel =
   (reserved "e" >> return Re) <|>
   (reserved "c" >> return Rf) <?> "register"
 
-imm :: Parser Integer
-imm = P.natural lexer
+-- imm :: Parser Integer
+-- imm = P.natural lexer
 
 regImm :: Parser (Either RegSel Expr)
 regImm = liftM Left regSel <|> liftM Right expr
@@ -117,10 +117,10 @@ rAssignInsn =
      when (memr /= MNone)
           (reservedOp "]")
      reservedOp ";"
-     return Insn {memr = memr
-                 ,memw = MNone
-                 ,rd = rd
-                 ,alue = alue}
+     return ArithInsn {memr = memr
+                      ,memw = MNone
+                      ,rd = rd
+                      ,alue = alue}
 
 mAssignInsn :: Parser Insn
 mAssignInsn = 
@@ -130,20 +130,18 @@ mAssignInsn =
      reservedOp "="
      rd <- regSel
      reservedOp ";"
-     return Insn {memr = MNone
-                 ,memw = memw
-                 ,rd = rd
-                 ,alue = alue}
+     return ArithInsn {memr = MNone
+                      ,memw = memw
+                      ,rd = rd
+                      ,alue = alue}
 
 jmpInsn :: Parser Insn
 jmpInsn =
   do reserved "jmp"
      l <- identifier
      reservedOp ";"
-     return Insn {memr = MNone
-                 ,memw = MNone
-		 ,rd = Rpc
-		 ,alue = AluExpr OpAdd Rc0 (Right (ExprRef l))}
+     return CntlFInsn {rd = Rc0
+                      ,imm = Just 123}
 
 insn :: Parser Insn
 insn = choice [rAssignInsn,mAssignInsn,jmpInsn]

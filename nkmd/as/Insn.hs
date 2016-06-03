@@ -59,18 +59,27 @@ show1 MC = "C"
 show1 MNone = "-"
 
 data Insn =
-  Insn {memw :: MemSel
-       ,memr :: MemSel
-       ,rd :: RegSel
-       ,alue :: AluExprT}
+  ArithInsn {memw :: MemSel
+            ,memr :: MemSel
+            ,rd :: RegSel
+            ,alue :: AluExprT} |
+  CntlFInsn {rd :: RegSel
+            ,imm :: Maybe Integer
+            -- ,linked :: Bool
+            -- ,rs :: RegSel
+            -- ,rt :: RegSel
+            }
 
 instance Show Insn where
-  show (Insn{memw = w,memr = r,rd = d,alue = a}) = 
-    "Insn{M[" ++
+  show (ArithInsn{memw = w,memr = r,rd = d,alue = a}) = 
+    "ArithInsn{M[" ++
     (show1 w) ++ (show1 r) ++ "] " ++ (show d) ++ " " ++ (show a) ++ "}"
+  show (CntlFInsn{rd = rd, imm = imm}) =
+    "CntlFInsn{rd=" ++ (show rd) ++ ", imm=" ++ (show imm) ++ "}"
 
 modifyInsnExpr :: (Expr -> Expr) -> Insn -> Insn
-modifyInsnExpr f i = i { alue = (modifyAlueExpr f (alue i)) }
+modifyInsnExpr f i@ArithInsn{} = i { alue = (modifyAlueExpr f (alue i)) }
+modifyInsnExpr f i@CntlFInsn{} = i
 
 -- instance Show Insn where
 --   show (Insn {memw = False, memr = False, dsel = dsel, alue = alue}) =
