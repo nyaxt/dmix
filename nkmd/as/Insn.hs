@@ -64,7 +64,7 @@ data Insn =
             ,rd :: RegSel
             ,alue :: AluExprT} |
   CntlFInsn {rd :: RegSel
-            ,imm :: Maybe Integer
+            ,imm :: Expr
             -- ,linked :: Bool
             -- ,rs :: RegSel
             -- ,rt :: RegSel
@@ -79,15 +79,6 @@ instance Show Insn where
 
 modifyInsnExpr :: (Expr -> Expr) -> Insn -> Insn
 modifyInsnExpr f i@ArithInsn{} = i { alue = (modifyAlueExpr f (alue i)) }
-modifyInsnExpr f i@CntlFInsn{} = i
+modifyInsnExpr f i@CntlFInsn{} = i { imm = (f (imm i)) }
 
--- instance Show Insn where
---   show (Insn {memw = False, memr = False, dsel = dsel, alue = alue}) =
---     show dsel++" <- "++show alue
---   show (Insn {memw = False, memr = True, dsel = dsel, alue = alue}) =
---     show dsel++" <- ["++show alue++"]"
---   show (Insn {memw = True, memr = False, dsel = dsel, alue = alue}) =
---     "["++show alue++"] <- "++show dsel
---   show (Insn {memw = True, memr = True, dsel = dsel, alue = alue}) =
---     "Insn {memw = True, memr = True}" -- Error!!
 type Object = [Insn]

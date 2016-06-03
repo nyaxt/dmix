@@ -59,7 +59,7 @@ regImm :: Parser (Either RegSel Expr)
 regImm = liftM Left regSel <|> liftM Right expr
 
 loadExpr :: Parser AluExprT
-loadExpr = 
+loadExpr =
   do bsel <- regImm
      return $ AluExpr OpAdd Rc0 bsel
   <?> "loadExpr"
@@ -138,10 +138,10 @@ mAssignInsn =
 jmpInsn :: Parser Insn
 jmpInsn =
   do reserved "jmp"
-     l <- identifier
+     e <- expr
      reservedOp ";"
      return CntlFInsn {rd = Rc0
-                      ,imm = Just 123}
+                      ,imm = e}
 
 insn :: Parser Insn
 insn = choice [rAssignInsn,mAssignInsn,jmpInsn]
@@ -165,7 +165,7 @@ stmt :: Parser Stmt
 stmt = choice [(liftM StInsn insn), labelp, constp]
 
 nkmm :: Parser Program
-nkmm = 
+nkmm =
   do is <- many1 stmt
      eof
      return is

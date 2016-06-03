@@ -1,6 +1,7 @@
 module Mnemonic where
 
 import Insn
+import Expr
 import Data.Bits
 import Data.Word (Word32)
 
@@ -40,9 +41,8 @@ regSelBits Rd = 0x4
 regSelBits Re = 0x5
 regSelBits Rf = 0x6
 
-immBits :: Maybe Integer -> Word32
-immBits Nothing = 0
-immBits (Just n) = (b1 `shiftL` 16) .|. ((fromInteger n :: Word32) .&. 0xffff)
+immBits :: Integer -> Word32
+immBits n = (b1 `shiftL` 16) .|. ((fromInteger n :: Word32) .&. 0xffff)
 
 {-
 assembleBSel :: (Either RegSel Integer) -> Word32
@@ -59,5 +59,5 @@ assemble Insn{memw = w,memr = r,rd = d,alue = alue} =
   (memwrBits w r) .|. ((regSelBits d) `shiftL` 26) .|. assembleAluE alue
 -}
 assemble :: Insn -> Word32
-assemble i@CntlFInsn{} = (b1 `shiftL` 31) .|. ((regSelBits (rd i)) `shiftL` 24) .|. (immBits (imm i))
+assemble i@CntlFInsn{imm = (ExprInteger n)} = (b1 `shiftL` 31) .|. ((regSelBits (rd i)) `shiftL` 24) .|. (immBits n)
 assemble _ = 0xdead
