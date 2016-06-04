@@ -10,6 +10,9 @@ data RegSel
   | Rd 
   | Re 
   | Rf 
+  | Rg 
+  | Rh
+  | Ri
   | Rpc
 
 instance Show RegSel where
@@ -20,6 +23,9 @@ instance Show RegSel where
   show Rd = "d"
   show Re = "e"
   show Rf = "f"
+  show Rg = "g"
+  show Rh = "h"
+  show Ri = "i"
   show Rpc = "PC"
 
 data AluSel
@@ -32,21 +38,6 @@ data AluSel
   | OpClamp
   | OpMul 
   deriving Show
-
-data AluExprT =
-  AluExpr AluSel
-          RegSel
-          (Either RegSel Expr)
-
-instance Show AluExprT where
-  show (AluExpr alu rs (Left rt)) = 
-    (show alu) ++ "(" ++ (show rs) ++ ", " ++ (show rt) ++ ")"
-  show (AluExpr alu rs (Right imm)) = 
-    (show alu) ++ "(" ++ (show rs) ++ ", imm " ++ (show imm) ++ ")"
-
-modifyAlueExpr :: (Expr -> Expr) -> AluExprT -> AluExprT
-modifyAlueExpr f (AluExpr asel rsel (Right e)) = AluExpr asel rsel (Right (f e))
-modifyAlueExpr _ alue = alue
 
 data MemSel
   = MNone 
@@ -63,9 +54,12 @@ show1 MNone = "-"
 
 data Insn =
   ArithInsn {memw :: MemSel
-            ,memr :: MemSel
-            ,rd :: RegSel
-            ,alue :: AluExprT} |
+            ,alusel :: AluSel
+            ,s :: RegSel
+            ,t :: (Either RegSel Expr)
+            ,memrs :: MemSel
+            ,memrt :: MemSel
+            ,rd :: RegSel} |
   CntlFInsn {rd :: RegSel
             ,imm :: Expr
             -- ,linked :: Bool
@@ -73,15 +67,20 @@ data Insn =
             -- ,rt :: RegSel
             }
 
+showT :: Either RegSel Expr -> String
+showT (Left l) = show l
+showT (Right r) = show r
+
 instance Show Insn where
-  show (ArithInsn{memw = w,memr = r,rd = d,alue = a}) = 
+  show (i@ArithInsn{}) = 
     "ArithInsn{M[" ++
-    (show1 w) ++ (show1 r) ++ "] " ++ (show d) ++ " " ++ (show a) ++ "}"
+    (show1 (memw i)) ++ (show1 (memrs i)) ++ (show1 (memrt i)) ++ "] d=" ++ (show (rd i)) ++ " alu=" ++ (show (alusel i)) ++ " s=" ++ (show (s i)) ++ " memrs=" ++ (show (memrs i)) ++ " t=" ++ (showT (t i)) ++ " memrt=" ++ (show (memrt i)) ++ "}"
   show (CntlFInsn{rd = rd, imm = imm}) =
     "CntlFInsn{rd=" ++ (show rd) ++ ", imm=" ++ (show imm) ++ "}"
 
 modifyInsnExpr :: (Expr -> Expr) -> Insn -> Insn
-modifyInsnExpr f i@ArithInsn{} = i { alue = (modifyAlueExpr f (alue i)) }
-modifyInsnExpr f i@CntlFInsn{} = i { imm = (f (imm i)) }
+modifyInsnExpr f i@ArithInsn{t = (Right e)} = i {t = Right (f e)}
+modifyInsnExpr f i@CntlFInsn{} = i {imm = (f (imm i))}
+modifyInsnExpr _ i = i
 
 type Object = [Insn]

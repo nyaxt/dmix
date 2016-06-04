@@ -95,11 +95,14 @@ function [`DCD_WIDTH-1:0] nkmd_cpu_dcd_func(
     input [31:0] inst_i);
 
 reg jmpen;
+reg memrw;
 reg immen;
 
 begin
     jmpen = inst_i[31];
+    memrw = inst_i[30];
     immen = inst_i[16];
+
     nkmd_cpu_dcd_func[`DCD_RSSEL+`DCD_REGSEL_W-1:`DCD_RSSEL] = inst_i[20:17];
     nkmd_cpu_dcd_func[`DCD_RTSEL+`DCD_REGSEL_W-1:`DCD_RTSEL] = inst_i[11:8];
     nkmd_cpu_dcd_func[`DCD_RDSEL+`DCD_REGSEL_W-1:`DCD_RDSEL] = inst_i[27:24];

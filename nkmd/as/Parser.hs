@@ -45,12 +45,16 @@ expr =
 
 regSel :: Parser RegSel
 regSel = 
-  (reserved "c0" >> return Rc0) <|> (reserved "a" >> return Ra) <|>
+  (reserved "c0" >> return Rc0) <|>
+  (reserved "a" >> return Ra) <|>
   (reserved "b" >> return Rb) <|>
   (reserved "c" >> return Rc) <|>
   (reserved "d" >> return Rd) <|>
   (reserved "e" >> return Re) <|>
-  (reserved "c" >> return Rf) <?> "register"
+  (reserved "f" >> return Rf) <|>
+  (reserved "g" >> return Rg) <|>
+  (reserved "h" >> return Rh) <|>
+  (reserved "i" >> return Ri) <?> "register"
 
 -- imm :: Parser Integer
 -- imm = P.natural lexer
@@ -58,6 +62,7 @@ regSel =
 regImm :: Parser (Either RegSel Expr)
 regImm = liftM Left regSel <|> liftM Right expr
 
+{-
 loadExpr :: Parser AluExprT
 loadExpr =
   do bsel <- regImm
@@ -98,42 +103,48 @@ aluExpr =
                OpXor) <|>
   notExpr <|>
   loadExpr
+-}
+
+aluSel :: Parser AluSel
+aluSel = (reservedOp "+" >> return OpAdd) <|>
+         (reservedOp "-" >> return OpSub) <|>
+         (reservedOp "|" >> return OpOr) <|>
+         (reservedOp "&" >> return OpAnd) <|>
+         (reservedOp "^" >> return OpXor)
 
 memSel :: Parser MemSel
-memSel = (reserved "R" >> return MR) <|> (reserved "C" >> return MC)
+memSel = (reserved "R" >> return MR) <|> (reserved "T" >> return MT) <|> (reserved "C" >> return MC)
 
-memrLBracket :: Parser MemSel
-memrLBracket = 
+memLBracket :: Parser MemSel
+memLBracket = 
   do m <- memSel
      reservedOp "["
      return m
 
-rAssignInsn :: Parser Insn
-rAssignInsn = 
-  do rd <- regSel
+arithInsn :: Parser Insn
+arithInsn = 
+  do memw <- option MNone memLBracket
+     rd <- regSel
+     when (memw /= MNone)
+          (reservedOp "]")
      reservedOp "="
-     memr <- option MNone memrLBracket
-     alue <- aluExpr
-     when (memr /= MNone)
+     memrs <- option MNone memLBracket
+     s <- regSel
+     when (memrs /= MNone)
+          (reservedOp "]")
+     alusel <- aluSel
+     memrt <- option MNone memLBracket
+     t <- regImm
+     when (memrt /= MNone)
           (reservedOp "]")
      reservedOp ";"
-     return ArithInsn {memr = memr
-                      ,memw = MNone
-                      ,rd = rd
-                      ,alue = alue}
-
-mAssignInsn :: Parser Insn
-mAssignInsn = 
-  do memw <- memrLBracket
-     alue <- aluExpr
-     reservedOp "]"
-     reservedOp "="
-     rd <- regSel
-     reservedOp ";"
-     return ArithInsn {memr = MNone
-                      ,memw = memw
-                      ,rd = rd
-                      ,alue = alue}
+     return ArithInsn {memw = memw
+                      ,alusel = alusel
+		      ,s = s
+		      ,t = t
+                      ,memrs = memrs
+                      ,memrt = memrt
+                      ,rd = rd}
 
 jmpInsn :: Parser Insn
 jmpInsn =
@@ -144,7 +155,7 @@ jmpInsn =
                       ,imm = e}
 
 insn :: Parser Insn
-insn = choice [rAssignInsn,mAssignInsn,jmpInsn]
+insn = choice [arithInsn,jmpInsn]
 
 labelp :: Parser Stmt
 labelp = 

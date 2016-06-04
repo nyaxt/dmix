@@ -21,10 +21,19 @@ memSelBits MR = 0x1
 memSelBits MT = 0x2
 memSelBits MC = 0x3
 
-memwrBits :: MemSel -> MemSel -> Word32
-memwrBits MNone MNone = 0x0
-memwrBits w MNone = (b1 `shiftL` 30) .|. ((memSelBits w) `shiftL` 28)
-memwrBits MNone r = (b0 `shiftL` 30) .|. ((memSelBits r) `shiftL` 28)
+memwBits :: MemSel -> Word32
+memwBits w = (memSelBits w) `shiftL` 29
+
+memrsBits :: MemSel -> Word32
+memrsBits MNone = 0x0
+memrsBits MC = (b1 `shiftL` 0)
+memrsBits _ = 0xdead
+
+memrtBits :: MemSel -> Word32
+memrtBits MNone = 0x0
+memrtBits MR = (b1 `shiftL` 28)
+memrtBits MT = (b1 `shiftL` 28) .|. (b1 `shiftL` 1)
+memrtBits _ = 0xdead
 
 aluSelBits :: AluSel -> Word32
 aluSelBits OpAdd = 0x0
@@ -44,11 +53,31 @@ regSelBits Rc = 0x3
 regSelBits Rd = 0x4
 regSelBits Re = 0x5
 regSelBits Rf = 0x6
+regSelBits Rg = 0x7
+regSelBits Rh = 0x8
+regSelBits Ri = 0x9
 
 immBits :: Integer -> Word32
 immBits n = (b1 `shiftL` 16) .|. ((fromInteger n :: Word32) .&. 0xffff)
 
+assembleCommon :: Insn -> Word32
+assembleCommon i@ArithInsn{} =
+    (memwBits (memw i)) .|.
+    (memrsBits (memrs i)) .|.
+    (memrtBits (memrt i)) .|.
+    ((regSelBits (rd i)) `shiftL` 24) .|.
+    ((aluSelBits (alusel i)) `shiftL` 21)
+
 assemble :: Insn -> Word32
-assemble i@ArithInsn{alue = (AluExpr asel rs (Right (ExprInteger n)))} = (memwrBits (memw i) (memr i)) .|. ((regSelBits (rd i)) `shiftL` 24) .|. ((aluSelBits asel) `shiftL` 21) .|. (immBits n)
-assemble i@CntlFInsn{imm = (ExprInteger n)} = (b1 `shiftL` 31) .|. ((regSelBits (rd i)) `shiftL` 24) .|. (immBits n)
+assemble i@ArithInsn{t = Right (ExprInteger n)} =
+    (assembleCommon i) .|.
+    (immBits n)
+assemble i@ArithInsn{t = Left rt} =
+    (assembleCommon i) .|.
+    ((regSelBits rt) `shiftL` 8)
+    
+assemble i@CntlFInsn{imm = (ExprInteger n)} =
+    (b1 `shiftL` 31) .|.
+    ((regSelBits (rd i)) `shiftL` 24) .|.
+    (immBits n)
 assemble _ = 0xdead
