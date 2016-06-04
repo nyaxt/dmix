@@ -67,7 +67,7 @@ loadExpr =
 notExpr = 
   do reservedOp "!"
      bsel <- regImm
-     return $ AluExpr OpNot Rc0 bsel
+     return $ AluExpr OpXor Rc0 bsel
   <?> "notExpr"
 
 makeAluExpr

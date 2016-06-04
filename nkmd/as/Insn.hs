@@ -28,8 +28,9 @@ data AluSel
   | OpOr 
   | OpAnd 
   | OpXor 
-  | OpNot 
-  | OpShift 
+  | OpReserved
+  | OpClamp
+  | OpMul 
   deriving Show
 
 data AluExprT =
@@ -50,11 +51,13 @@ modifyAlueExpr _ alue = alue
 data MemSel
   = MNone 
   | MR 
+  | MT
   | MC 
   deriving (Eq,Show)
 
 show1 :: MemSel -> String
 show1 MR = "R"
+show1 MT = "T"
 show1 MC = "C"
 show1 MNone = "-"
 
