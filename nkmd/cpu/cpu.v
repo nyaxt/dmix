@@ -1,4 +1,5 @@
 `default_nettype none
+`timescale 1ns / 1ps
 
 `define DCD_REGSEL_W 4
 `define DCD_RSSEL 0
@@ -41,7 +42,7 @@ module nkmd_cpu_if(
     input jmp_pc_en_i,
     output [31:0] inst_o);
 
-assign p_addr_o = jmp_pc_i;
+assign p_addr_o = pc_ff;
 assign inst_o = p_data_i;
 
 reg [31:0] pc_ff;
@@ -541,5 +542,104 @@ nkmd_cpu_regfile nkmd_cpu_regfile(
     .seq_regn_is_zero_o(rf_seq_regn_is_zero));
 
 // MEMAA: MEMory Access Arbitrator
+
+`ifdef SIMULATION
+
+task print_regsel;
+    input [`DCD_REGSEL_W-1:0] regsel;
+begin
+    case (regsel)
+    4'h0: $write("c0");
+    4'h1: $write("a");
+    4'h2: $write("b");
+    4'h3: $write("c");
+    4'h4: $write("d");
+    4'h5: $write("e");
+    4'h6: $write("f");
+    4'h7: $write("g");
+    4'h8: $write("h");
+    4'h9: $write("i");
+    4'ha: $write("j");
+    4'hb: $write("ra");
+    4'hc: $write("sl");
+    4'hd: $write("sh");
+    4'he: $write("n");
+    4'hf: $write("pc");
+    default: $write("?%h", regsel);
+    endcase
+end
+endtask
+
+task print_alusel;
+    input [`DCD_ALUSEL_W-1:0] alusel;
+begin
+    case (alusel)
+    3'h0: $write("add");
+    3'h1: $write("sub");
+    3'h2: $write("or");
+    3'h3: $write("and");
+    3'h4: $write("xor");
+    3'h5: $write("resv");
+    3'h6: $write("clamp");
+    3'h7: $write("mul");
+    default: $write("?%h", alusel);
+    endcase
+end
+endtask
+
+always @(posedge clk) begin
+    $display("= nkmm CPU state dump ========================================================");
+    $display("IF/DCD  inst %h", if_dcd_inst);
+    $write("DCD/MEM rssel ");
+    print_regsel(dcd_mem_rssel);
+    $write(" rt ");
+    print_regsel(dcd_mem_rtsel);
+    $write(" rd ");
+    print_regsel(dcd_mem_rdsel);
+    $write(" alu ");
+    print_alusel(dcd_mem_alusel);
+    $write(" imm %h", dcd_mem_imm);
+    $write(" jmprel %h", dcd_mem_jmprel);
+    $write(" r_read_en %h", dcd_mem_r_read_en);
+    $write(" c_read_en %h", dcd_mem_c_read_en);
+    $write("\n");
+    $write("MEM/EX  ");
+    $write("sval %h tval %h", mem_ex_sval, mem_ex_tval);
+    $write(" alusel ");
+    print_alusel(mem_ex_alusel);
+    $write("\n");
+    $write("EX/WB   ");
+    $write("regsel ");
+    print_regsel(ex_wb_regsel);
+    $write(" val %h", ex_wb_val);
+    $write("\n");
+    $write("WB/IF   ");
+    if (wb_if_jmp_pc_en)
+        $write("jmp_pc %h");
+    else
+        $write("jmp_pc disabled");
+    $write("\n");
+    $display("------------------------------------------------------------------------------");
+    $write("DCD/RF ");
+    $write(" rssel ");
+    print_regsel(dcd_rf_rssel);
+    $write("\n");
+    $write("RF/MEM "); 
+    $write(" rs ");
+    print_regsel(dcd_rf_rssel);
+    $write(" rt ");
+    print_regsel(dcd_rf_rtsel);
+    $write("\n");
+    $write("WB/RF  "); 
+    $write(" regsel ");
+    print_regsel(wb_rf_regsel);
+    $write(" val %h", wb_rf_val);
+    $write("\n");
+    $display("RF/SEQ  repn %h", dcd_seq_repn);
+    $display("SEQ/IF  stop_inc_pc %h", seq_if_stop_inc_pc);
+    $display("SEQ/DCD latch_curr_output %h", seq_dcd_latch_curr_output);
+    $display("==============================================================================");
+end
+`endif
 
 endmodule
