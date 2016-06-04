@@ -96,7 +96,7 @@ begin
     immen = inst_i[16];
     nkmd_cpu_dcd_func[`DCD_RSSEL+`DCD_REGSEL_W-1:`DCD_RSSEL] = inst_i[20:17];
     nkmd_cpu_dcd_func[`DCD_RTSEL+`DCD_REGSEL_W-1:`DCD_RTSEL] = inst_i[11:8];
-    nkmd_cpu_dcd_func[`DCD_RDSEL+`DCD_REGSEL_W-1:`DCD_RDSEL] = inst_i[27:4];
+    nkmd_cpu_dcd_func[`DCD_RDSEL+`DCD_REGSEL_W-1:`DCD_RDSEL] = inst_i[27:24];
     nkmd_cpu_dcd_func[`DCD_ALUSEL+`DCD_ALUSEL_W-1:`DCD_ALUSEL] = inst_i[23:21];
     nkmd_cpu_dcd_func[`DCD_IMM+`DCD_IMM_W-1:`DCD_IMM] = {{17{inst_i[15]}}, inst_i[14:0]};
     nkmd_cpu_dcd_func[`DCD_JMPREL+`DCD_JMPREL_W-1:`DCD_JMPREL] = {{25{inst_i[15]}}, inst_i[7:0]};
@@ -107,7 +107,7 @@ end
 endfunction
 
 always @(posedge clk) begin
-    {rssel_ff, rtsel_ff, rdsel_ff, alusel_ff, imm_ff, jmprel_ff, r_read_en_ff, c_read_en_ff} <= nkmd_cpu_dcd_func(inst_i);
+    {repn_ff, c_read_en_ff, r_read_en_ff, jmprel_ff, imm_ff, alusel_ff, rdsel_ff, rtsel_ff, rssel_ff} <= nkmd_cpu_dcd_func(inst_i);
 end
 
 assign rssel_o = rssel_ff;
@@ -116,6 +116,9 @@ assign rdsel_o = rdsel_ff;
 assign alusel_o = alusel_ff;
 assign imm_o = imm_ff;
 assign jmprel_o = jmprel_ff;
+assign r_read_en_o = r_read_en_ff;
+assign c_read_en_o = c_read_en_ff;
+assign repn_o = repn_ff;
 
 endmodule
 
@@ -590,7 +593,7 @@ endtask
 always @(posedge clk) begin
     $display("= nkmm CPU state dump ========================================================");
     $display("IF/DCD  inst %h", if_dcd_inst);
-    $write("DCD/MEM rssel ");
+    $write("DCD/MEM rs ");
     print_regsel(dcd_mem_rssel);
     $write(" rt ");
     print_regsel(dcd_mem_rtsel);
