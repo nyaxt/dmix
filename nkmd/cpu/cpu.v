@@ -15,9 +15,9 @@
 `define DCD_JMPREL_W 32 
 `define DCD_JMPREL (`DCD_IMM + `DCD_IMM_W)
 
-`define DCD_R_READEN (`DCD_JMPREL + `DCD_JMPREL_W)
-`define DCD_C_READEN (`DCD_R_READEN + 1)
-`define DCD_IMMEN (`DCD_C_READEN + 1)
+`define DCD_TVAL_R_READ_EN (`DCD_JMPREL + `DCD_JMPREL_W)
+`define DCD_SVAL_C_READ_EN (`DCD_TVAL_R_READ_EN + 1)
+`define DCD_IMMEN (`DCD_SVAL_C_READ_EN + 1)
 `define DCD_JMPEN (`DCD_IMMEN + 1)
 `define DCD_REPN (`DCD_JMPEN + 1)
 
@@ -73,8 +73,8 @@ module nkmd_cpu_dcd(
     output [`DCD_ALUSEL_W-1:0] alusel_o,
     output [`DCD_IMM_W-1:0] imm_o,
     output [`DCD_JMPREL_W-1:0] jmprel_o,
-    output r_read_en_o,
-    output c_read_en_o,
+    output tval_r_read_en_o,
+    output sval_c_read_en_o,
     output imm_en_o,
     output jmp_en_o,
     output repn_o);
@@ -85,8 +85,8 @@ reg [`DCD_REGSEL_W-1:0] rdsel_ff;
 reg [`DCD_ALUSEL_W-1:0] alusel_ff;
 reg [`DCD_IMM_W-1:0] imm_ff;
 reg [`DCD_JMPREL_W-1:0] jmprel_ff;
-reg r_read_en_ff;
-reg c_read_en_ff;
+reg tval_r_read_en_ff;
+reg sval_c_read_en_ff;
 reg imm_en_ff;
 reg jmp_en_ff;
 reg repn_ff;
@@ -109,8 +109,8 @@ begin
     nkmd_cpu_dcd_func[`DCD_ALUSEL+`DCD_ALUSEL_W-1:`DCD_ALUSEL] = inst_i[23:21];
     nkmd_cpu_dcd_func[`DCD_IMM+`DCD_IMM_W-1:`DCD_IMM] = {{17{inst_i[15]}}, inst_i[14:0]};
     nkmd_cpu_dcd_func[`DCD_JMPREL+`DCD_JMPREL_W-1:`DCD_JMPREL] = {{25{inst_i[15]}}, inst_i[7:0]};
-    nkmd_cpu_dcd_func[`DCD_R_READEN] = !jmpen && !immen && inst_i[1];
-    nkmd_cpu_dcd_func[`DCD_C_READEN] = !jmpen && !immen && inst_i[0];
+    nkmd_cpu_dcd_func[`DCD_TVAL_R_READ_EN] = !jmpen && inst_i[28];
+    nkmd_cpu_dcd_func[`DCD_SVAL_C_READ_EN] = !jmpen && !immen && inst_i[0];
     nkmd_cpu_dcd_func[`DCD_IMMEN] = immen;
     nkmd_cpu_dcd_func[`DCD_JMPEN] = jmpen;
     nkmd_cpu_dcd_func[`DCD_REPN] = !jmpen && !immen && inst_i[12];
@@ -118,7 +118,7 @@ end
 endfunction
 
 always @(posedge clk) begin
-    {repn_ff, jmp_en_ff, imm_en_ff, c_read_en_ff, r_read_en_ff, jmprel_ff, imm_ff, alusel_ff, rdsel_ff, rtsel_ff, rssel_ff} <= nkmd_cpu_dcd_func(inst_i);
+    {repn_ff, jmp_en_ff, imm_en_ff, sval_c_read_en_ff, tval_r_read_en_ff, jmprel_ff, imm_ff, alusel_ff, rdsel_ff, rtsel_ff, rssel_ff} <= nkmd_cpu_dcd_func(inst_i);
 end
 
 assign rssel_o = rssel_ff;
@@ -127,8 +127,8 @@ assign rdsel_o = rdsel_ff;
 assign alusel_o = alusel_ff;
 assign imm_o = imm_ff;
 assign jmprel_o = jmprel_ff;
-assign r_read_en_o = r_read_en_ff;
-assign c_read_en_o = c_read_en_ff;
+assign tval_r_read_en_o = tval_r_read_en_ff;
+assign sval_c_read_en_o = sval_c_read_en_ff;
 assign imm_en_o = imm_en_ff;
 assign jmp_en_o = jmp_en_ff;
 assign repn_o = repn_ff;
@@ -299,12 +299,36 @@ module nkmd_cpu_mem(
 assign r_data_o = 32'b0; // FIXME
 assign r_addr_o = mem_r_addr_i;
 assign r_we_o = 1'b0;
-assign mem_r_data_o = r_data_i;
+
+reg [31:0] r_eff_addr_ff;
+reg r_read_en_ff;
+always @(posedge clk) begin
+    if (rst) begin
+        r_eff_addr_ff <= 0;
+        r_read_en_ff <= 0;
+    end else begin
+        r_eff_addr_ff <= mem_r_addr_i;
+        r_read_en_ff <= mem_r_read_en;
+    end
+end
+assign mem_r_data_o = r_read_en_ff ? r_data_i : r_eff_addr_ff;
 
 assign c_data_o = 32'b0; // FIXME
 assign c_addr_o = mem_c_addr_i;
 assign c_we_o = 1'b0;
-assign mem_c_data_o = c_data_i;
+
+reg [31:0] c_eff_addr_ff;
+reg c_read_en_ff;
+always @(posedge clk) begin
+    if (rst) begin
+        c_eff_addr_ff <= 0;
+        c_read_en_ff <= 0;
+    end else begin
+        c_eff_addr_ff <= mem_c_addr_i;
+        c_read_en_ff <= mem_c_read_en;
+    end
+end
+assign mem_c_data_o = c_read_en_ff ? c_data_i : c_eff_addr_ff;
 
 endmodule
 
@@ -315,8 +339,9 @@ module nkmd_cpu_ex(
     input [31:0] rsval_i,
     input [31:0] rtval_i,
     input [`DCD_ALUSEL_W-1:0] alusel_i,
+    input [`DCD_REGSEL_W-1:0] rdsel_i,
 
-    output [`DCD_REGSEL_W-1:0] regsel_o,
+    output [`DCD_REGSEL_W-1:0] rdsel_o,
     output [31:0] val_o
     );
 
@@ -345,9 +370,10 @@ always @(posedge clk) begin
     end
 end
 
-reg [`DCD_REGSEL_W-1:0] regsel_ff;
-assign regsel_o = regsel_ff;
-// FIXME
+reg [`DCD_REGSEL_W-1:0] rdsel_ff;
+always @(posedge clk)
+    rdsel_ff <= rdsel_i;
+assign rdsel_o = rdsel_ff;
 
 endmodule
 
@@ -359,14 +385,14 @@ module nkmd_cpu_wb(
     input [31:0] val_i,
 
     // to regfile
-    output [`DCD_REGSEL_W-1:0] rf_regsel_o,
+    output [`DCD_REGSEL_W-1:0] rf_rdsel_o,
     output [31:0] rf_val_o
 
     /* FIXME
     // to memaa
     output [31:0] memex_addr_o */);
 
-assign rf_regsel_o = regsel_i;
+assign rf_rdsel_o = regsel_i;
 assign rf_val_o = val_i;
 
 endmodule
@@ -419,16 +445,17 @@ wire [`DCD_IMM_W-1:0] dcd_mem_imm;
 wire [`DCD_JMPREL_W-1:0] dcd_mem_jmprel;
 wire dcd_mem_imm_en;
 wire dcd_mem_jmp_en;
-wire dcd_mem_r_read_en;
-wire dcd_mem_c_read_en;
+wire dcd_mem_tval_r_read_en;
+wire dcd_mem_sval_c_read_en;
 
 // MEM -> EX
 wire [31:0] mem_ex_sval;
 wire [31:0] mem_ex_tval;
 wire [`DCD_ALUSEL_W-1:0] mem_ex_alusel;
+wire [`DCD_REGSEL_W-1:0] mem_ex_rdsel;
 
 // EX -> WB
-wire [`DCD_REGSEL_W-1:0] ex_wb_regsel;
+wire [`DCD_REGSEL_W-1:0] ex_wb_rdsel;
 wire [31:0] ex_wb_val;
 
 // WB -> IF
@@ -485,8 +512,8 @@ nkmd_cpu_dcd nkmd_cpu_dcd(
     .alusel_o(dcd_mem_alusel),
     .imm_o(dcd_mem_imm),
     .jmprel_o(dcd_mem_jmprel),
-    .r_read_en_o(dcd_mem_r_read_en),
-    .c_read_en_o(dcd_mem_c_read_en),
+    .tval_r_read_en_o(dcd_mem_tval_r_read_en),
+    .sval_c_read_en_o(dcd_mem_sval_c_read_en),
     .imm_en_o(dcd_mem_imm_en),
     .jmp_en_o(dcd_mem_jmp_en),
     .repn_o(dcd_repn_o));
@@ -494,7 +521,7 @@ assign dcd_rf_decn = dcd_repn_o;
 assign dcd_seq_repn = dcd_repn_o;
 
 // MEM: Memory fetch
-wire [31:0] mem_c_addr_i = dcd_mem_imm_en ? dcd_mem_imm : rf_mem_rtval;
+wire [31:0] mem_r_addr_i = dcd_mem_imm_en ? dcd_mem_imm : rf_mem_rtval;
 nkmd_cpu_mem nkmd_cpu_mem(
     .clk(clk), .rst(rst),
 
@@ -507,12 +534,20 @@ nkmd_cpu_mem nkmd_cpu_mem(
     .c_addr_o(c_addr_o),
     .c_we_o(c_we_o),
 
-    .mem_r_addr_i(rf_mem_rsval),
-    .mem_r_read_en(dcd_mem_r_read_en),
-    .mem_r_data_o(mem_ex_sval),
-    .mem_c_addr_i(mem_c_addr_i),
-    .mem_c_read_en(dcd_mem_c_read_en),
-    .mem_c_data_o(mem_ex_tval));
+    .mem_r_addr_i(mem_r_addr_i),
+    .mem_r_read_en(dcd_mem_tval_r_read_en),
+    .mem_r_data_o(mem_ex_tval),
+    .mem_c_addr_i(rf_mem_rsval),
+    .mem_c_read_en(dcd_mem_sval_c_read_en),
+    .mem_c_data_o(mem_ex_sval));
+reg [`DCD_ALUSEL_W-1:0] mem_alusel_ff;
+reg [`DCD_REGSEL_W-1:0] mem_rdsel_ff;
+always @(posedge clk) begin
+    mem_alusel_ff <= dcd_mem_alusel;
+    mem_rdsel_ff <= dcd_mem_rdsel;
+end
+assign mem_ex_alusel = mem_alusel_ff;
+assign mem_ex_rdsel = mem_rdsel_ff;
 
 // EX: EXecute alu
 nkmd_cpu_ex nkmd_cpu_ex(
@@ -521,18 +556,19 @@ nkmd_cpu_ex nkmd_cpu_ex(
     .rsval_i(mem_ex_sval),
     .rtval_i(mem_ex_tval),
     .alusel_i(mem_ex_alusel),
+    .rdsel_i(mem_ex_rdsel),
 
-    .regsel_o(ex_wb_regsel),
+    .rdsel_o(ex_wb_rdsel),
     .val_o(ex_wb_val));
 
 // WB: WriteBack to mem or regfile
 nkmd_cpu_wb nkmd_cpu_wb(
     .clk(clk), .rst(rst),
 
-    .regsel_i(ex_wb_regsel),
+    .regsel_i(ex_wb_rdsel),
     .val_i(ex_wb_val),
 
-    .rf_regsel_o(wb_rf_regsel),
+    .rf_rdsel_o(wb_rf_regsel),
     .rf_val_o(wb_rf_val));
 
 // *** Multistage components ***
@@ -627,17 +663,17 @@ always @(posedge clk) begin
         $write(" jmprel %h", dcd_mem_jmprel);
     else
         $write(" jmprel disabled");
-    $write(" [rc]_read_en %h%h", dcd_mem_r_read_en, dcd_mem_c_read_en);
+    $write(" [r->t,c->s]rden %h%h", dcd_mem_tval_r_read_en, dcd_mem_sval_c_read_en);
     $write("\n");
-    $display("MEM c_addr_i %h", mem_c_addr_i);
+    $display("MEM r_addr_i %h", mem_r_addr_i);
     $write("MEM/EX  ");
     $write("sval %h tval %h", mem_ex_sval, mem_ex_tval);
     $write(" alusel ");
     print_alusel(mem_ex_alusel);
     $write("\n");
     $write("EX/WB   ");
-    $write("regsel ");
-    print_regsel(ex_wb_regsel);
+    $write("rdsel ");
+    print_regsel(ex_wb_rdsel);
     $write(" val %h", ex_wb_val);
     $write("\n");
     $write("WB/IF   ");
@@ -654,8 +690,8 @@ always @(posedge clk) begin
     print_regsel(dcd_rf_rtsel);
     $write("\n");
     $write("RF/MEM "); 
-    $write(" sval %h ", rf_mem_rsval);
-    $write(" tval %h ", rf_mem_rtval);
+    $write(" sval %h", rf_mem_rsval);
+    $write(" tval %h", rf_mem_rtval);
     $write("\n");
     $write("WB/RF  "); 
     $write(" regsel ");

@@ -11,27 +11,29 @@ reg [31:0] data_ff;
 
 always @(posedge clk) begin
     case (addr_i)
-// ArithInsn{M[-R] a OpAdd(c0, imm 0xf000=61440)}
-16'h0000: data_ff <= 32'h1101f000;
-// ArithInsn{M[-R] b OpAdd(c0, imm 0xf000=61440)}
-16'h0001: data_ff <= 32'h1201f000;
-// ArithInsn{M[-R] c OpAdd(c0, imm 0xf000=61440)}
-16'h0002: data_ff <= 32'h1301f000;
-// ArithInsn{M[-R] d OpAdd(c0, imm 0xf000=61440)}
-16'h0003: data_ff <= 32'h1401f000;
-// ArithInsn{M[R-] a OpAdd(c0, imm 0xf100=61696)}
-16'h0004: data_ff <= 32'h5101f100;
-// ArithInsn{M[R-] b OpAdd(c0, imm 0xf100=61696)}
-16'h0005: data_ff <= 32'h5201f100;
-// ArithInsn{M[R-] c OpAdd(c0, imm 0xf100=61696)}
-16'h0006: data_ff <= 32'h5301f100;
-// ArithInsn{M[R-] d OpAdd(c0, imm 0xf100=61696)}
-16'h0007: data_ff <= 32'h5401f100;
-// CntlFInsn{rd=c0, imm=0x00=0}
-16'h0008: data_ff <= 32'h80010000;
+// ArithInsn{M[---] d=i alu=OpAdd s=c0 memrs=MNone t=0xf100=61696 memrt=MNone}
+16'h0000: data_ff <= 32'h0901f100;
+// ArithInsn{M[--R] d=a alu=OpAdd s=c0 memrs=MNone t=0xf000=61440 memrt=MR}
+16'h0001: data_ff <= 32'h1101f000;
+// ArithInsn{M[--R] d=b alu=OpAdd s=c0 memrs=MNone t=0xf000=61440 memrt=MR}
+16'h0002: data_ff <= 32'h1201f000;
+// ArithInsn{M[--R] d=c alu=OpAdd s=c0 memrs=MNone t=0xf000=61440 memrt=MR}
+16'h0003: data_ff <= 32'h1301f000;
+// ArithInsn{M[--R] d=d alu=OpAdd s=c0 memrs=MNone t=0xf000=61440 memrt=MR}
+16'h0004: data_ff <= 32'h1401f000;
+// ArithInsn{M[R--] d=i alu=OpAdd s=c0 memrs=MNone t=a memrt=MNone}
+16'h0005: data_ff <= 32'h29000100;
+// ArithInsn{M[R--] d=i alu=OpAdd s=c0 memrs=MNone t=b memrt=MNone}
+16'h0006: data_ff <= 32'h29000200;
+// ArithInsn{M[R--] d=i alu=OpAdd s=c0 memrs=MNone t=c memrt=MNone}
+16'h0007: data_ff <= 32'h29000300;
+// ArithInsn{M[R--] d=i alu=OpAdd s=c0 memrs=MNone t=d memrt=MNone}
+16'h0008: data_ff <= 32'h29000400;
+// CntlFInsn{rd=c0, imm=0x01=1}
+16'h0009: data_ff <= 32'h80010001;
 
 // CntlFInsn{rd=c0, imm=0x00=0}
-default:  data_ff <= 32'h80010000;
+default:  data_ff <= 32'h80010001;
     endcase
 end
 

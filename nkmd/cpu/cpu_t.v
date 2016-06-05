@@ -8,7 +8,9 @@ reg clk;
 reg rst;
 
 wire [31:0] cpu_r_data_i;
-assign cpu_r_data_i = 0;
+assign cpu_r_data_i = 32'hdeadbeef;
+wire [31:0] cpu_c_data_i;
+assign cpu_c_data_i = 32'hbaadf00d;
 
 wire [31:0] cpu_p_data_i;
 wire [31:0] cpu_p_addr_o;
@@ -17,6 +19,7 @@ nkmd_cpu cpu(
     .rst(rst),
 
     .r_data_i(cpu_r_data_i),
+    .c_data_i(cpu_c_data_i),
 
     .p_data_i(cpu_p_data_i),
     .p_addr_o(cpu_p_addr_o));
