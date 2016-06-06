@@ -28,9 +28,13 @@ initial begin
 
 `ifndef NODUMP
     //#100_000;
-    #(TCLK*10);
-    $finish(2);
+    //#(TCLK*10);
 `endif
+end
+
+always @(posedge clk) begin
+    if (uut.cpu_prog_addr_o == 32'hf)
+        $finish(2);
 end
 
 nkmd_arch uut(

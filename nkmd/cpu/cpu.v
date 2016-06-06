@@ -269,6 +269,16 @@ always @(posedge clk) begin
 end
 assign seq_regn_is_zero_o = regn_is_zero_ff;
 
+`ifdef SIMULATION
+task dump;
+begin
+    $display("-- reg dump ------------------------------------------------------------------");
+    $display("a %h b %h c %h d %h e %h f %h g %h", a_ff, b_ff, c_ff, d_ff, e_ff, f_ff, g_ff);
+    $display("h %h i %h j %h sh:l %h:%h n %h", h_ff, i_ff, j_ff, sh_ff, sl_ff, n_ff);
+end
+endtask
+`endif
+
 endmodule
 
 module nkmd_cpu_mem(
@@ -665,7 +675,7 @@ always @(posedge clk) begin
         $write(" jmprel disabled");
     $write(" [r->t,c->s]rden %h%h", dcd_mem_tval_r_read_en, dcd_mem_sval_c_read_en);
     $write("\n");
-    $display("MEM r_addr_i %h", mem_r_addr_i);
+    $display("MEM r_addr_i %h from imm? %d", mem_r_addr_i, dcd_mem_imm_en);
     $write("MEM/EX  ");
     $write("sval %h tval %h", mem_ex_sval, mem_ex_tval);
     $write(" alusel ");
@@ -683,6 +693,7 @@ always @(posedge clk) begin
         $write("jmp_pc disabled");
     $write("\n");
     $display("------------------------------------------------------------------------------");
+    $display("IF fetchaddr %h", p_addr_o);
     $write("DCD/RF ");
     $write(" rssel ");
     print_regsel(dcd_rf_rssel);
@@ -701,6 +712,8 @@ always @(posedge clk) begin
     $display("RF/SEQ  repn %h", dcd_seq_repn);
     $display("SEQ/IF  stop_inc_pc %h", seq_if_stop_inc_pc);
     $display("SEQ/DCD latch_curr_output %h", seq_dcd_latch_curr_output);
+    $display("------------------------------------------------------------------------------");
+    nkmd_cpu_regfile.dump();
     $display("==============================================================================");
 end
 `endif
