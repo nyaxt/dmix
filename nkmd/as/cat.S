@@ -12,3 +12,7 @@ start:
 	R[i] = c0 + c;
 	R[i] = c0 + d;
 	jmp start;
+    c0 = c0 + c0;
+    c0 = c0 + c0;
+    c0 = c0 + c0;
+    c0 = c0 + c0;

@@ -31,6 +31,14 @@ always @(posedge clk) begin
 16'h0008: data_ff <= 32'h29000400;
 // CntlFInsn{rd=c0, imm=0x01=1}
 16'h0009: data_ff <= 32'h80010001;
+// ArithInsn{M[---] d=c0 alu=OpAdd s=c0 memrs=MNone t=c0 memrt=MNone}
+16'h000a: data_ff <= 32'h00000000;
+// ArithInsn{M[---] d=c0 alu=OpAdd s=c0 memrs=MNone t=c0 memrt=MNone}
+16'h000b: data_ff <= 32'h00000000;
+// ArithInsn{M[---] d=c0 alu=OpAdd s=c0 memrs=MNone t=c0 memrt=MNone}
+16'h000c: data_ff <= 32'h00000000;
+// ArithInsn{M[---] d=c0 alu=OpAdd s=c0 memrs=MNone t=c0 memrt=MNone}
+16'h000d: data_ff <= 32'h00000000;
 
 // CntlFInsn{rd=c0, imm=0x00=0}
 default:  data_ff <= 32'h80010001;
