@@ -28,7 +28,7 @@ initial begin
 
 //`ifndef NODUMP
     //#100_000;
-    #(TCLK*30);
+    #(TCLK*50);
     $finish(2);
 //`endif
 end
