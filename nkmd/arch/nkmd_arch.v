@@ -51,6 +51,15 @@ nkmd_uart uart(
     .addr_i(cpu_addr_o),
     .we_i(cpu_we_o));
 
+wire [31:0] dai_data_o;
+nkmd_dai dai(
+    .clk(clk), .rst(rst),
+
+    .data_i(cpu_data_o),
+    .data_o(dai_data_o),
+    .addr_i(cpu_addr_o),
+    .we_i(cpu_we_o));
+
 wire [31:0] debug_data_o;
 nkmd_debug debug(
     .clk(clk), .rst(rst),

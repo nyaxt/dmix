@@ -1,5 +1,5 @@
-const ASIN = 0xf000;
-const ASOUT = 0xf100;
+const ASIN = 0xf100;
+const ASOUT = 0xf180;
 
 	i = c0 + ASOUT;
 start:
