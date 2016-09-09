@@ -777,7 +777,7 @@ end
 endtask
 
 always @(posedge clk) begin
-    $display("= nkmm CPU state dump ========================================================");
+    $display("<statedump>");
     $display("IF/DCD  inst %h", if_dcd_inst);
     $write("DCD/MEM rs ");
     print_regsel(dcd_mem_rssel);
@@ -846,7 +846,7 @@ always @(posedge clk) begin
     $display("SEQ/DCD latch_curr_output %h", seq_dcd_latch_curr_output);
     $display("------------------------------------------------------------------------------");
     nkmd_cpu_regfile.dump();
-    $display("==============================================================================");
+    $display("</statedump>");
 end
 `endif
 
