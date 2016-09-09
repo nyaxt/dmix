@@ -416,9 +416,15 @@ reg [`DCD_REGSEL_W-1:0] rdsel_ff;
 reg [31:0] rdval_ff;
 reg [`DCD_MWSEL_W-1:0] mwsel_ff;
 always @(posedge clk) begin
-    rdsel_ff <= rdsel_i;
-    rdval_ff <= rdval_i;
-    mwsel_ff <= mwsel_i;
+    if (rst) begin
+        rdsel_ff <= 0;
+        rdval_ff <= 0;
+        mwsel_ff <= 0;
+    end else begin
+        rdsel_ff <= rdsel_i;
+        rdval_ff <= rdval_i;
+        mwsel_ff <= mwsel_i;
+    end
 end
 assign rdsel_o = rdsel_ff;
 assign rdval_o = rdval_ff;
@@ -427,8 +433,13 @@ assign mwsel_o = mwsel_ff;
 reg jmp_en_ff;
 reg [31:0] jmp_pc_ff;
 always @(posedge clk) begin
-    jmp_en_ff <= jmp_en_i;
-    jmp_pc_ff <= rdval_i + jmprel_i; // FIXME: may need size ext
+    if (rst) begin
+        jmp_en_ff <= 0;
+        jmp_pc_ff <= 0;
+    end else begin
+        jmp_en_ff <= jmp_en_i;
+        jmp_pc_ff <= rdval_i + jmprel_i; // FIXME: may need size ext
+    end
 end
 assign jmp_en_o = jmp_en_ff;
 assign jmp_pc_o = jmp_pc_ff;
@@ -636,12 +647,21 @@ reg [31:0] mem_rdval_ff;
 reg [`DCD_MWSEL_W-1:0] mem_mwsel_ff;
 reg mem_jmp_en_ff;
 always @(posedge clk) begin
-    mem_alusel_ff <= dcd_mem_alusel;
-    mem_rdsel_ff <= dcd_mem_rdsel;
-    mem_jmprel_ff <= dcd_mem_jmprel;
-    mem_rdval_ff <= rf_mem_rdval;
-    mem_mwsel_ff <= dcd_mem_mwsel;
-    mem_jmp_en_ff <= dcd_mem_jmp_en;
+    if (rst) begin
+        mem_alusel_ff <= 0;
+        mem_rdsel_ff <= 0;
+        mem_jmprel_ff <= 0;
+        mem_rdval_ff <= 0;
+        mem_mwsel_ff <= `MWSEL_NO;
+        mem_jmp_en_ff <= 0;
+    end else begin
+        mem_alusel_ff <= dcd_mem_alusel;
+        mem_rdsel_ff <= dcd_mem_rdsel;
+        mem_jmprel_ff <= dcd_mem_jmprel;
+        mem_rdval_ff <= rf_mem_rdval;
+        mem_mwsel_ff <= dcd_mem_mwsel;
+        mem_jmp_en_ff <= dcd_mem_jmp_en;
+    end
 end
 assign mem_ex_alusel = mem_alusel_ff;
 assign mem_ex_rdsel = mem_rdsel_ff;
@@ -844,8 +864,12 @@ always @(posedge clk) begin
     $display("RF/SEQ  repn %h", dcd_seq_repn);
     $display("SEQ/IF  stop_inc_pc %h", seq_if_stop_inc_pc);
     $display("SEQ/DCD latch_curr_output %h", seq_dcd_latch_curr_output);
-    $display("------------------------------------------------------------------------------");
+
     nkmd_cpu_regfile.dump();
+
+    $display("------------------------------------------------------------------------------");
+    $display("Rbus data_i %h data_o %h addr_o %h we_o %h", r_data_i, r_data_o, r_addr_o, r_we_o);
+    $display("Pbus data_i %h addr_o %h", p_data_i, p_addr_o);
     $display("</statedump>");
 end
 `endif
