@@ -9,7 +9,7 @@ module nkmd_dai(
 
 reg [23:0] data_o_ff;
 always @(posedge clk) begin
-    case (addr_i)
+    case (addr_i[15:0])
     16'hf100:
         data_o_ff <= 24'habcdef;
     16'hf180:

@@ -71,7 +71,7 @@ nkmd_debug debug(
     .addr_i(cpu_addr_o),
     .we_i(cpu_we_o));
 
-assign cpu_data_i = ram_data_o | uart_data_o | debug_data_o;
+assign cpu_data_i = ram_data_o | uart_data_o | dai_data_o | debug_data_o;
 
 nkmd_progrom rom(
     .clk(clk),
