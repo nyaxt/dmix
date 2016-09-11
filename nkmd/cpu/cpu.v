@@ -88,6 +88,10 @@ module nkmd_cpu_dcd(
     output jmp_en_o,
     output repn_o);
 
+reg delayed_rst_ff;
+always @(posedge clk)
+    delayed_rst_ff <= rst;
+
 reg [`DCD_REGSEL_W-1:0] rssel_ff;
 reg [`DCD_REGSEL_W-1:0] rtsel_ff;
 reg [`DCD_REGSEL_W-1:0] rdsel_ff;
@@ -129,7 +133,10 @@ end
 endfunction
 
 always @(posedge clk) begin
-    {repn_ff, jmp_en_ff, imm_en_ff, mwsel_ff, sval_c_read_en_ff, tval_r_read_en_ff, jmprel_ff, imm_ff, alusel_ff, rdsel_ff, rtsel_ff, rssel_ff} <= nkmd_cpu_dcd_func(inst_i);
+    if (rst || delayed_rst_ff)
+        {repn_ff, jmp_en_ff, imm_en_ff, mwsel_ff, sval_c_read_en_ff, tval_r_read_en_ff, jmprel_ff, imm_ff, alusel_ff, rdsel_ff, rtsel_ff, rssel_ff} <= 0;
+    else
+        {repn_ff, jmp_en_ff, imm_en_ff, mwsel_ff, sval_c_read_en_ff, tval_r_read_en_ff, jmprel_ff, imm_ff, alusel_ff, rdsel_ff, rtsel_ff, rssel_ff} <= nkmd_cpu_dcd_func(inst_i);
 end
 
 assign rssel_o = rssel_ff;
