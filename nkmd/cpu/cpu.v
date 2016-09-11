@@ -222,20 +222,12 @@ begin
 end
 endfunction
 
-reg [31:0] mem_rsval_ff;
-reg [31:0] mem_rtval_ff;
-reg [31:0] mem_rdval_ff;
-always @(posedge clk) begin
-    mem_rsval_ff <= nkmd_cpu_regfile_sel(dcd_rssel_i,
+assign mem_rsval_o = nkmd_cpu_regfile_sel(dcd_rssel_i,
         a_ff, b_ff, c_ff, d_ff, e_ff, f_ff, g_ff, h_ff, i_ff, j_ff, sl_ff, sh_ff, n_ff);
-    mem_rtval_ff <= nkmd_cpu_regfile_sel(dcd_rtsel_i,
+assign mem_rtval_o = nkmd_cpu_regfile_sel(dcd_rtsel_i,
         a_ff, b_ff, c_ff, d_ff, e_ff, f_ff, g_ff, h_ff, i_ff, j_ff, sl_ff, sh_ff, n_ff);
-    mem_rdval_ff <= nkmd_cpu_regfile_sel(dcd_rdsel_i,
+assign mem_rdval_o = nkmd_cpu_regfile_sel(dcd_rdsel_i,
         a_ff, b_ff, c_ff, d_ff, e_ff, f_ff, g_ff, h_ff, i_ff, j_ff, sl_ff, sh_ff, n_ff);
-end
-assign mem_rsval_o = mem_rsval_ff;
-assign mem_rtval_o = mem_rtval_ff;
-assign mem_rdval_o = mem_rdval_ff;
 
 always @(posedge clk) begin
     if (rst) begin
@@ -337,9 +329,9 @@ module nkmd_cpu_mem(
     input wb_c_we_i);
 
 // FIXME: would need arbitration with WB stage in future
-assign r_data_o = 32'b0; // FIXME
-assign r_addr_o = mem_r_addr_i;
-assign r_we_o = 1'b0;
+assign r_data_o = wb_data_i;
+assign r_addr_o = wb_r_we_i ? wb_addr_i : mem_r_addr_i;
+assign r_we_o = wb_r_we_i;
 
 reg [31:0] r_eff_addr_ff;
 reg r_read_en_ff;
