@@ -35,3 +35,10 @@ https://docs.google.com/presentation/d/1eTRmQODLgxqnv2yuBNbpwJNigMHqBfnhtFLWPbKy
     - decode S/PDIF signal
 - synth.v
     - sawwave synth for test
+
+## Protocol
+
+Pull-based
+- The downstream requests new sample to be output by the upstream by setting pop_i to 1.
+- The upstream responds to request by setting ack_o to 1, with the new sample on data_o[].
+  - For modules w/o ack_o, simply assume the data_o[] returns the valid sample in the immediate next cycle.
