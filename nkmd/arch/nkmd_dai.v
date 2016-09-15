@@ -93,7 +93,7 @@ assign should_queue = we_i && addr_i[15:12] == 4'hd && addr_i[7:0] == 8'h01;
 always @(posedge clk) begin
     if (rst) begin
         queued_ff <= 0;
-        lastr_ff <= 0;
+        lastr_ff <= 6'h3f;
         nextw_ff <= 0;
     end else if (should_queue && !tx_pop_i) begin
         ringbuf[nextw_ff] <= data_i;
@@ -118,6 +118,7 @@ end
 reg tx_ack_ff;
 always @(posedge clk)
     tx_ack_ff <= tx_pop_i;
+assign tx_ack_o = tx_ack_ff;
 
 // RAM interface
 reg [31:0] data_o_ff;
@@ -133,7 +134,7 @@ assign offset_i = addr_i[5:0];
 always @(posedge clk) begin
     if (addr_i[15:12] == 4'he)
         data_o_ff <= ringbuf[nextw_ff - offset_i];
-    else if (addr_i[15:12] == 4'hd && addr_i[7:0] == 8'h00)
+    else if (addr_i[15:12] == 4'hd && addr_i[7:0] == 8'h01)
         data_o_ff <= queued_ff;
     else
         data_o_ff <= 0;
