@@ -68,12 +68,35 @@ initial begin
 
     queue(24'hcafebb);
 
+    nkmd_addr = 32'h0000e000;
+    #(TCLK);
+    $display("expect %h, actual %h : ringbuf ram read", 32'h00cafebb, nkmd_data_o);
+
     nkmd_addr = 32'h0000d001;
     #(TCLK);
     $display("expect %h, actual %h : queued_ff peek", 6'h1, uut.queued_ff);
     $display("expect %h, actual %h : queued_ff ram read", 32'h1, nkmd_data_o);
 
     trigger_pop();
+
+    nkmd_addr = 32'h0000d001;
+    #(TCLK);
+    $display("expect %h, actual %h : queued_ff peek", 6'h0, uut.queued_ff);
+    $display("expect %h, actual %h : queued_ff ram read", 32'h0, nkmd_data_o);
+
+    for (i = 0; i < 63; i = i + 1) begin
+        queue(i);
+    end
+    $display("expect %h, actual %h : queued_ff peek", 6'd63, uut.queued_ff);
+    for (i = 0; i < 63; i = i + 1) begin
+        trigger_pop();
+    end
+    for (i = 63; i < 80; i = i + 1) begin
+        queue(i);
+    end
+    for (i = 63; i < 80; i = i + 1) begin
+        trigger_pop();
+    end
 
     #(TCLK*3);
     $finish(2);

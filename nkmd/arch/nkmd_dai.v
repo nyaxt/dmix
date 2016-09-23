@@ -133,7 +133,7 @@ assign offset_i = addr_i[5:0];
 
 always @(posedge clk) begin
     if (addr_i[15:12] == 4'he)
-        data_o_ff <= ringbuf[nextw_ff - offset_i];
+        data_o_ff <= ringbuf[nextw_ff - 1 - offset_i];
     else if (addr_i[15:12] == 4'hd && addr_i[7:0] == 8'h01)
         data_o_ff <= queued_ff;
     else
