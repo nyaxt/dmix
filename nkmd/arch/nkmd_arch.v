@@ -5,6 +5,13 @@ module nkmd_arch(
     input uart_rx,
     output uart_tx,
 
+    input [23:0] dai_data_i,
+    input dai_ack_i,
+
+    output [23:0] dai_data_o,
+    input dai_pop_i,
+    output dai_ack_o,
+
     output [7:0] debug_led,
     input [7:0] switch);
 
@@ -34,7 +41,6 @@ nkmd_cpu cpu(
 wire [31:0] ram_data_o;
 nkmd_ram ram(
     .clk(clk),
-
     .data_i(cpu_data_o),
     .data_o(ram_data_o),
     .addr_i(cpu_addr_o),
@@ -51,25 +57,28 @@ nkmd_uart uart(
     .addr_i(cpu_addr_o),
     .we_i(cpu_we_o));
 
-reg [23:0] mock_counter;
-initial mock_counter <= 24'b0;
-wire rxfifo_pop;
-always @(posedge clk) begin
-    if (rxfifo_pop)
-        mock_counter <= mock_counter + 1;
-end
-
-wire [31:0] dai_data_o;
-nkmd_dai dai(
+wire [31:0] dai_rx_data_o;
+nkmd_dai_rx dai_rx(
     .clk(clk), .rst(rst),
 
-    .rxfifo_data_i(mock_counter),
-    .rxfifo_lrck(1'b0),
-    .rxfifo_pop_o(rxfifo_pop),
-    .rxfifo_empty_i(1'b0),
+    .rx_data_i(dai_data_i),
+    .rx_ack_i(dai_ack_i),
 
     .data_i(cpu_data_o),
-    .data_o(dai_data_o),
+    .data_o(dai_rx_data_o),
+    .addr_i(cpu_addr_o),
+    .we_i(cpu_we_o));
+
+wire [31:0] dai_tx_data_o;
+nkmd_dai_tx dai_tx(
+    .clk(clk), .rst(rst),
+
+    .tx_data_o(dai_data_o),
+    .tx_pop_i(dai_pop_i),
+    .tx_ack_o(dai_ack_o),
+
+    .data_i(cpu_data_o),
+    .data_o(dai_tx_data_o),
     .addr_i(cpu_addr_o),
     .we_i(cpu_we_o));
 
@@ -84,7 +93,11 @@ nkmd_debug debug(
     .addr_i(cpu_addr_o),
     .we_i(cpu_we_o));
 
-assign cpu_data_i = ram_data_o | uart_data_o | dai_data_o | debug_data_o;
+assign cpu_data_i =
+    ram_data_o |
+    uart_data_o |
+    dai_rx_data_o | dai_tx_data_o |
+    debug_data_o;
 
 nkmd_progrom rom(
     .clk(clk),

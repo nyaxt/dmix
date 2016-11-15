@@ -22,3 +22,4 @@ lpc/dmix_lpc_m4/Release
 lpc/driver/dmixlpccli
 nkmm/as/nkmmas
 nkmd/as/nkmmas
+nkmd/arch/dump

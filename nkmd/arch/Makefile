@@ -8,7 +8,7 @@ runsim: $(TARGET)_t.lxt
 .vvp.lxt:
 	vvp $< -lxt2
 
-$(TARGET)_t.vvp: *.v ../cpu/cpu.v ../cpu/progrom_cat.v ../../uart.v
+$(TARGET)_t.vvp: nkmd_arch_t.v $(filter-out $(wildcard *_t.v), $(wildcard *.v)) ../cpu/cpu.v ../cpu/progrom_cat.v ../../uart.v
 	iverilog -DSIMULATION -o $@ $^
 
 .SUFFIXES: .lxt .vvp

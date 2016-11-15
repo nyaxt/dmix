@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 `define DEBUG
 
+// Output Left-Justified 24bit 192kHz 2ch (Stereo) Audio Stream
 module dac_drv(
 	input clk,
 	input rst,
@@ -11,8 +12,7 @@ module dac_drv(
 
     input [1:0] ack_i,
 	input [23:0] data_i,
-    output [1:0] pop_o
-	);
+    output [1:0] pop_o);
 
 // 256fs * 192kHz = 49.152Mhz
 reg [7:0] clk_counter;
@@ -63,7 +63,7 @@ always @(posedge clk) begin
     `ifdef DEBUG
         $display("dac_drv:   lr %d send %h", lrck_o, data_i_ff[chsel]);
     `endif
-        data_o_ff <= {8'b0, data_i_ff[chsel]};
+        data_o_ff <= {data_i_ff[chsel], 8'b0};
     end else if(clk_counter[1:0] == 2'b11) begin
         data_o_ff <= {data_o_ff[30:0], 1'b0};
     end
