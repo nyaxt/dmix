@@ -1,0 +1,16 @@
+dump: nkmd_dai_tx_t.lxt
+	gtkwave nkmd_dai_tx_t.lxt &
+
+runsim: nkmd_dai_tx_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+nkmd_dai_tx_t.vvp: nkmd_dai.v nkmd_dai_tx_t.v
+	iverilog -DSIMULATION -o $@ $^
+
+clean:
+	@rm -f nkmd_dai_tx_t.lxt nkmd_dai_tx_t.vvp
+
+.SUFFIXES: .lxt .vvp
+.PHONY: dump runsim clean

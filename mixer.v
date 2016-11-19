@@ -139,7 +139,7 @@ end
 wire product_valid = kill_result_ff[0];
 
 // Adder
-reg [23:0] sum_ff;
+reg [23:0] sum_ff; // FIXME: this should be >24bit
 
 function [23:0] saturated_add(
     input [23:0] a,
@@ -158,9 +158,9 @@ begin
         2'b00, 2'b11: // sum is in expressible range
             saturated_add = sumext[23:0];
         2'b01: // overflow
-            saturated_add = 32'h7fff_ffff;
+            saturated_add = 24'h7f_ffff;
         2'b10: // underflow
-            saturated_add = 32'h8000_0000;
+            saturated_add = 24'h80_0000;
     endcase
 end
 endfunction

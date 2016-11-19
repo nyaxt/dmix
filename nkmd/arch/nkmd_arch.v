@@ -51,9 +51,22 @@ nkmd_uart uart(
     .addr_i(cpu_addr_o),
     .we_i(cpu_we_o));
 
+reg [23:0] mock_counter;
+initial mock_counter <= 24'b0;
+wire rxfifo_pop;
+always @(posedge clk) begin
+    if (rxfifo_pop)
+        mock_counter <= mock_counter + 1;
+end
+
 wire [31:0] dai_data_o;
 nkmd_dai dai(
     .clk(clk), .rst(rst),
+
+    .rxfifo_data_i(mock_counter),
+    .rxfifo_lrck(1'b0),
+    .rxfifo_pop_o(rxfifo_pop),
+    .rxfifo_empty_i(1'b0),
 
     .data_i(cpu_data_o),
     .data_o(dai_data_o),
@@ -71,7 +84,7 @@ nkmd_debug debug(
     .addr_i(cpu_addr_o),
     .we_i(cpu_we_o));
 
-assign cpu_data_i = ram_data_o | uart_data_o | debug_data_o;
+assign cpu_data_i = ram_data_o | uart_data_o | dai_data_o | debug_data_o;
 
 nkmd_progrom rom(
     .clk(clk),
