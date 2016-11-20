@@ -1,0 +1,16 @@
+dump: dac_drv_t.lxt
+	gtkwave dac_drv_t.lxt &
+
+runsim: dac_drv_t.lxt
+
+.vvp.lxt:
+	vvp $< -lxt2
+
+dac_drv_t.vvp: dac_drv.v dac_drv_t.v
+	iverilog -DSIMULATION -o $@ $^
+
+clean:
+	@rm -f dac_drv_t.lxt dac_drv_t.vvp
+
+.SUFFIXES: .lxt .vvp
+.PHONY: dump runsim clean
