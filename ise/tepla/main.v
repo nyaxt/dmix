@@ -3,8 +3,9 @@
 module main(
     input CLK100M,
     input CLK24M576,
-    input CLK22M592,
-    output LED,
+    input CLK22M5792,
+    output LED_M,
+	 output [3:0] LED,
     output [3:0] SPDIF,
     output [3:0] GPIO,
     output UART_RXD,
@@ -29,20 +30,21 @@ module main(
     output SATA_RX_N,
     output SATA_RX_P,
     output SATA_TX_N,
-    output SATA_TX_P);
+    output SATA_TX_P
+	 );
 
-wire clk = CLK100M;
+wire clk = CLK22M5792;
 
 reg [31:0] counter_ff;
 always @(posedge clk) begin
-    counter_ff <= counter_ff + 1;
+    counter_ff <= counter_ff + 4;
 end
 
-assign LED = counter_ff[28];
-assign SPDIF[1] = CLK24M576;
-assign SPDIF[0] = CLK22M592;
-assign SPDIF[3:2] = counter_ff[19:16];
+assign LED_M = counter_ff[28];
+assign LED[3:0] = counter_ff[27:24];
+assign SPDIF[3:0] = counter_ff[19:16];
 assign GPIO[3:0] = counter_ff[19:16];
+
 assign UART_RXD = counter_ff[15];
 assign UART_TXD = counter_ff[14];
 assign SPI_MISO = counter_ff[16];
