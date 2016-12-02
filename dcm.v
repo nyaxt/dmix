@@ -3,6 +3,7 @@
 
 module dmix_dcm(
     input clk245760_pad,
+	 input rst_dcm,
     output clk245760,
     output clk491520,
     output clk983040);
@@ -36,10 +37,10 @@ DCM #(
 ) dcm983040(
     .CLKFB(clk245760_unbuf),
     .CLKIN(clk245760_pad),
-    .DSSEN(0), 
-    .PSCLK(0), // phase shift
-    .PSEN(0),
-    .PSINCDEC(0),
+    .DSSEN(1'b0), 
+    .PSCLK(1'b0), // phase shift
+    .PSEN(1'b0),
+    .PSINCDEC(1'b0),
     .RST(rst_dcm),
     .CLK0(clk245760_unbuf),
     .CLK2X(clk491520_unbuf),

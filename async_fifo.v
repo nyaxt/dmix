@@ -75,8 +75,12 @@ endfunction
 // empty notify
 wire [2:0] waddr_gray = gray_enc(waddr_ff);
 reg [8:0] waddr_gray_delay_ff;
-always @(posedge rclk)
-    waddr_gray_delay_ff <= {waddr_gray, waddr_gray_delay_ff[8:3]};
+always @(posedge rclk) begin
+    if (rrst)
+        waddr_gray_delay_ff <= 9'b0;
+    else
+        waddr_gray_delay_ff <= {waddr_gray, waddr_gray_delay_ff[8:3]};
+end
 wire [2:0] waddr_delayed = gray_dec(waddr_gray_delay_ff[2:0]);
 
 assign empty_o = (waddr_delayed[1:0] == raddr_next[1:0]) && (waddr_delayed[2] == raddr_next[2]);
@@ -84,8 +88,12 @@ assign empty_o = (waddr_delayed[1:0] == raddr_next[1:0]) && (waddr_delayed[2] ==
 // full notify
 wire [2:0] raddr_gray = gray_enc(raddr_ff);
 reg [8:0] raddr_gray_delay_ff;
-always @(posedge wclk)
-    raddr_gray_delay_ff <= {raddr_gray, raddr_gray_delay_ff[8:3]};
+always @(posedge wclk) begin
+    if (wrst)
+        raddr_gray_delay_ff <= 9'b0;
+    else
+        raddr_gray_delay_ff <= {raddr_gray, raddr_gray_delay_ff[8:3]};
+end
 wire [2:0] raddr_delayed = gray_dec(raddr_gray_delay_ff[2:0]);
 
 assign full_o = (raddr_delayed[1:0] == waddr_next[1:0]) && (raddr_delayed[2] != waddr_next[2]);
