@@ -1,0 +1,36 @@
+Release 14.7 - par P.20131013 (lin64)
+Copyright (c) 1995-2013 Xilinx, Inc.  All rights reserved.
+
+Thu Dec  8 17:32:56 2016
+
+All signals are completely routed.
+
+WARNING:ParHelpers:361 - There are 24 loadless signals in this design. This design will cause Bitgen to issue DRC
+   warnings.
+
+   memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem1_RAMD_D1_O
+   memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem2_RAMD_D1_O
+   memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem3_RAMD_D1_O
+   memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem4_RAMD_D1_O
+   memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem5_RAMD_D1_O
+   memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem6_RAMD_D1_O
+   memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem1_RAMD_D1_O
+   memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem2_RAMD_D1_O
+   memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem3_RAMD_D1_O
+   memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem4_RAMD_D1_O
+   memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem5_RAMD_D1_O
+   memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem6_RAMD_D1_O
+   memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem1_RAMD_D1_O
+   memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem2_RAMD_D1_O
+   memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem3_RAMD_D1_O
+   memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem4_RAMD_D1_O
+   memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem5_RAMD_D1_O
+   memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem6_RAMD_D1_O
+   memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem1_RAMD_D1_O
+   memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem2_RAMD_D1_O
+   memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem3_RAMD_D1_O
+   memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem4_RAMD_D1_O
+   memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem5_RAMD_D1_O
+   memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_postedfifo/rd_fifo/Mram_mem6_RAMD_D1_O
+
+

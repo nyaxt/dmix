@@ -1,0 +1,108 @@
+Release 14.7 Drc P.20131013 (lin64)
+Copyright (c) 1995-2013 Xilinx, Inc.  All rights reserved.
+
+Thu Dec  8 17:34:11 2016
+
+drc -z example_top.ncd example_top.pcf
+
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem3_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem4_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem4_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem1_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem2_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem3_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem4_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem5_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT0_TG.m_traffic_gen_p0/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem6_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem1_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem2_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem3_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem5_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem1_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem2_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem3_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem5_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem4_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT1_TG.m_traffic_gen_p1/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem6_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem5_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem1_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem6_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT2_TG.m_traffic_gen_p2/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem6_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal
+   <memc3_tb_top_inst/PORT3_TG.m_traffic_gen_p3/RD_PATH.read_data_path/read_post
+   edfifo/rd_fifo/Mram_mem2_RAMD_D1_O> is incomplete. The signal does not drive
+   any load pins in the design.
+INFO:PhysDesignRules:1861 - To achieve optimal frequency synthesis performance
+   with the CLKFX and CLKFX180 outputs of the DCM comp dcm/dcm_sp_inst, consult
+   the device Data Sheet.
+DRC detected 0 errors and 24 warnings.  Please see the previously displayed
+individual error or warning messages for more details.
