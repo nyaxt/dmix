@@ -187,12 +187,13 @@ void USBHandler::enqueueResponse(size_t len) {
 
 void USBHandler::processRxData() {
 	size_t len = static_cast<size_t>(m_sizeReceived);
-#if 0
+#if 1
 	if (len < sizeof(uint32_t)*2)
 		return;
 
 	uint32_t* a = reinterpret_cast<uint32_t*>(m_bufRx);
 	*reinterpret_cast<uint32_t*>(m_bufTx) = a[0] + a[1];
+	USBHandler::getInstance()->enqueueResponse(4);
 #else
 	if (!SPI::getInstance()->isTransactionActive()) {
         SPI::getInstance()->doSendRecv(m_bufRx, m_bufTx, len, [len]() {

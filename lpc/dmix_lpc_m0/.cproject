@@ -5,13 +5,13 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.crt.advproject.config.exe.debug.1008477588" moduleId="org.eclipse.cdt.core.settings" name="Debug">
 				<externalSettings/>
 				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
-					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -41,6 +41,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
+								<option id="com.crt.advproject.cpp.misc.dialect.1013949608" name="Language standard" superClass="com.crt.advproject.cpp.misc.dialect" value="com.crt.advproject.misc.dialect.cpp14" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.cpp.input.1634520700" superClass="com.crt.advproject.compiler.cpp.input"/>
 							</tool>
 							<tool id="com.crt.advproject.gcc.exe.debug.695015014" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug">
@@ -64,6 +65,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
+								<option id="com.crt.advproject.gcc.specs.1447176152" name="Specs" superClass="com.crt.advproject.gcc.specs" value="com.crt.advproject.gcc.specs.newlib" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.input.2118978658" superClass="com.crt.advproject.compiler.input"/>
 							</tool>
 							<tool id="com.crt.advproject.gas.exe.debug.64662445" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.debug">
@@ -76,6 +78,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
+								<option id="com.crt.advproject.gas.specs.755192937" name="Specs" superClass="com.crt.advproject.gas.specs" value="com.crt.advproject.gas.specs.newlib" valueType="enumerated"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1754713464" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 								<inputType id="com.crt.advproject.assembler.input.953133553" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
 							</tool>
@@ -114,7 +117,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/config_m0app}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_chip_43xx_m0/inc/usbd}&quot;"/>
 								</option>
-								<option id="com.crt.advproject.cpp.misc.dialect.422486204" name="Language standard" superClass="com.crt.advproject.cpp.misc.dialect" value="com.crt.advproject.misc.dialect.cpp11y" valueType="enumerated"/>
+								<option id="com.crt.advproject.cpp.misc.dialect.422486204" name="Language standard" superClass="com.crt.advproject.cpp.misc.dialect" value="com.crt.advproject.misc.dialect.cpp14" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.cpp.input.1925244624" superClass="com.crt.advproject.compiler.cpp.input"/>
 							</tool>
 							<tool id="com.crt.advproject.gcc.exe.debug.1558489246" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.695015014">
@@ -183,13 +186,13 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.crt.advproject.config.exe.release.1983787155" moduleId="org.eclipse.cdt.core.settings" name="Release">
 				<externalSettings/>
 				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
-					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -243,6 +246,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
+								<option id="com.crt.advproject.gcc.specs.2038130971" name="Specs" superClass="com.crt.advproject.gcc.specs" value="com.crt.advproject.gcc.specs.newlib" valueType="enumerated"/>
 								<inputType id="com.crt.advproject.compiler.input.1293938285" superClass="com.crt.advproject.compiler.input"/>
 							</tool>
 							<tool id="com.crt.advproject.gas.exe.release.1598913823" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.release">
@@ -255,6 +259,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0/lpc_board_nxp_lpclink2_4370_m0/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dmix_lpc_m0/dmix_lpc_m0}&quot;"/>
 								</option>
+								<option id="com.crt.advproject.gas.specs.1840976697" name="Specs" superClass="com.crt.advproject.gas.specs" value="com.crt.advproject.gas.specs.newlib" valueType="enumerated"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.913370216" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 								<inputType id="com.crt.advproject.assembler.input.2087001900" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
 							</tool>
@@ -336,88 +341,88 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="com.crt.config">
-		<projectStorage>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&#13;
-&lt;TargetConfig&gt;&#13;
-&lt;Properties property_0="M0APP" property_2="LPC18_43_SPIFI_1MB_4KB.cfx" property_3="NXP" property_4="LPC4370-M0" property_count="5" version="70200"/&gt;&#13;
-&lt;infoList vendor="NXP"&gt;&lt;info chip="LPC4370-M0" match_id="0x0" name="LPC4370-M0" stub="crt_emu_lpc18_43_nxp"&gt;&lt;chip&gt;&lt;name&gt;LPC4370-M0&lt;/name&gt;&#13;
-&lt;family&gt;LPC43xx&lt;/family&gt;&#13;
-&lt;vendor&gt;NXP (formerly Philips)&lt;/vendor&gt;&#13;
-&lt;reset board="None" core="Real" sys="Real"/&gt;&#13;
-&lt;clock changeable="TRUE" freq="20MHz" is_accurate="TRUE"/&gt;&#13;
-&lt;memory can_program="true" id="Flash" is_ro="true" type="Flash"/&gt;&#13;
-&lt;memory id="RAM" type="RAM"/&gt;&#13;
-&lt;memory id="Periph" is_volatile="true" type="Peripheral"/&gt;&#13;
-&lt;memoryInstance derived_from="Flash" edited="true" id="Flash_1MB" location="0x14080000" size="0x80000"/&gt;&#13;
-&lt;memoryInstance derived_from="RAM" edited="true" id="RamLoc72" location="0x10080000" size="0x12000"/&gt;&#13;
-&lt;peripheralInstance derived_from="V6M_NVIC" id="NVIC" location="0xe000e000"/&gt;&#13;
-&lt;peripheralInstance derived_from="V6M_DCR" id="DCR" location="0xe000edf0"/&gt;&#13;
-&lt;peripheralInstance derived_from="SCT" id="SCT" location="0x40000000"/&gt;&#13;
-&lt;peripheralInstance derived_from="GPDMA" id="GPDMA" location="0x40002000"/&gt;&#13;
-&lt;peripheralInstance derived_from="SPIFI" id="SPIFI" location="0x40003000"/&gt;&#13;
-&lt;peripheralInstance derived_from="SDMMC" id="SDMMC" location="0x40004000"/&gt;&#13;
-&lt;peripheralInstance derived_from="EMC" id="EMC" location="0x40005000"/&gt;&#13;
-&lt;peripheralInstance derived_from="USB0" id="USB0" location="0x40006000"/&gt;&#13;
-&lt;peripheralInstance derived_from="USB1" id="USB1" location="0x40007000"/&gt;&#13;
-&lt;peripheralInstance derived_from="LCD" id="LCD" location="0x40008000"/&gt;&#13;
-&lt;peripheralInstance derived_from="EEPROM" id="EEPROM" location="0x4000e000"/&gt;&#13;
-&lt;peripheralInstance derived_from="ETHERNET" id="ETHERNET" location="0x40010000"/&gt;&#13;
-&lt;peripheralInstance derived_from="ATIMER" id="ATIMER" location="0x40040000"/&gt;&#13;
-&lt;peripheralInstance derived_from="REGFILE" id="REGFILE" location="0x40041000"/&gt;&#13;
-&lt;peripheralInstance derived_from="PMC" id="PMC" location="0x40042000"/&gt;&#13;
-&lt;peripheralInstance derived_from="CREG" id="CREG" location="0x40043000"/&gt;&#13;
-&lt;peripheralInstance derived_from="EVENTROUTER" id="EVENTROUTER" location="0x40044000"/&gt;&#13;
-&lt;peripheralInstance derived_from="RTC" id="RTC" location="0x40046000"/&gt;&#13;
-&lt;peripheralInstance derived_from="CGU" id="CGU" location="0x40050000"/&gt;&#13;
-&lt;peripheralInstance derived_from="CCU1" id="CCU1" location="0x40051000"/&gt;&#13;
-&lt;peripheralInstance derived_from="CCU2" id="CCU2" location="0x40052000"/&gt;&#13;
-&lt;peripheralInstance derived_from="RGU" id="RGU" location="0x40053000"/&gt;&#13;
-&lt;peripheralInstance derived_from="WWDT" id="WWDT" location="0x40080000"/&gt;&#13;
-&lt;peripheralInstance derived_from="USART0" id="USART0" location="0x40081000"/&gt;&#13;
-&lt;peripheralInstance derived_from="USART2" id="USART2" location="0x400c1000"/&gt;&#13;
-&lt;peripheralInstance derived_from="USART3" id="USART3" location="0x400c2000"/&gt;&#13;
-&lt;peripheralInstance derived_from="UART1" id="UART1" location="0x40082000"/&gt;&#13;
-&lt;peripheralInstance derived_from="SSP0" id="SSP0" location="0x40083000"/&gt;&#13;
-&lt;peripheralInstance derived_from="SSP1" id="SSP1" location="0x400c5000"/&gt;&#13;
-&lt;peripheralInstance derived_from="TIMER0" id="TIMER0" location="0x40084000"/&gt;&#13;
-&lt;peripheralInstance derived_from="TIMER1" id="TIMER1" location="0x40085000"/&gt;&#13;
-&lt;peripheralInstance derived_from="TIMER2" id="TIMER2" location="0x400c3000"/&gt;&#13;
-&lt;peripheralInstance derived_from="TIMER3" id="TIMER3" location="0x400c4000"/&gt;&#13;
-&lt;peripheralInstance derived_from="SCU" id="SCU" location="0x40086000"/&gt;&#13;
-&lt;peripheralInstance derived_from="GPIO-PIN-INT" id="GPIO-PIN-INT" location="0x40087000"/&gt;&#13;
-&lt;peripheralInstance derived_from="GPIO-GROUP-INT0" id="GPIO-GROUP-INT0" location="0x40088000"/&gt;&#13;
-&lt;peripheralInstance derived_from="GPIO-GROUP-INT1" id="GPIO-GROUP-INT1" location="0x40089000"/&gt;&#13;
-&lt;peripheralInstance derived_from="MCPWM" id="MCPWM" location="0x400a0000"/&gt;&#13;
-&lt;peripheralInstance derived_from="I2C0" id="I2C0" location="0x400a1000"/&gt;&#13;
-&lt;peripheralInstance derived_from="I2C1" id="I2C1" location="0x400e0000"/&gt;&#13;
-&lt;peripheralInstance derived_from="I2S0" id="I2S0" location="0x400a2000"/&gt;&#13;
-&lt;peripheralInstance derived_from="I2S1" id="I2S1" location="0x400a3000"/&gt;&#13;
-&lt;peripheralInstance derived_from="C-CAN1" id="C-CAN1" location="0x400a4000"/&gt;&#13;
-&lt;peripheralInstance derived_from="RITIMER" id="RITIMER" location="0x400c0000"/&gt;&#13;
-&lt;peripheralInstance derived_from="QEI" id="QEI" location="0x400c6000"/&gt;&#13;
-&lt;peripheralInstance derived_from="GIMA" id="GIMA" location="0x400c7000"/&gt;&#13;
-&lt;peripheralInstance derived_from="DAC" id="DAC" location="0x400e1000"/&gt;&#13;
-&lt;peripheralInstance derived_from="C-CAN0" id="C-CAN0" location="0x400e2000"/&gt;&#13;
-&lt;peripheralInstance derived_from="ADC0" id="ADC0" location="0x400e3000"/&gt;&#13;
-&lt;peripheralInstance derived_from="ADC1" id="ADC1" location="0x400e4000"/&gt;&#13;
-&lt;peripheralInstance derived_from="ADCHS" id="ADCHS" location="0x400f0000"/&gt;&#13;
-&lt;peripheralInstance derived_from="GPIO-PORT" id="GPIO-PORT" location="0x400f4000"/&gt;&#13;
-&lt;peripheralInstance derived_from="SPI" id="SPI" location="0x40100000"/&gt;&#13;
-&lt;peripheralInstance derived_from="SGPIO" id="SGPIO" location="0x40101000"/&gt;&#13;
-&lt;peripheralInstance derived_from="EEPROM" id="EEPROM" location="0x4000e000"/&gt;&#13;
-&lt;/chip&gt;&#13;
-&lt;processor&gt;&lt;name gcc_name="cortex-m0"&gt;Cortex-M0&lt;/name&gt;&#13;
-&lt;family&gt;Cortex-M&lt;/family&gt;&#13;
-&lt;/processor&gt;&#13;
-&lt;link href="nxp_lpc43xx_m0_peripheral.xme" show="embed" type="simple"/&gt;&#13;
-&lt;/info&gt;&#13;
-&lt;/infoList&gt;&#13;
+		<projectStorage>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;TargetConfig&gt;
+&lt;Properties property_0="M0APP" property_2="LPC18_43_SPIFI_1MB_4KB.cfx" property_3="NXP" property_4="LPC4370-M0" property_count="5" version="70200"/&gt;
+&lt;infoList vendor="NXP"&gt;&lt;info chip="LPC4370-M0" match_id="0x0" name="LPC4370-M0" stub="crt_emu_lpc18_43_nxp"&gt;&lt;chip&gt;&lt;name&gt;LPC4370-M0&lt;/name&gt;
+&lt;family&gt;LPC43xx&lt;/family&gt;
+&lt;vendor&gt;NXP (formerly Philips)&lt;/vendor&gt;
+&lt;reset board="None" core="Real" sys="Real"/&gt;
+&lt;clock changeable="TRUE" freq="20MHz" is_accurate="TRUE"/&gt;
+&lt;memory can_program="true" id="Flash" is_ro="true" type="Flash"/&gt;
+&lt;memory id="RAM" type="RAM"/&gt;
+&lt;memory id="Periph" is_volatile="true" type="Peripheral"/&gt;
+&lt;memoryInstance derived_from="Flash" edited="true" id="Flash_1MB" location="0x14080000" size="0x80000"/&gt;
+&lt;memoryInstance derived_from="RAM" edited="true" id="RamLoc72" location="0x10080000" size="0x12000"/&gt;
+&lt;peripheralInstance derived_from="V6M_NVIC" id="NVIC" location="0xe000e000"/&gt;
+&lt;peripheralInstance derived_from="V6M_DCR" id="DCR" location="0xe000edf0"/&gt;
+&lt;peripheralInstance derived_from="SCT" id="SCT" location="0x40000000"/&gt;
+&lt;peripheralInstance derived_from="GPDMA" id="GPDMA" location="0x40002000"/&gt;
+&lt;peripheralInstance derived_from="SPIFI" id="SPIFI" location="0x40003000"/&gt;
+&lt;peripheralInstance derived_from="SDMMC" id="SDMMC" location="0x40004000"/&gt;
+&lt;peripheralInstance derived_from="EMC" id="EMC" location="0x40005000"/&gt;
+&lt;peripheralInstance derived_from="USB0" id="USB0" location="0x40006000"/&gt;
+&lt;peripheralInstance derived_from="USB1" id="USB1" location="0x40007000"/&gt;
+&lt;peripheralInstance derived_from="LCD" id="LCD" location="0x40008000"/&gt;
+&lt;peripheralInstance derived_from="EEPROM" id="EEPROM" location="0x4000e000"/&gt;
+&lt;peripheralInstance derived_from="ETHERNET" id="ETHERNET" location="0x40010000"/&gt;
+&lt;peripheralInstance derived_from="ATIMER" id="ATIMER" location="0x40040000"/&gt;
+&lt;peripheralInstance derived_from="REGFILE" id="REGFILE" location="0x40041000"/&gt;
+&lt;peripheralInstance derived_from="PMC" id="PMC" location="0x40042000"/&gt;
+&lt;peripheralInstance derived_from="CREG" id="CREG" location="0x40043000"/&gt;
+&lt;peripheralInstance derived_from="EVENTROUTER" id="EVENTROUTER" location="0x40044000"/&gt;
+&lt;peripheralInstance derived_from="RTC" id="RTC" location="0x40046000"/&gt;
+&lt;peripheralInstance derived_from="CGU" id="CGU" location="0x40050000"/&gt;
+&lt;peripheralInstance derived_from="CCU1" id="CCU1" location="0x40051000"/&gt;
+&lt;peripheralInstance derived_from="CCU2" id="CCU2" location="0x40052000"/&gt;
+&lt;peripheralInstance derived_from="RGU" id="RGU" location="0x40053000"/&gt;
+&lt;peripheralInstance derived_from="WWDT" id="WWDT" location="0x40080000"/&gt;
+&lt;peripheralInstance derived_from="USART0" id="USART0" location="0x40081000"/&gt;
+&lt;peripheralInstance derived_from="USART2" id="USART2" location="0x400c1000"/&gt;
+&lt;peripheralInstance derived_from="USART3" id="USART3" location="0x400c2000"/&gt;
+&lt;peripheralInstance derived_from="UART1" id="UART1" location="0x40082000"/&gt;
+&lt;peripheralInstance derived_from="SSP0" id="SSP0" location="0x40083000"/&gt;
+&lt;peripheralInstance derived_from="SSP1" id="SSP1" location="0x400c5000"/&gt;
+&lt;peripheralInstance derived_from="TIMER0" id="TIMER0" location="0x40084000"/&gt;
+&lt;peripheralInstance derived_from="TIMER1" id="TIMER1" location="0x40085000"/&gt;
+&lt;peripheralInstance derived_from="TIMER2" id="TIMER2" location="0x400c3000"/&gt;
+&lt;peripheralInstance derived_from="TIMER3" id="TIMER3" location="0x400c4000"/&gt;
+&lt;peripheralInstance derived_from="SCU" id="SCU" location="0x40086000"/&gt;
+&lt;peripheralInstance derived_from="GPIO-PIN-INT" id="GPIO-PIN-INT" location="0x40087000"/&gt;
+&lt;peripheralInstance derived_from="GPIO-GROUP-INT0" id="GPIO-GROUP-INT0" location="0x40088000"/&gt;
+&lt;peripheralInstance derived_from="GPIO-GROUP-INT1" id="GPIO-GROUP-INT1" location="0x40089000"/&gt;
+&lt;peripheralInstance derived_from="MCPWM" id="MCPWM" location="0x400a0000"/&gt;
+&lt;peripheralInstance derived_from="I2C0" id="I2C0" location="0x400a1000"/&gt;
+&lt;peripheralInstance derived_from="I2C1" id="I2C1" location="0x400e0000"/&gt;
+&lt;peripheralInstance derived_from="I2S0" id="I2S0" location="0x400a2000"/&gt;
+&lt;peripheralInstance derived_from="I2S1" id="I2S1" location="0x400a3000"/&gt;
+&lt;peripheralInstance derived_from="C-CAN1" id="C-CAN1" location="0x400a4000"/&gt;
+&lt;peripheralInstance derived_from="RITIMER" id="RITIMER" location="0x400c0000"/&gt;
+&lt;peripheralInstance derived_from="QEI" id="QEI" location="0x400c6000"/&gt;
+&lt;peripheralInstance derived_from="GIMA" id="GIMA" location="0x400c7000"/&gt;
+&lt;peripheralInstance derived_from="DAC" id="DAC" location="0x400e1000"/&gt;
+&lt;peripheralInstance derived_from="C-CAN0" id="C-CAN0" location="0x400e2000"/&gt;
+&lt;peripheralInstance derived_from="ADC0" id="ADC0" location="0x400e3000"/&gt;
+&lt;peripheralInstance derived_from="ADC1" id="ADC1" location="0x400e4000"/&gt;
+&lt;peripheralInstance derived_from="ADCHS" id="ADCHS" location="0x400f0000"/&gt;
+&lt;peripheralInstance derived_from="GPIO-PORT" id="GPIO-PORT" location="0x400f4000"/&gt;
+&lt;peripheralInstance derived_from="SPI" id="SPI" location="0x40100000"/&gt;
+&lt;peripheralInstance derived_from="SGPIO" id="SGPIO" location="0x40101000"/&gt;
+&lt;peripheralInstance derived_from="EEPROM" id="EEPROM" location="0x4000e000"/&gt;
+&lt;/chip&gt;
+&lt;processor&gt;&lt;name gcc_name="cortex-m0"&gt;Cortex-M0&lt;/name&gt;
+&lt;family&gt;Cortex-M&lt;/family&gt;
+&lt;/processor&gt;
+&lt;link href="nxp_lpc43xx_m0_peripheral.xme" show="embed" type="simple"/&gt;
+&lt;/info&gt;
+&lt;/infoList&gt;
 &lt;/TargetConfig&gt;</projectStorage>
 	</storageModule>
 	<storageModule moduleId="refreshScope" versionNumber="2">
-		<configuration configurationName="Release">
+		<configuration configurationName="Debug">
 			<resource resourceType="PROJECT" workspacePath="/dmix_lpc_m0"/>
 		</configuration>
-		<configuration configurationName="Debug">
+		<configuration configurationName="Release">
 			<resource resourceType="PROJECT" workspacePath="/dmix_lpc_m0"/>
 		</configuration>
 	</storageModule>
@@ -442,4 +447,5 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.crt.advproject.GCCManagedMakePerProjectProfile"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

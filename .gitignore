@@ -23,3 +23,4 @@ lpc/driver/dmixlpccli
 nkmm/as/nkmmas
 nkmd/as/nkmmas
 nkmd/arch/dump
+ise/nkmm_arch/output.txt

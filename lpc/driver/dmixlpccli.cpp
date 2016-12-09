@@ -293,7 +293,8 @@ int main(int argc, char* argv[]) {
     printf("claimed!\n");
 
     auto txdata = parseHex(FLAGS_hex);
-    doTest(&devhandle, txdata);
+    auto rxdata = doTest(&devhandle, txdata);
+    printf("%02x %02x %02x %02x\n", rxdata[0], rxdata[1], rxdata[2], rxdata[3]);
   } catch (std::exception& e) {
     fprintf(stderr, "Error: %s\n", e.what());
     return 1;
