@@ -1,15 +1,17 @@
 module csr_cmd_decoder(
     input [7:0] cmd,
     output we,
+    output target_nkmdprom,
     output target_csr,
-    output [3:0] ch,
-    output nop);
+    output [3:0] addr_high);
 
-assign we = cmd[5];
-assign target_csr = cmd[4];
+assign we = cmd[7];
+
+assign target = cmd[5:4];
+assign target_nkmdprom = (target == 2'b10);
+assign target_csr = (target == 2'b00);
+
 assign ch = cmd[3:0];
-
-assign nop = cmd[7:6] == 2'b00 && target_csr == 2'b0;
 
 endmodule
 
@@ -37,7 +39,11 @@ module csr_spi #(
     input [(RATE_WIDTH-1):0] rate_i,
     input [(UDATA_WIDTH-1):0] udata_i,
     input [(CDATA_WIDTH-1):0] cdata_i,
-    );
+
+    // nkmd prom
+    output [31:0] prom_addr_o,
+    output [31:0] prom_data_o,
+    output prom_ack_o);
 
 wire spi_rst;
 wire [7:0] spi_data_rx;
@@ -52,19 +58,18 @@ spi_trx spi_trx(
     .data_o(spi_data_rx), .ack_pop_o(spi_ack_pop_o),
     .data_i(spi_data_tx), .ack_i(spi_ack_i));
 
-wire [7:0] dec_nrep;
 wire dec_we;
+wire dec_target_nkmdprom;
 wire dec_target_csr;
-wire [3:0] dec_ch;
-wire dec_nop;
+wire [3:0] dec_addr_high;
 csr_cmd_decoder csr_cmd_decoder(
     .cmd(spi_data_rx),
-    .nrep(dec_nrep), .we(dec_we), .target_csr(dec_target_csr), .ch(dec_ch), .nop(dec_nop));
+    .we(dec_we), .target_nkmdprom(dec_target_nkmdprom), .target_csr(dec_target_csr),
+    .addr_high(dec_addr_high));
 
-reg [7:0] nrep_counter;
 reg cmd_we_ff;
-reg [3:0] cmd_ch_ff;
-reg [7:0] csr_addr_low_ff;
+reg [19:0] addr_ff;
+reg [31:0] wdata_ff;
 
 wire [7:0] csr_data_o;
 
@@ -73,87 +78,117 @@ parameter ST_INIT = 0;
 parameter ST_PENDING_CSR_ADDR = 1;
 parameter ST_PENDING_CSR_DATA = 2;
 parameter ST_RESPOND_CSR_DATA = 3;
-parameter ST_PENDING_XCHG_DATA = 4;
-parameter ST_RESPOND_XCHG_DATA = 5;
+parameter ST_PENDING_NKMDPROM_ADDR_MID = 4;
+parameter ST_PENDING_NKMDPROM_ADDR_LOW = 5;
+parameter ST_PENDING_NKMDPROM_DATA = 6;
+reg [1:0] data_offset_ff; // For 32bit targets, this reg will keep which wdata_ff octet needs to be filled in next
 
-// FIXME: split always for data_tx
 reg [7:0] data_tx_ff;
 assign spi_data_tx = data_tx_ff;
 reg data_ready_ff;
 assign spi_ack_i = data_ready_ff;
 
-integer i;
-integer j;
-reg [2:0] hostaudio_shift_ff;
-reg [23:0] hostaudio_ff;
-assign data_o = hostaudio_ff;
-reg [1:0] hostaudio_ack_ff;
-assign ack_o = hostaudio_ack_ff;
-
-reg hostbuf_highlow_ff;
-assign hostbuf_highlow_o = hostbuf_highlow_ff;
-assign hostbuf_ch_o = cmd_ch_ff;
-assign hostbuf_pop_o = state_ff == ST_RESPOND_XCHG_DATA && hostbuf_highlow_ff == 1'b1;
-
 always @(posedge clk) begin
-    data_ready_ff <= 0;
-    hostaudio_ack_ff <= 2'b00;
-
-    if(rst) begin
+    if (rst || spi_rst) begin
         state_ff <= ST_INIT;
         data_tx_ff <= 8'h00;
+        data_ready_ff <= 0;
+
+        cmd_we_ff <= 1'b0;
+        addr_ff <= {dec_addr_high, 16'h0};
+        wdata_ff <= 32'b0;
+        data_offset_ff <= 2'h0;
     end else begin
         case (state_ff)
             ST_INIT: begin
                 if (spi_ack_pop_o) begin
-                    nrep_counter <= dec_nrep;        
-                    cmd_ch_ff <= dec_ch;
+                    addr_ff <= {dec_addr_high, 16'h0};
                     cmd_we_ff <= dec_we;
-                    hostbuf_highlow_ff <= 1'b0;
 
                     data_tx_ff <= 8'hcc;
                     data_ready_ff <= 1;
 
-                    hostaudio_shift_ff <= 3'b001;
-                    hostaudio_ff <= 24'h0;
-
-                    if (dec_nop)
-                        state_ff <= ST_INIT;
-                    else if (dec_target_csr)
+                    if (dec_target_csr)
                         state_ff <= ST_PENDING_CSR_ADDR;
+                    else if (dec_target_nkmdprom)
+                        state_ff <= ST_PENDING_NKMDPROM_ADDR_MID;
                     else
-                        state_ff <= ST_PENDING_XCHG_DATA;
-                end else
+                        state_ff <= ST_INIT;
+                end else begin
+                    data_ready_ff <= 0;
                     state_ff <= ST_INIT;
+                end
             end
             ST_PENDING_CSR_ADDR: begin
                 if (spi_ack_pop_o) begin
-                    csr_addr_low_ff[7:0] <= spi_data_rx[7:0];
+                    addr_ff <= {addr_ff[20:16], spi_data_rx[7:0], 8'h0};
 
                     data_tx_ff <= 8'had;
                     data_ready_ff <= 1;
 
                     state_ff <= ST_PENDING_CSR_DATA;
-                end else
+                end else begin
+                    data_ready_ff <= 0;
                     state_ff <= ST_PENDING_CSR_ADDR;
+                end
             end
             ST_PENDING_CSR_DATA: begin
+                data_ready_ff <= 0;
                 if (spi_ack_pop_o) begin
                     state_ff <= ST_RESPOND_CSR_DATA;
-                end else
+                end else begin
                     state_ff <= ST_PENDING_CSR_DATA;
+                end
             end
             ST_RESPOND_CSR_DATA: begin
                 data_tx_ff <= csr_data_o;
                 data_ready_ff <= 1;
 
-                csr_addr_low_ff <= csr_addr_low_ff + 1;
+                addr_ff[20:8] = addr_ff[20:8] + 1;
+                state_ff <= ST_PENDING_CSR_DATA;
+            end
+            ST_PENDING_NKMDPROM_ADDR_MID: begin
+                if (spi_ack_pop_o) begin
+                    data_tx_ff <= 8'ha0;
+                    data_ready_ff <= 1;
 
-                nrep_counter <= nrep_counter - 1;
-                if (nrep_counter != 0)
-                    state_ff <= ST_PENDING_CSR_DATA;
-                else
-                    state_ff <= ST_INIT;
+                    addr_ff <= {addr_ff[19:16], spi_data_rx[7:0], 8'b0};
+
+                    state_ff <= ST_PENDING_NKMDPROM_ADDR_LOW;
+                end else begin
+                    data_ready_ff <= 0;
+                    state_ff <= ST_PENDING_NKMDPROM_ADDR_MID;
+                end
+            end
+            ST_PENDING_NKMDPROM_ADDR_LOW: begin
+                if (spi_ack_pop_o) begin
+                    data_tx_ff <= 8'ha1;
+                    data_ready_ff <= 1;
+
+                    addr_ff <= {addr_ff[19:16], addr_ff[15:8], spi_data_rx[7:0]};
+
+                    state_ff <= ST_PENDING_NKMDPROM_DATA;
+                end else begin
+                    data_ready_ff <= 0;
+                    state_ff <= ST_PENDING_NKMDPROM_ADDR_LOW;
+                end
+            end
+            ST_PENDING_NKMDPROM_DATA: begin
+                if (spi_ack_pop_o) begin
+                    data_tx_ff <= 8'hdd;
+                    data_ready_ff <= 1;
+
+                    case (data_offset_ff)
+                        4'h0: wdata_ff <= {wdata_ff[31:24], wdata_ff[23:16], wdata_ff[15:8], spi_data_rx[7:0]};
+                        4'h1: wdata_ff <= {wdata_ff[31:24], wdata_ff[23:16], spi_data_rx[7:0], wdata_ff[7:0]};
+                        4'h2: wdata_ff <= {wdata_ff[31:24], spi_data_rx[7:0], wdata_ff[15:8], wdata_ff[7:0]};
+                        4'h3: wdata_ff <= {spi_data_rx[7:0], wdata_ff[23:16], wdata_ff[15:8], wdata_ff[7:0]};
+                    endcase
+
+                    data_offset_ff <= data_offset_ff + 1;
+                end
+
+                state_ff <= ST_PENDING_NKMDPROM_DATA;
             end
             default:
                 state_ff <= ST_INIT;
@@ -161,11 +196,18 @@ always @(posedge clk) begin
     end
 end
 
-wire [11:0] csr_addr = {cmd_ch_ff, csr_addr_low_ff};
+wire [11:0] csr_addr = addr_ff[19:8];
 wire csr_ack_i = state_ff == ST_PENDING_CSR_DATA && spi_ack_pop_o == 1'b1 && cmd_we_ff == 1'b1;
 csr #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr(
     .clk(clk), .rst(rst),
     .addr_i(csr_addr), .ack_i(csr_ack_i), .data_i(spi_data_rx), .data_o(csr_data_o),
     .vol_o(vol_o), .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
+
+wire prom_addr_o = {12'b0, addr_ff[19:0]};
+wire prom_data_o = wdata_ff;
+reg prom_ack_ff;
+always @(posedge clk)
+    prom_ack_ff <= (state_ff == ST_PENDING_NKMDPROM_DATA && spi_ack_pop_o == 1'b1 && cmd_we_ff == 1'b1 && data_offset_ff == 4'h3);
+wire prom_ack_o = prom_ack_ff;
 
 endmodule
