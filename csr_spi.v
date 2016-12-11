@@ -1,42 +1,15 @@
 module csr_cmd_decoder(
     input [7:0] cmd,
-    output [7:0] nrep,
     output we,
     output target_csr,
     output [3:0] ch,
     output nop);
 
-function [7:0] decode_nrep(input [1:0] encoded);
-    case (encoded)
-    2'b00: decode_nrep = 8'd0;
-    2'b01: decode_nrep = 8'd3;
-    2'b10: decode_nrep = 8'd63;
-    2'b11: decode_nrep = 8'd255;
-    endcase
-endfunction
-
-assign nrep = decode_nrep(cmd[7:6]);
 assign we = cmd[5];
 assign target_csr = cmd[4];
 assign ch = cmd[3:0];
 
 assign nop = cmd[7:6] == 2'b00 && target_csr == 2'b0;
-
-endmodule
-
-module out2host_buf #(
-    parameter NUM_CH = 2
-)(
-    input clk,
-    input rst,
-
-    input [(24*NUM_CH-1):0] data_i,
-    input [(NUM_CH-1):0] ack_i,
-
-    output [7:0] data_o,
-    input highlow_o,
-    input [3:0] ch_i,
-    input pop_o);
 
 endmodule
 
@@ -59,21 +32,12 @@ module csr_spi #(
     input mosi,
     input ss,
 
-    // registers access
-    output [(VOL_WIDTH-1):0] vol_o, // addr: 12'h000 ~
-    input [(RATE_WIDTH-1):0] rate_i, // addr: 12'h800 ~
-    input [(UDATA_WIDTH-1):0] udata_i, // addr: 12'h900 ~
-    input [(CDATA_WIDTH-1):0] cdata_i, // addr: 12'ha00 ~
-
-    // dmix audio data in
-    input [7:0] hostbuf_data_i,
-    output hostbuf_highlow_o,
-    output [3:0] hostbuf_ch_o,
-    output hostbuf_pop_o,
-
-    // spi host audio data out
-    output [23:0] data_o,
-    output [1:0] ack_o);
+    // csr registers access
+    output [(VOL_WIDTH-1):0] vol_o,
+    input [(RATE_WIDTH-1):0] rate_i,
+    input [(UDATA_WIDTH-1):0] udata_i,
+    input [(CDATA_WIDTH-1):0] cdata_i,
+    );
 
 wire spi_rst;
 wire [7:0] spi_data_rx;
@@ -188,36 +152,6 @@ always @(posedge clk) begin
                 nrep_counter <= nrep_counter - 1;
                 if (nrep_counter != 0)
                     state_ff <= ST_PENDING_CSR_DATA;
-                else
-                    state_ff <= ST_INIT;
-            end
-            ST_PENDING_XCHG_DATA: begin
-                if (spi_ack_pop_o) begin
-                    // ISE bug workaround... :(
-                    for (i = 0; i < 3; i = i + 1) begin
-                        for (j = 0; j < 8; j = j + 1) begin
-                            if (hostaudio_shift_ff[i])
-                                hostaudio_ff[(i*8)+j] <= spi_data_rx[j];
-                        end
-                    end
-                    if (cmd_we_ff == 1'b1 && hostaudio_shift_ff == 3'b100)
-                        hostaudio_ack_ff <= cmd_ch_ff[0] ? 2'b10 : 2'b01;
-
-                    hostaudio_shift_ff <= {hostaudio_shift_ff[1:0], 1'b0};
-
-                    state_ff <= ST_RESPOND_XCHG_DATA;
-                end else
-                    state_ff <= ST_PENDING_XCHG_DATA;
-            end
-            ST_RESPOND_XCHG_DATA: begin
-                data_tx_ff <= hostbuf_data_i;
-                data_ready_ff <= 1;
-
-                hostbuf_highlow_ff <= ~hostbuf_highlow_ff;
-
-                nrep_counter <= nrep_counter - 1;
-                if (nrep_counter != 0)
-                    state_ff <= ST_PENDING_XCHG_DATA;
                 else
                     state_ff <= ST_INIT;
             end
