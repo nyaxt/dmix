@@ -1,38 +1,7 @@
-/*
- * Copyright(C) NXP Semiconductors, 2012
- * All rights reserved.
- *
- * Software that is described herein is for illustrative purposes only
- * which provides customers with programming information regarding the
- * LPC products.  This software is supplied "AS IS" without any warranties of
- * any kind, and NXP Semiconductors and its licensor disclaim any and
- * all warranties, express or implied, including all implied warranties of
- * merchantability, fitness for a particular purpose and non-infringement of
- * intellectual property rights.  NXP Semiconductors assumes no responsibility
- * or liability for the use of the software, conveys no license or rights under any
- * patent, copyright, mask work right, or any other intellectual property rights in
- * or to any products. NXP Semiconductors reserves the right to make changes
- * in the software without notification. NXP Semiconductors also makes no
- * representation or warranty that such application will be suitable for the
- * specified use without further testing or modification.
- *
- * Permission to use, copy, modify, and distribute this software and its
- * documentation is hereby granted, under NXP Semiconductors' and its
- * licensor's relevant copyrights in the software, without fee, provided that it
- * is used in conjunction with NXP Semiconductors microcontrollers.  This
- * copyright, permission, and disclaimer notice must appear in all copies of
- * this code.
- */
-
 #include "board.h"
 
-/* The System initialization code is called prior to the application and
-   initializes the board for run-time operation. Board initialization
-   includes clock setup and default pin muxing configuration. */
-
-/*****************************************************************************
- * Private types/enumerations/variables
- ****************************************************************************/
+const uint32_t OscRateIn = 12000000;
+const uint32_t ExtRateIn = 0;
 
 #if defined(CORE_M4)
 /* Structure for initial base clock states */
@@ -68,39 +37,30 @@ STATIC const PINMUX_GRP_T spifipinmuxing[] = {
 };
 
 STATIC const PINMUX_GRP_T pinmuxing[] = {
-	/* Board LEDs */
-	{0x1, 1, (SCU_MODE_INBUFF_EN | SCU_MODE_PULLDOWN | SCU_MODE_FUNC0)},
+	// SSP0
+	/* SSEL: P1.0: [Serial Expansion Interface] */
+	{0x1, 0, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
+	/* MISO: P1.1: [Serial Expansion Interface] */
+	{0x1, 1, (SCU_MODE_INACT | SCU_MODE_INBUFF_EN | SCU_MODE_ZIF_DIS | SCU_MODE_FUNC5)},
+	/* MOSI: P1.2: [Serial Expansion Interface] */
+	{0x1, 2, (SCU_MODE_INACT | SCU_MODE_INBUFF_EN | SCU_MODE_ZIF_DIS | SCU_MODE_FUNC5)},
+	/* SCLK: P3.0: [Serial Expansion Interface] */
+	{0x3, 0, (SCU_PINIO_FAST | SCU_MODE_FUNC4)},
 };
-#endif /* defined(CORE_M4) */
-
-/*****************************************************************************
- * Public types/enumerations/variables
- ****************************************************************************/
-
-/*****************************************************************************
- * Private functions
- ****************************************************************************/
-
-/*****************************************************************************
- * Public functions
- ****************************************************************************/
 
 /* Sets up system pin muxing */
-void Board_SetupMuxing(void)
+static void Board_SetupMuxing(void)
 {
-#if defined(CORE_M4)
 	/* Setup system level pin muxing */
 	Chip_SCU_SetPinMuxing(pinmuxing, sizeof(pinmuxing) / sizeof(PINMUX_GRP_T));
 
 	/* SPIFI pin setup is done prior to setting up system clocking */
 	Chip_SCU_SetPinMuxing(spifipinmuxing, sizeof(spifipinmuxing) / sizeof(PINMUX_GRP_T));
-#endif /* defined(CORE_M4) */
 }
 
 /* Set up and initialize clocking prior to call to main */
-void Board_SetupClocking(void)
+static void Board_SetupClocking(void)
 {
-#if defined(CORE_M4)
 	int i;
 
 	Chip_SetupCoreClock(CLKIN_CRYSTAL, MAX_CLOCK_FREQ, true);
@@ -128,7 +88,6 @@ void Board_SetupClocking(void)
 
 	/* Attach main PLL clock to divider C with a divider of 2 */
 	Chip_Clock_SetDivider(CLK_IDIV_C, CLKIN_MAINPLL, 2);
-#endif /* defined(CORE_M4) */
 }
 
 /* Set up and initialize hardware prior to call to main */
@@ -142,3 +101,5 @@ void Board_SystemInit(void)
 	Board_SetupClocking();
 #endif /* defined(CORE_M4) */
 }
+
+#endif /* defined(CORE_M4) */

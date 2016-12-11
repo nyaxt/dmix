@@ -40,7 +40,6 @@ void DMA_IRQHandler(void) {
 
 int main(void) {
     SystemCoreClockUpdate();
-    Board_Init();
 
     Config_NVIC();
 	NVIC_EnableIRQ(M4_IRQn);

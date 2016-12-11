@@ -294,7 +294,14 @@ int main(int argc, char* argv[]) {
 
     auto txdata = parseHex(FLAGS_hex);
     auto rxdata = doTest(&devhandle, txdata);
-    printf("%02x %02x %02x %02x\n", rxdata[0], rxdata[1], rxdata[2], rxdata[3]);
+    printf("len: %zu\n", rxdata.size());
+    size_t count = 0;
+    for (uint8_t byte : rxdata) {
+      printf("%02x ", byte);
+      if (count++ % 4 == 3)
+        printf("\n");
+    }
+    printf("\n");
   } catch (std::exception& e) {
     fprintf(stderr, "Error: %s\n", e.what());
     return 1;

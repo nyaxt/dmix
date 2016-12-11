@@ -42,7 +42,7 @@
 const uint32_t ExtRateIn = 0;
 const uint32_t OscRateIn = 12000000;
 #else
-#include "../dmix_lpc_m4/lpc_board_nxp_lpclink2_4370/inc/board.h"
+#include "board.h"
 #endif
 
 /*****************************************************************************

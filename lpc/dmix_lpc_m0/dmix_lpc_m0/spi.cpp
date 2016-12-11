@@ -12,16 +12,16 @@ void SPI::init() {
 }
 
 SPI::SPI() {
-	Board_SSP_Init(LPC_SSP1);
-	Chip_SSP_Init(LPC_SSP1);
-	Chip_SSP_SetFormat(LPC_SSP1, SSP_BITS_8, SSP_FRAMEFORMAT_SPI, SSP_CLOCK_MODE0);
-	Chip_SSP_Enable(LPC_SSP1);
+	Chip_SSP_Init(LPC_SSP0);
+	Chip_SSP_SetBitRate(LPC_SSP0, 100000);
+	Chip_SSP_SetFormat(LPC_SSP0, SSP_BITS_8, SSP_FRAMEFORMAT_SPI, SSP_CLOCK_CPHA0_CPOL0);
+	Chip_SSP_Enable(LPC_SSP0);
 
 	Chip_GPDMA_Init(LPC_GPDMA);
 
 	NVIC_EnableIRQ(DMA_IRQn);
 
-	Chip_SSP_SetMaster(LPC_SSP1, TRUE);
+	Chip_SSP_SetMaster(LPC_SSP0, TRUE);
 }
 
 void SPI::doSendRecvImpl(const uint8_t* txBuf, uint8_t* rxBuf, size_t len) {
@@ -30,21 +30,21 @@ void SPI::doSendRecvImpl(const uint8_t* txBuf, uint8_t* rxBuf, size_t len) {
 	m_isTransactionActive = true;
 	m_txComplete = m_rxComplete = false;
 
-	m_dmaTx = Chip_GPDMA_GetFreeChannel(LPC_GPDMA, GPDMA_CONN_SSP1_Tx);
-	m_dmaRx = Chip_GPDMA_GetFreeChannel(LPC_GPDMA, GPDMA_CONN_SSP1_Rx);
+	m_dmaTx = Chip_GPDMA_GetFreeChannel(LPC_GPDMA, GPDMA_CONN_SSP0_Tx);
+	m_dmaRx = Chip_GPDMA_GetFreeChannel(LPC_GPDMA, GPDMA_CONN_SSP0_Rx);
 
-	Chip_SSP_DMA_Enable(LPC_SSP1);
+	Chip_SSP_DMA_Enable(LPC_SSP0);
 
 	//checkAlign(reinterpret_cast<void*>(len));
 	checkAlign(txBuf);
 	Chip_GPDMA_Transfer(LPC_GPDMA, m_dmaTx,
 			reinterpret_cast<uint32_t>(txBuf),
-			GPDMA_CONN_SSP1_Tx,
+			GPDMA_CONN_SSP0_Tx,
 			GPDMA_TRANSFERTYPE_M2P_CONTROLLER_DMA,
 			len);
 	checkAlign(rxBuf);
 	Chip_GPDMA_Transfer(LPC_GPDMA, m_dmaRx,
-			GPDMA_CONN_SSP1_Rx,
+			GPDMA_CONN_SSP0_Rx,
 			reinterpret_cast<uint32_t>(rxBuf),
 			GPDMA_TRANSFERTYPE_P2M_CONTROLLER_DMA,
 			len);
@@ -69,7 +69,7 @@ bool SPI::callCallbackIfDone() {
 	m_isTransactionActive = false;
 	Chip_GPDMA_Stop(LPC_GPDMA, m_dmaTx);
 	Chip_GPDMA_Stop(LPC_GPDMA, m_dmaRx);
-	Chip_SSP_DMA_Disable(LPC_SSP1);
+	Chip_SSP_DMA_Disable(LPC_SSP0);
 
 	m_callback();
 	if (!m_isTransactionActive)

@@ -55,7 +55,7 @@ int main(void)
 	M0App_Boot(M0APP_BASEADDR);
 
 	SystemCoreClockUpdate();
-	Board_Init();
+	// Board_Init();
 
 	SysTick_Config(SystemCoreClock / 1000); /* set tick to 1ms */
 

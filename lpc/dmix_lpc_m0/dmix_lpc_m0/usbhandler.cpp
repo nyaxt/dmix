@@ -187,7 +187,7 @@ void USBHandler::enqueueResponse(size_t len) {
 
 void USBHandler::processRxData() {
 	size_t len = static_cast<size_t>(m_sizeReceived);
-#if 1
+#if 0
 	if (len < sizeof(uint32_t)*2)
 		return;
 
