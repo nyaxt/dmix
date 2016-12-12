@@ -137,13 +137,35 @@ initial begin
     spi_cycle(8'hf1);
     spi_cycle(8'h01);
     spi_cycle(8'h09);
-
     // write prom[20'h00000] => 32'hdeadbeef
     ss = 1;
     #(TCLK*3);
-    $display("---");
+    $display("--- NKMD dbgin[3] => 8'hac");
     #(TCLK*3);
-
+    ss = 0;
+    spi_cycle({4'b1_0_00, 4'h6});
+    spi_cycle(8'h03); // offset
+    spi_cycle(8'hac);
+    ss = 1;
+    #(TCLK*3);
+    $display("--- NKMD rst => 1");
+    #(TCLK*3);
+    ss = 0;
+    spi_cycle({4'b1_0_00, 4'h4});
+    spi_cycle(8'h00); // offset
+    spi_cycle(8'h01);
+    ss = 1;
+    #(TCLK*3);
+    $display("--- NKMD rst => 0");
+    #(TCLK*3);
+    ss = 0;
+    spi_cycle({4'b1_0_00, 4'h4});
+    spi_cycle(8'h00); // offset
+    spi_cycle(8'h00);
+    ss = 1;
+    #(TCLK*3);
+    $display("--- end");
+    #(TCLK*3);
     $finish(2);
 end
 
@@ -153,5 +175,10 @@ always @(posedge clk) begin
     if(uut.spi_trx.ack_pop_o)
         $display("spi data rx: %x", uut.spi_trx.data_o);
 end
+
+always @(posedge uut.nkmd_rst_o)
+    $display("nkmd_rst_o posedge");
+always @(negedge uut.nkmd_rst_o)
+    $display("nkmd_rst_o negedge");
 
 endmodule

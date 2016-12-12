@@ -21,6 +21,7 @@ module csr_spi #(
     parameter NUM_RATE = 5,
 
     parameter VOL_WIDTH = NUM_CH*32,
+    parameter NKMDDBG_WIDTH = 16*8,
     parameter RATE_WIDTH = NUM_SPDIF_IN*NUM_RATE,
     parameter UDATA_WIDTH = NUM_SPDIF_IN*192,
     parameter CDATA_WIDTH = UDATA_WIDTH
@@ -36,6 +37,9 @@ module csr_spi #(
 
     // csr registers access
     output [(VOL_WIDTH-1):0] vol_o,
+    output nkmd_rst_o,
+    input [(NKMDDBG_WIDTH-1):0] nkmd_dbgout_i,
+    output [(NKMDDBG_WIDTH-1):0] nkmd_dbgin_o,
     input [(RATE_WIDTH-1):0] rate_i,
     input [(UDATA_WIDTH-1):0] udata_i,
     input [(CDATA_WIDTH-1):0] cdata_i,
@@ -215,7 +219,9 @@ wire csr_ack_i = state_ff == ST_PENDING_CSR_DATA && spi_ack_pop_o == 1'b1 && cmd
 csr #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr(
     .clk(clk), .rst(rst),
     .addr_i(csr_addr), .ack_i(csr_ack_i), .data_i(spi_data_rx), .data_o(csr_data_o),
-    .vol_o(vol_o), .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
+    .vol_o(vol_o),
+    .nkmd_rst_o(nkmd_rst_o), .nkmd_dbgout_i(nkmd_dbgout_i), .nkmd_dbgin_o(nkmd_dbgin_o),
+    .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
 
 wire prom_addr_o = {12'b0, addr_ff[19:0]};
 wire prom_data_o = wdata_ff;
