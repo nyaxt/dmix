@@ -1,3 +1,5 @@
+`default_nettype none
+
 module csr_cmd_decoder(
     input [7:0] cmd,
     output we,

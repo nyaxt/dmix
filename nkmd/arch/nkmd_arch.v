@@ -12,6 +12,12 @@ module nkmd_arch(
     input dai_pop_i,
     output dai_ack_o,
 
+`ifdef PROMW
+    input [31:0] prog_addr_i,
+    input [31:0] prog_data_i,
+    input prog_ack_i,
+`endif
+
     output [7:0] debug_led,
     input [7:0] switch);
 
@@ -99,10 +105,23 @@ assign cpu_data_i =
     dai_rx_data_o | dai_tx_data_o |
     debug_data_o;
 
-nkmd_progrom rom(
+`ifdef PROMW
+nkmd_progrom_w
+`else
+nkmd_progrom
+`endif
+    rom(
     .clk(clk),
 
     .addr_i(cpu_prog_addr_o),
-    .data_o(cpu_prog_data_i));
+    .data_o(cpu_prog_data_i)
+
+`ifdef PROMW
+    ,
+    .prog_addr_i(prog_addr_i),
+    .prog_data_i(prog_data_i),
+    .prog_ack_i(prog_ack_i)
+`endif
+);
 
 endmodule
