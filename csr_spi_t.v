@@ -80,7 +80,7 @@ initial begin
 
     #(TCLK*3);
     ss = 0;
-    spi_cycle(8'b00_1_1_0000);
+    spi_cycle(8'b1_0_00_0000);
     spi_cycle(8'h03);
     spi_cycle(8'h99);
     spi_cycle(8'h00); // NOP padding
@@ -92,17 +92,17 @@ initial begin
 
     #(TCLK*3);
     ss = 0;
-    spi_cycle({4'b00_0_1, 4'h8}); // high 8
+    spi_cycle({4'b0_0_00, 4'h8}); // high 8
     spi_cycle(8'h01); //             low 01
-    spi_cycle(8'h00); // read result 801
+    spi_cycle(8'h00); // read result 12'h801
     spi_cycle(8'h00); // NOP padding
     ss = 1;
     #(TCLK*3);
     $display("---");
     #(TCLK*3);
     ss = 0;
-    spi_cycle(8'b01_0_1_0000); 
-    spi_cycle(8'h00); // offset
+    spi_cycle({4'b0_0_00, 4'h9}); // high 9
+    spi_cycle(8'h00); //             low 00 
     spi_cycle(8'h00); // read result 000
     spi_cycle(8'h00); // read result 001
     spi_cycle(8'h00); // read result 002
@@ -113,13 +113,36 @@ initial begin
     $display("---");
     #(TCLK*3);
     ss = 0;
-    spi_cycle(8'b01_1_0_0010); 
-    spi_cycle(8'h56); // data[0] little endian
-    spi_cycle(8'h34); // data[0]
-    spi_cycle(8'h12); // data[0]
-    spi_cycle(8'hff); // dummy
-    spi_cycle(8'h00); // NOP padding
+    spi_cycle(8'b1_0_00_0000); 
+    spi_cycle(8'h04); // offset
+    spi_cycle(8'hef); // data[4]
+    spi_cycle(8'hbe); // data[5]
+    spi_cycle(8'had); // data[6]
+    spi_cycle(8'hde); // data[7]
     ss = 1;
+    #(TCLK*3);
+    $display("vol_ff: %x", uut.csr.vol_ff);
+    $display("--- PROM write begin");
+    #(TCLK*3);
+    ss = 0;
+    spi_cycle(8'b1_0_01_0000); // high 0
+    spi_cycle(8'h00); // mid 00
+    spi_cycle(8'h00); // low 00
+    spi_cycle(8'hef); //
+    spi_cycle(8'hbe); //
+    spi_cycle(8'had); //
+    spi_cycle(8'hde); //
+    // ArithInsn{M[---] d=i alu=OpAdd s=c0 memrs=MNone t=0xf180=61824 memrt=MNone}
+    spi_cycle(8'h80);
+    spi_cycle(8'hf1);
+    spi_cycle(8'h01);
+    spi_cycle(8'h09);
+
+    // write prom[20'h00000] => 32'hdeadbeef
+    ss = 1;
+    #(TCLK*3);
+    $display("---");
+    #(TCLK*3);
 
     $finish(2);
 end

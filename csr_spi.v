@@ -8,10 +8,10 @@ module csr_cmd_decoder(
 assign we = cmd[7];
 
 assign target = cmd[5:4];
-assign target_nkmdprom = (target == 2'b10);
+assign target_nkmdprom = (target == 2'b01);
 assign target_csr = (target == 2'b00);
 
-assign ch = cmd[3:0];
+assign addr_high = cmd[3:0];
 
 endmodule
 
@@ -81,6 +81,7 @@ parameter ST_RESPOND_CSR_DATA = 3;
 parameter ST_PENDING_NKMDPROM_ADDR_MID = 4;
 parameter ST_PENDING_NKMDPROM_ADDR_LOW = 5;
 parameter ST_PENDING_NKMDPROM_DATA = 6;
+parameter ST_WRITING_NKMDPROM_DATA = 7;
 reg [1:0] data_offset_ff; // For 32bit targets, this reg will keep which wdata_ff octet needs to be filled in next
 
 reg [7:0] data_tx_ff;
@@ -95,7 +96,7 @@ always @(posedge clk) begin
         data_ready_ff <= 0;
 
         cmd_we_ff <= 1'b0;
-        addr_ff <= {dec_addr_high, 16'h0};
+        addr_ff <= 20'b0;
         wdata_ff <= 32'b0;
         data_offset_ff <= 2'h0;
     end else begin
@@ -144,7 +145,7 @@ always @(posedge clk) begin
                 data_tx_ff <= csr_data_o;
                 data_ready_ff <= 1;
 
-                addr_ff[20:8] = addr_ff[20:8] + 1;
+                addr_ff[19:8] <= addr_ff[19:8] + 1;
                 state_ff <= ST_PENDING_CSR_DATA;
             end
             ST_PENDING_NKMDPROM_ADDR_MID: begin
@@ -175,7 +176,7 @@ always @(posedge clk) begin
             end
             ST_PENDING_NKMDPROM_DATA: begin
                 if (spi_ack_pop_o) begin
-                    data_tx_ff <= 8'hdd;
+                    data_tx_ff <= {4'hd, 2'b00, data_offset_ff};
                     data_ready_ff <= 1;
 
                     case (data_offset_ff)
@@ -184,14 +185,27 @@ always @(posedge clk) begin
                         4'h2: wdata_ff <= {wdata_ff[31:24], spi_data_rx[7:0], wdata_ff[15:8], wdata_ff[7:0]};
                         4'h3: wdata_ff <= {spi_data_rx[7:0], wdata_ff[23:16], wdata_ff[15:8], wdata_ff[7:0]};
                     endcase
+                    if (cmd_we_ff == 1'b1 && data_offset_ff == 4'h3)
+                        state_ff <= ST_WRITING_NKMDPROM_DATA;
+                    else
+                        state_ff <= ST_PENDING_NKMDPROM_DATA;
 
                     data_offset_ff <= data_offset_ff + 1;
+                end else begin
+                    data_ready_ff <= 0;
+                    state_ff <= ST_PENDING_NKMDPROM_DATA;
                 end
-
-                state_ff <= ST_PENDING_NKMDPROM_DATA;
             end
-            default:
+            ST_WRITING_NKMDPROM_DATA: begin
+                data_ready_ff <= 0;
+                state_ff <= ST_PENDING_NKMDPROM_DATA;
+
+                addr_ff <= addr_ff + 1;
+            end
+            default: begin
+                data_ready_ff <= 0;
                 state_ff <= ST_INIT;
+            end
         endcase
     end
 end
@@ -205,9 +219,6 @@ csr #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr(
 
 wire prom_addr_o = {12'b0, addr_ff[19:0]};
 wire prom_data_o = wdata_ff;
-reg prom_ack_ff;
-always @(posedge clk)
-    prom_ack_ff <= (state_ff == ST_PENDING_NKMDPROM_DATA && spi_ack_pop_o == 1'b1 && cmd_we_ff == 1'b1 && data_offset_ff == 4'h3);
-wire prom_ack_o = prom_ack_ff;
+wire prom_ack_o = (state_ff == ST_WRITING_NKMDPROM_DATA);
 
 endmodule
