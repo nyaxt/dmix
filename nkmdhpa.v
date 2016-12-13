@@ -27,7 +27,10 @@ module nkmdhpa#(
     input csr_sck,
     output csr_miso,
     input csr_mosi,
-    input csr_ss);
+    input csr_ss,
+
+    input nkmd_uart_rx,
+    output nkmd_uart_tx);
 
 wire clk245760;
 wire clk491520;
@@ -194,6 +197,27 @@ dac_drv dac_drv(
     .data_i(resampler_dac_data_sel),
     .pop_o(resampler_dac_pop));
 
+nkmd_arch nkmd_arch(
+    .clk(clk491520),
+    .rst(csr_nkmd_rst),
 
+    .uart_rx(nkmd_uart_rx),
+    .uart_tx(nkmd_uart_tx),
+
+    // FIXME
+    .dai_data_i(0),
+    .dai_ack_i(0),
+    // output [23:0] dai_data_o,
+    .dai_pop_i(0),
+    // output dai_ack_o,
+
+`ifdef PROMW
+    .prog_addr_i(csr_nkmd_prog_addr),
+    .prog_data_i(csr_nkmd_prog_data),
+    .prog_ack_i(csr_nkmd_prog_ack),
+`endif
+
+    output [7:0] debug_led,
+    input [7:0] switch);
 
 endmodule
