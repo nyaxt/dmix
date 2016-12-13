@@ -1,4 +1,6 @@
-module nkmd_arch(
+module nkmd_arch #(
+    parameter NKMDDBG_WIDTH = 16*8
+)(
     input clk,
     input rst,
     
@@ -18,8 +20,8 @@ module nkmd_arch(
     input prog_ack_i,
 `endif
 
-    output [7:0] debug_led,
-    input [7:0] switch);
+    output [(NKMDDBG_WIDTH-1):0] dbgout_o,
+    input [(NKMDDBG_WIDTH-1):0] dbgin_i);
 
 wire [31:0] cpu_data_i;
 wire [31:0] cpu_data_o;
@@ -92,7 +94,7 @@ wire [31:0] debug_data_o;
 nkmd_debug debug(
     .clk(clk), .rst(rst),
 
-    .debug_led(debug_led), .switch(switch),
+    .dbgout_o(dbgout_o), .dbgin_i(dbgin_i),
 
     .data_i(cpu_data_o),
     .data_o(debug_data_o),

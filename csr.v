@@ -48,7 +48,7 @@ integer i;
 always @(posedge clk) begin
     if(rst) begin
         vol_ff <= {(NUM_CH*2){16'h00ff}};
-        nkmd_rst_ff <= 1'b0;
+        nkmd_rst_ff <= 1'b1;
         nkmd_dbgin_ff <= {(NKMDDBG_WIDTH){1'b0}};
     end else if(ack_i) begin
         case(addr_tag)

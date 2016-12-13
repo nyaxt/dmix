@@ -43,7 +43,6 @@ end
 nkmd_arch uut(
     .clk(clk), .rst(rst),
     .uart_rx(1'b1),
-    .switch(8'hab)
-    );
+    .dbgin_i(128'h0123456789abcdef_0123456789abcdef));
 
 endmodule

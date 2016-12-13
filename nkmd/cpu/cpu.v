@@ -796,6 +796,7 @@ end
 endtask
 
 always @(posedge clk) begin
+if (!rst) begin
     $display("<statedump>");
     $display("IF/DCD  inst %h", if_dcd_inst);
     $write("DCD/MEM rs ");
@@ -870,6 +871,7 @@ always @(posedge clk) begin
     $display("Rbus data_i %h data_o %h addr_o %h we_o %h", r_data_i, r_data_o, r_addr_o, r_we_o);
     $display("Pbus data_i %h addr_o %h", p_data_i, p_addr_o);
     $display("</statedump>");
+end
 end
 `endif
 

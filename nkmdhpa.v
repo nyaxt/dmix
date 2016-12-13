@@ -217,7 +217,7 @@ nkmd_arch nkmd_arch(
     .prog_ack_i(csr_nkmd_prog_ack),
 `endif
 
-    output [7:0] debug_led,
-    input [7:0] switch);
+    .dbgout_o(nkmd_csr_dbgout),
+    .dbgin_i(csr_nkmd_dbgin));
 
 endmodule
