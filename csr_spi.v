@@ -9,6 +9,7 @@ module csr_cmd_decoder(
 
 assign we = cmd[7];
 
+wire [1:0] target;
 assign target = cmd[5:4];
 assign target_nkmdprom = (target == 2'b01);
 assign target_csr = (target == 2'b00);

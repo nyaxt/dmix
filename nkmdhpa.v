@@ -1,7 +1,17 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
-module nkmdhpa(
+module nkmdhpa#(
+    parameter NUM_CH = 2,
+    parameter NUM_SPDIF_IN = 1,
+    parameter NUM_RATE = 5,
+
+    parameter VOL_WIDTH = NUM_CH*32,
+    parameter NKMDDBG_WIDTH = 16*8,
+    parameter RATE_WIDTH = NUM_SPDIF_IN*NUM_RATE,
+    parameter UDATA_WIDTH = NUM_SPDIF_IN*192,
+    parameter CDATA_WIDTH = UDATA_WIDTH
+)(
     input clk245760_pad,
     input rst,
 
@@ -12,7 +22,12 @@ module nkmdhpa(
     output dac_mclk_o,
     output dac_lrck_o,
     output dac_sda_o,
-    output dac_sck_o);
+    output dac_sck_o,
+
+    input csr_sck,
+    output csr_miso,
+    input csr_mosi,
+    input csr_ss);
 
 wire clk245760;
 wire clk491520;
@@ -23,7 +38,6 @@ dmix_dcm dcm(
     .clk245760(clk245760),
     .clk491520(clk491520),
     .clk983040(clk983040));
-
 
 `ifdef SIMULATION
 assign dac_mclk_o = clk245760;
@@ -58,16 +72,54 @@ always @(posedge clk245760) begin
 end
 wire rst_ip = rst_delayed_ff;
 
+// csr wires
+// - csr <-> mixer
+// wire [(VOL_WIDTH-1):0] csr_mixer_vol;
+// - csr <-> DAI
+wire [(RATE_WIDTH-1):0] dai_csr_rate;
+wire [(UDATA_WIDTH-1):0] dai_csr_udata;
+wire [(CDATA_WIDTH-1):0] dai_csr_cdata;
+// - csr <-> nkmd dsp
+wire csr_nkmd_rst;
+wire [(NKMDDBG_WIDTH-1):0] nkmd_csr_dbgout;
+wire [(NKMDDBG_WIDTH-1):0] csr_nkmd_dbgin;
+wire [31:0] csr_nkmd_prog_addr;
+wire [31:0] csr_nkmd_prog_data;
+wire csr_nkmd_prog_ack;
+
+csr_spi #(
+    .NUM_CH(NUM_CH),
+    .NUM_SPDIF_IN(NUM_SPDIF_IN))
+    csr_spi(
+    .clk(clk491520),
+    .rst(rst_ip),
+
+    .sck(csr_sck),
+    .miso(csr_miso),
+    .mosi(csr_mosi),
+    .ss(csr_ss),
+
+    // csr registers access
+    // .vol_o(csr_nkmd_vol),
+    .nkmd_rst_o(csr_nkmd_rst),
+    .nkmd_dbgout_i(nkmd_csr_dbgout),
+    .nkmd_dbgin_o(csr_nkmd_dbgin),
+    .rate_i(dai_csr_rate),
+    .udata_i(dai_csr_udata),
+    .cdata_i(dai_csr_cdata),
+
+    // nkmd prom
+    .prom_addr_o(csr_nkmd_prog_addr),
+    .prom_data_o(csr_nkmd_prog_data),
+    .prom_ack_o(csr_nkmd_prog_ack));
+
 wire [23:0] dai_data_o_983040;
 wire dai_lrck_o_983040;
 wire dai_ack_o_983040;
 wire dai_locked_o;
 assign led_locked = dai_locked_o;
 
-wire [191:0] dai_udata_o;
-wire [191:0] dai_cdata_o;
-wire [4:0] dai_rate_o;
-
+wire [(NUM_RATE-1):0] dai_rate_o;
 spdif_dai_varclk dai(
     .clk(clk983040),
     .rst(rst_ip),
@@ -80,9 +132,10 @@ spdif_dai_varclk dai(
 
     .locked_o(dai_locked_o),
 
-    .udata_o(dai_udata_o),
-    .cdata_o(dai_cdata_o),
+    .udata_o(dai_csr_udata),
+    .cdata_o(dai_csr_cdata),
     .rate_o(dai_rate_o));
+assign dai_csr_rate = dai_rate_o;
 
 wire [23:0] dai_data_o_491520;
 wire dai_lrck_o_491520;
@@ -140,5 +193,7 @@ dac_drv dac_drv(
     .ack_i(resampler_dac_ack),
     .data_i(resampler_dac_data_sel),
     .pop_o(resampler_dac_pop));
+
+
 
 endmodule

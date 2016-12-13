@@ -1,5 +1,8 @@
 TARGET=nkmdhpa
-DEPS=nkmdhpa.v spdif_dai_varclk.v spdif_dai.v resampler.v resample_pipeline.v dac_drv.v mpemu.v rom_*.v ringbuf.v dcm.v async_fifo.v posedge_latch.v pop_latch.v mixer.v
+IVFLAGS=-DSIMULATION -DNO_IP -DPROMW
+NKMD_CPU=$(filter-out $(wildcard nkmd/cpu/*_t.v), $(wildcard nkmd/cpu/*.v))
+NKMD_ARCH=$(filter-out $(wildcard nkmd/arch/*_t.v), $(wildcard nkmd/arch/*.v))
+DEPS=nkmdhpa.v spdif_dai_varclk.v spdif_dai.v resampler.v resample_pipeline.v dac_drv.v mpemu.v rom_*.v ringbuf.v dcm.v async_fifo.v posedge_latch.v pop_latch.v mixer.v uart.v csr_spi.v csr.v spi_trx.v $(NKMD_CPU) $(NKMD_ARCH)
 
 dump: $(TARGET)_t.lxt
 	gtkwave $(TARGET)_t.lxt &
@@ -10,6 +13,10 @@ runsim: $(TARGET)_t.lxt
 	vvp $< -lxt2
 
 $(TARGET)_t.vvp: $(TARGET)_t.v $(DEPS)
-	iverilog -DSIMULATION -DNO_IP -o $@ $^
+	iverilog $(IVFLAGS) -o $@ $^
 
-.SUFFIXES: .lxt .vvp
+.SUFFIXES:t .vvp .lxt
+
+.PHONY: clean
+clean:
+	rm -f $(TARGET)_t.lxt $(TARGET)_t.vvp
