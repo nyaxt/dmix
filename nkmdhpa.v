@@ -1,6 +1,7 @@
+`default_nettype none
 `timescale 1ns / 1ps
 
-module mvp(
+module nkmdhpa(
     input clk245760_pad,
     input rst,
 

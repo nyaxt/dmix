@@ -8,7 +8,7 @@ reg rst;
 reg signal;
 
 parameter TclkSPDIF = 40; // 24.576MHz == 192Khz * 32 bit * 2 (biphase)
-mvp uut(.rst(rst), .spdif_i(signal));
+nkmdhpa uut(.rst(rst), .spdif_i(signal));
 
 task recv_rawbit;
     input b;
@@ -150,7 +150,7 @@ endtask
 
 reg [22:0] counter;
 initial begin
-	$dumpfile("mvp_t.lxt");
+	$dumpfile("nkmdhpa_t.lxt");
 	$dumpvars(0, uut);
 
 	rst = 1'b0;
