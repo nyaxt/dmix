@@ -56,6 +56,12 @@ regSelBits Rf = 0x6
 regSelBits Rg = 0x7
 regSelBits Rh = 0x8
 regSelBits Ri = 0x9
+regSelBits Rj = 0xa
+regSelBits Rra = 0xb
+regSelBits Rsl = 0xc
+regSelBits Rsh = 0xd
+regSelBits Rn = 0xe
+regSelBits Rpc = 0xf
 
 immBits :: Integer -> Word32
 immBits n = (b1 `shiftL` 16) .|. ((fromInteger n :: Word32) .&. 0xffff)

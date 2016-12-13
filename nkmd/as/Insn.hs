@@ -13,6 +13,11 @@ data RegSel
   | Rg 
   | Rh
   | Ri
+  | Rj
+  | Rra
+  | Rsl
+  | Rsh
+  | Rn
   | Rpc
 
 instance Show RegSel where
@@ -26,6 +31,11 @@ instance Show RegSel where
   show Rg = "g"
   show Rh = "h"
   show Ri = "i"
+  show Rj = "j"
+  show Rra = "RA"
+  show Rsl = "sl"
+  show Rsh = "sh"
+  show Rn = "n"
   show Rpc = "PC"
 
 data AluSel

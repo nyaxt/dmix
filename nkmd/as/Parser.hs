@@ -16,7 +16,7 @@ lexer = P.makeTokenParser style
   where style = 
           emptyDef {P.reservedOpNames = 
                       ["=","+","-","|","&","^","!",";","[","]",";"]
-                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f","const","jmp"]
+                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f","g","h","i","j","ra","sl","sh","n","pc","const","jmp"]
                    ,P.commentLine = "#"}
 
 reserved :: String -> Parser ()
@@ -54,7 +54,14 @@ regSel =
   (reserved "f" >> return Rf) <|>
   (reserved "g" >> return Rg) <|>
   (reserved "h" >> return Rh) <|>
-  (reserved "i" >> return Ri) <?> "register"
+  (reserved "i" >> return Ri) <|> 
+  (reserved "j" >> return Rj) <|> 
+  (reserved "ra" >> return Rra) <|> 
+  (reserved "sl" >> return Rsl) <|> 
+  (reserved "sh" >> return Rsh) <|> 
+  (reserved "n" >> return Rn) <|> 
+  (reserved "pc" >> return Rpc) 
+  <?> "register"
 
 -- imm :: Parser Integer
 -- imm = P.natural lexer
@@ -140,8 +147,8 @@ arithInsn =
      reservedOp ";"
      return ArithInsn {memw = memw
                       ,alusel = alusel
-		      ,s = s
-		      ,t = t
+                      ,s = s
+                      ,t = t
                       ,memrs = memrs
                       ,memrt = memrt
                       ,rd = rd}
