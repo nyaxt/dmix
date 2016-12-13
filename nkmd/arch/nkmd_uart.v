@@ -32,7 +32,7 @@ uart uart(
 
 // tx
 assign uart_data_i = data_i[7:0];
-assign uart_ack_i = (addr_i == 16'hf001) && we_i;
+assign uart_ack_i = (addr_i == 16'hc001) && we_i;
 
 reg uart_tx_ready_ff;
 always @(posedge clk) begin
@@ -51,7 +51,7 @@ always @(posedge clk) begin
         uart_rx_ready_ff <= 1'b0;
         uart_rx_buf_ff <= 8'h00;
     end else begin
-        if (addr_i == 16'hf002) begin
+        if (addr_i == 16'hc002) begin
             uart_rx_ready_ff <= 1'b0;
         end
 
@@ -65,11 +65,11 @@ end
 reg [7:0] data_o_ff;
 always @(posedge clk) begin
     case (addr_i)
-    16'hf002:
+    16'hc002:
         data_o_ff <= uart_data_o;
-    16'hf003:
+    16'hc003:
         data_o_ff <= {7'b0, uart_tx_ready_ff};
-    16'hf004:
+    16'hc004:
         data_o_ff <= {7'b0, uart_rx_ready_ff};
     default:
         data_o_ff <= 8'b0;

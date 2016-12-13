@@ -18,7 +18,7 @@ wire [1:0] addr_offset = addr_i[1:0];
 
 reg [31:0] data_o_ff;
 always @(posedge clk) begin
-    if (addr_i[15:12] == 4'hf)
+    if (addr_i[15:4] == 12'hc80)
         data_o_ff <= dbgin_i[(addr_offset * 32) +: 32];
     else
         data_o_ff <= 8'h00;
@@ -30,7 +30,7 @@ reg [(NKMDDBG_WIDTH-1):0] dbgout_ff;
 always @(posedge clk) begin
     if (rst) begin
         dbgout_ff <= {(NKMDDBG_WIDTH){1'b0}};
-    end else if (addr_i == 16'hf000 && we_i) begin
+    end else if (addr_i[15:4] == 12'hc80 && we_i) begin
         // ISE bug workaround... :(
         for(i = 0; i < 32; i = i + 1)
             dbgout_ff[(addr_offset*32 + i)] <= data_i[i];
