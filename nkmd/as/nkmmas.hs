@@ -7,17 +7,37 @@ import Parser
 import Insn
 import Program
 import Mnemonic (assemble)
-import Control.Monad.State
+
 import Control.Applicative
-import Text.Printf (printf)
+import Control.Monad.State
+import Control.Monad.Trans.Reader
 import Data.Either.Unwrap (fromRight)
 import Data.List
-import qualified Data.Map.Strict as Map
 import Data.Word (Word, Word32)
+import Data.Semigroup ((<>))
+import Options.Applicative
 import System.IO
+import Text.Printf (printf)
+import qualified Data.Map.Strict as Map
 
--- import Options.Applicative
---
+data OutputFormat = Progrom | IntelHex deriving (Show, Read, Enum, Bounded)
+data Options = Options
+  { showMnemonic :: Bool
+  , outputFormat :: OutputFormat
+  } deriving Show
+
+optionsI :: ParserInfo Options
+optionsI = info (helper <*> optionsP) $ progDesc "Nkmd CPU assembler"
+  where
+    showMneumonicP :: Parser Bool
+    showMneumonicP = switch $ short 'm' <> long "show-mnemonic" <> help "Show mnemonic info (for suported output formats only)"
+
+    outputFormatP :: Parser OutputFormat
+    outputFormatP = option auto $ long "format" <> help "Output file format" <> value Progrom <> showDefault
+
+    optionsP :: Parser Options
+    optionsP = Options <$> showMneumonicP <*> outputFormatP
+
 showObj :: Object -> String
 showObj obj = intercalate "\n" $ map show obj
 
@@ -163,7 +183,8 @@ handleProgram prog =
 
 main :: IO ()
 main = 
-  do src <- getContents
+  do opts <- execParser optionsI
+     src <- getContents
      case (parseNkmmAs src) of
        (Left err) -> hPutStrLn stderr $ show err
        (Right prog) -> handleProgram prog
