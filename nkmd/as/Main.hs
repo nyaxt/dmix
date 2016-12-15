@@ -7,6 +7,7 @@ import Parser
 import Insn
 import Program
 import Mnemonic (assemble)
+import Output
 
 import Control.Applicative
 import Control.Monad.State
@@ -21,7 +22,6 @@ import System.IO
 import Text.Printf (printf)
 import qualified Data.Map.Strict as Map
 
-data OutputFormat = Progrom | IntelHex deriving (Show, Read, Enum, Bounded)
 data Options = Options
   { showMnemonic :: Bool
   , outputFormat :: OutputFormat
@@ -41,44 +41,6 @@ optionsI = info (helper <*> optionsP) $ progDesc "Nkmd CPU assembler"
 
 showObj :: Object -> String
 showObj obj = intercalate "\n" $ map show obj
-
-processInsn :: Word -> Insn -> String
-processInsn addr insn = 
-  let asm = assemble insn
-  in printf "// %s\n16'h%04x: data_ff <= 32'h%08x;\n" (show insn) addr asm
-
-outputObjBody :: Word -> Object -> String
-outputObjBody startAddr is = 
-  concat $ map (uncurry processInsn) $ zip [startAddr ..] is
-
-headerStr = 
-  unlines ["`include \"../nkmm_const.v\""
-          ,"module nkmm_progrom("
-          ,"    input clk,"
-          ,"    "
-          ,"    output [`INSN_WIDTH-1:0] prog_data_o,"
-          ,"    input [`ADDR_WIDTH-1:0] prog_addr_i);"
-          ,""
-          ,"reg [`INSN_WIDTH-1:0] data_ff;"
-          ,""
-          ,"always @(posedge clk) begin"
-          ,"    case (prog_addr_i)"
-          ,"// **** HEADER END ****"]
-
-footerStr = 
-  unlines ["// **** FOOTER BEGIN ****"
-          ,"// Insn{M[--] D OpAdd(R0, imm 0)}"
-          ,"default: data_ff <= 32'h10010000;"
-          ,"    endcase"
-          ,"end"
-          ,""
-          ,"assign prog_data_o = data_ff;"
-          ,""
-          ,"endmodule"]
-
-outputObj :: Object -> String
-outputObj obj = objBody -- headerStr ++ objBody ++ footerStr
-  where objBody = outputObjBody 0 obj
 
 type Offset = Int
 
@@ -193,4 +155,4 @@ main = do opts <- execParser optionsI
           guard (isJust prep)
           obj <- doCompile (fromJust prep) (fromJust prog)
           guard (isJust obj)
-          putStr $ outputObj (fromJust obj)
+          putStr $ outputObj (outputFormat opts) (fromJust obj)
