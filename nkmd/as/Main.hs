@@ -47,8 +47,8 @@ processInsn addr insn =
   let asm = assemble insn
   in printf "// %s\n16'h%04x: data_ff <= 32'h%08x;\n" (show insn) addr asm
 
-processObjBody :: Word -> Object -> String
-processObjBody startAddr is = 
+outputObjBody :: Word -> Object -> String
+outputObjBody startAddr is = 
   concat $ map (uncurry processInsn) $ zip [startAddr ..] is
 
 headerStr = 
@@ -76,9 +76,9 @@ footerStr =
           ,""
           ,"endmodule"]
 
-processObj :: Object -> String
-processObj obj = objBody -- headerStr ++ objBody ++ footerStr
-  where objBody = processObjBody 0 obj
+outputObj :: Object -> String
+outputObj obj = objBody -- headerStr ++ objBody ++ footerStr
+  where objBody = outputObjBody 0 obj
 
 type Offset = Int
 
@@ -172,20 +172,25 @@ compileProg
 compileProg prep prog = 
   Right $ compiledObj $ execCompiler prep $ mapM_ compileStmt prog
 
-handleProgram :: Program -> IO ()
-handleProgram prog = 
-  case (preprocessProg prog) of
-    (Left err) -> hPutStrLn stderr $ show err
-    (Right prep) -> 
-      do hPutStrLn stderr $ show prep
-         case (compileProg prep prog) of
-           (Left err) -> hPutStrLn stderr $ show err
-           (Right obj) -> putStr $ processObj obj
+doPreprocess :: Program -> IO (Maybe PreprocessorState)
+doPreprocess prog = case (preprocessProg prog) of
+    (Left err) -> do hPutStrLn stderr $ show err
+                     return Nothing
+    (Right prep) -> return (Just prep)
+
+doCompile :: PreprocessorState -> Program -> IO (Maybe Object)
+doCompile prep prog = case (compileProg prep prog) of
+    (Left err) -> do hPutStrLn stderr $ show err
+                     return Nothing
+    (Right obj) -> return (Just obj)
 
 main :: IO ()
-main = 
-  do opts <- execParser optionsI
-     src <- getContents
-     prog <- doParse src
-     guard (isJust prog)
-     handleProgram (fromJust prog)
+main = do opts <- execParser optionsI
+          src <- getContents
+          prog <- doParse src
+          guard (isJust prog)
+          prep <- doPreprocess (fromJust prog)
+          guard (isJust prep)
+          obj <- doCompile (fromJust prep) (fromJust prog)
+          guard (isJust obj)
+          putStr $ outputObj (fromJust obj)
