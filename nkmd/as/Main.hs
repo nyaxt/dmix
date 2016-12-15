@@ -13,6 +13,7 @@ import Control.Monad.State
 import Control.Monad.Trans.Reader
 import Data.Either.Unwrap (fromRight)
 import Data.List
+import Data.Maybe
 import Data.Word (Word, Word32)
 import Data.Semigroup ((<>))
 import Options.Applicative
@@ -185,6 +186,6 @@ main :: IO ()
 main = 
   do opts <- execParser optionsI
      src <- getContents
-     case (parseNkmmAs src) of
-       (Left err) -> hPutStrLn stderr $ show err
-       (Right prog) -> handleProgram prog
+     prog <- doParse src
+     guard (isJust prog)
+     handleProgram (fromJust prog)

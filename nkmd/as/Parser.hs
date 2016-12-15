@@ -1,4 +1,4 @@
-module Parser (parseNkmmAs) where
+module Parser (parseNkmmAs, doParse) where
 
 import Expr
 import Insn
@@ -10,6 +10,7 @@ import Text.Parsec.Char
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as P
+import System.IO
 
 lexer :: P.TokenParser ()
 lexer = P.makeTokenParser style
@@ -188,6 +189,11 @@ nkmm =
      eof
      return is
 
-parseNkmmAs
-  :: String -> Either ParseError Program
+parseNkmmAs :: String -> Either ParseError Program
 parseNkmmAs = parse nkmm "(unknown)"
+
+doParse :: String -> IO (Maybe Program)
+doParse src = case (parseNkmmAs src) of
+                  (Left err) -> do hPutStrLn stderr $ show err
+                                   return Nothing
+                  (Right prog) -> return $ Just prog
