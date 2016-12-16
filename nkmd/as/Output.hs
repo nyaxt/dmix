@@ -55,8 +55,8 @@ chunk16 bs
     | BL.null bs = []
     | otherwise  = (BL.take 16 bs):(chunk16 (BL.drop 16 bs))
 
-formatIntelHex32DataChunk :: BL.ByteString -> String
-formatIntelHex32DataChunk c = startCode ++ hexStr (encoded `BL.snoc` (checksum encoded)) ++ "\n"
+formatIntelHex32DataChunk :: Int -> BL.ByteString -> String
+formatIntelHex32DataChunk addr c = startCode ++ hexStr (encoded `BL.snoc` (checksum encoded)) ++ "\n"
   where startCode :: String
         startCode = ":"
 
@@ -72,7 +72,7 @@ formatIntelHex32DataChunk c = startCode ++ hexStr (encoded `BL.snoc` (checksum e
         encoded :: BL.ByteString
         encoded = foldl1 BL.append
                       [byteCountP (BL.length c)
-                      ,addressP (0xabcd)
+                      ,addressP addr
                       ,BL.singleton dataRecord
                       ,c]
 
@@ -87,7 +87,7 @@ formatIntelHex32DataChunk c = startCode ++ hexStr (encoded `BL.snoc` (checksum e
 formatIntelHex32 :: BL.ByteString -> String
 formatIntelHex32 bs = formattedChunks ++ eos
   where formattedChunks :: String
-        formattedChunks = concatMap formatIntelHex32DataChunk $ chunk16 bs
+        formattedChunks = concatMap (uncurry formatIntelHex32DataChunk) $ zip (map (*16) [0 ..]) $ chunk16 bs
 
         eos :: String
         eos = ":00000001FF\n"
