@@ -1,11 +1,12 @@
 #include <gflags/gflags.h>
 #include <libusb-1.0/libusb.h>
-#include <stdarg.h>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <vector>
+
+#include "util.h"
 
 DEFINE_int32(verbose, 0, "increase verbosity");
 DEFINE_bool(test, false, "test adaptor hardware");
@@ -16,56 +17,6 @@ static const int USBI2C_PRODUCT_ID = 0xD316;
 static const size_t MAX_BULK_LEN = 0x5000;
 
 struct libusb_context* g_usbctx;
-
-std::vector<uint8_t> parseHex(const std::string& str) {
-  std::vector<uint8_t> parsed;
-  uint8_t b;
-  bool halfbyte_pending = false;
-
-  for (char c : str) {
-    uint8_t hb;
-    if ('0' <= c && c <= '9')
-      hb = c - '0';
-    else if ('a' <= c && c <= 'f')
-      hb = c - 'a' + 0xa;
-    else if ('A' <= c && c <= 'F')
-      hb = c - 'A' + 0xa;
-    else
-      continue;
-
-    if (!halfbyte_pending) {
-      b = hb << 4;
-      halfbyte_pending = true;
-    } else {
-      parsed.push_back(b | hb);
-      halfbyte_pending = false;
-    }
-  }
-
-  return parsed;
-}
-
-std::string stringPrintF(const char* fmt, ...) {
-  va_list arg;
-  char tmp[512]; // FIXME
-
-  va_start(arg, fmt);
-  vsprintf(tmp, fmt, arg);
-  va_end(arg);
-
-  return std::string(tmp);
-}
-
-std::string formatHex(const std::vector<uint8_t>& data) {
-  // FIXME: not very efficient
-
-  std::string ret;
-
-  for (uint8_t b : data)
-    ret += stringPrintF("%02x ", b);
-
-  return std::move(ret);
-}
 
 std::vector<uint8_t> prepareTxData() {
   std::vector<uint8_t> txdata;
@@ -84,17 +35,6 @@ class LibUSBError : public std::runtime_error {
  public:
   LibUSBError(const char* context, int err)
       : std::runtime_error(stringPrintF("%s failed: %s", context, libusb_strerror(static_cast<libusb_error>(err)))) {}
-};
-
-class noncopyable {
- public:
-  noncopyable() {}
-  noncopyable(noncopyable&&) = default;
-  noncopyable& operator=(noncopyable&&) = default;
-
- private:
-  noncopyable(const noncopyable&) = delete;
-  noncopyable& operator=(const noncopyable&) = delete;
 };
 
 class USBDeviceHandle : noncopyable {
@@ -211,22 +151,6 @@ std::vector<uint8_t> USBDeviceHandle::recvBulk(size_t len) {
 
   return std::move(rxdata);
 }
-
-#if 0
-std::vector<uint8_t> USBDeviceHandle::recvFeatureReportInterrupt(size_t len) {
-  std::vector<uint8_t> rxdata(len);
-
-  static const int INTERRUPT_IN_ENDPOINT = 1;
-
-  int ntx = 0;
-  int err = libusb_interrupt_transfer(devhandle_, INTERRUPT_IN_ENDPOINT,
-                                      rxdata.data(), static_cast<uint16_t>(len),
-                                      &ntx, timeout_);
-  if (err < 0) throw LibUSBError("libusb_interrupt_transfer Rx", err);
-
-  return std::move(rxdata);
-}
-#endif
 
 class USBDeviceList : noncopyable {
  public:
