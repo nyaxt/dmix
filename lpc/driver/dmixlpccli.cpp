@@ -11,6 +11,7 @@
 
 DEFINE_int32(verbose, 0, "increase verbosity");
 DEFINE_bool(test, false, "test adaptor hardware");
+DEFINE_string(prefix, "", "prefix to send in hex. e.g. \"de,ad,be,ef\"");
 DEFINE_string(hex, "", "data to send in hex. e.g. \"de,ad,be,ef\"");
 DEFINE_string(hexfile, "", "intel HEX file to send");
 bool g_verbose;
@@ -210,24 +211,34 @@ int main(int argc, char* argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   g_verbose = FLAGS_verbose;
 
-  if (FLAGS_hexfile != "") {
-    std::vector<uint8_t> hexdata = readIntelHexFile(FLAGS_hexfile);
-    printf("hex len: %zu data: %s\n", hexdata.size(),
-           formatHex(hexdata).c_str());
-    return 0;
+  std::vector<uint8_t> txdata;
+  if (FLAGS_prefix != "") {
+    txdata = parseHex(FLAGS_prefix);
   }
+
+  std::vector<uint8_t> body;
+  if (FLAGS_hex != "") {
+    if (FLAGS_hexfile != "")
+      throw std::runtime_error("Specify either --hex or --hexfile");
+
+    body = parseHex(FLAGS_hex);
+  } else if (FLAGS_hexfile != "") {
+    if (FLAGS_hex != "")
+      throw std::runtime_error("Specify either --hex or --hexfile");
+
+    body = readIntelHexFile(FLAGS_hexfile);
+  }
+  txdata.insert(txdata.end(), body.begin(), body.end());
+
+  printf("tx hex len: %zu data: %s\n", txdata.size(), formatHex(txdata).c_str());
 
   try {
     if (libusb_init(&g_usbctx) != 0)
       throw std::runtime_error("libusb init failed");
 
-    printf("ihoge!\n");
     USBDeviceHandle devhandle = findDevice();
-    printf("try claim!\n");
     devhandle.claim();
-    printf("claimed!\n");
 
-    auto txdata = parseHex(FLAGS_hex);
     auto rxdata = doTest(&devhandle, txdata);
     printf("len: %zu\n", rxdata.size());
     size_t count = 0;
