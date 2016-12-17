@@ -25,11 +25,15 @@ std::vector<uint8_t> readIntelHexFile(const std::string& path) {
       throw std::runtime_error("failed to find start code");
     }
 
-    char byteCountStr[3]; memcpy(byteCountStr, &header[1], 2); byteCountStr[2] = '\0';
+    char byteCountStr[3];
+    memcpy(byteCountStr, &header[1], 2);
+    byteCountStr[2] = '\0';
     int byteCount = strtol(byteCountStr, nullptr, 16);
     if (g_verbose) printf("byteCount: %d\n", byteCount);
 
-    char addrStr[5]; memcpy(addrStr, &header[3], 4); addrStr[4] = '\0';
+    char addrStr[5];
+    memcpy(addrStr, &header[3], 4);
+    addrStr[4] = '\0';
     int addr = strtol(addrStr, nullptr, 16);
     if (g_verbose) printf("addr: %04x\n", addr);
 
@@ -40,15 +44,17 @@ std::vector<uint8_t> readIntelHexFile(const std::string& path) {
       // EOF record
       break;
     } else if (header[8] != '0') {
-      throw std::runtime_error(stringPrintF("encountered unsupported record type 0%c!", header[8]));
+      throw std::runtime_error(
+          stringPrintF("encountered unsupported record type 0%c!", header[8]));
     }
 
     if (addr != expNextAddr)
-      throw std::runtime_error(stringPrintF("Expected addr record %04x, but read %04x", expNextAddr, addr)); 
+      throw std::runtime_error(stringPrintF(
+          "Expected addr record %04x, but read %04x", expNextAddr, addr));
 
-    char byteStr[3]; byteStr[2] = '\0';
-    for (int i = 0; i < byteCount; ++ i)
-    {
+    char byteStr[3];
+    byteStr[2] = '\0';
+    for (int i = 0; i < byteCount; ++i) {
       if (fread(byteStr, 1, 2, fp.get()) != 2)
         throw ErrnoError("fread byteStr", errno);
 
@@ -65,7 +71,7 @@ std::vector<uint8_t> readIntelHexFile(const std::string& path) {
       if (c == EOF)
         break;
       else if (!isspace(c)) {
-        ungetc(c, fp.get()); 
+        ungetc(c, fp.get());
         break;
       }
     }

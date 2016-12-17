@@ -212,7 +212,8 @@ int main(int argc, char* argv[]) {
 
   if (FLAGS_hexfile != "") {
     std::vector<uint8_t> hexdata = readIntelHexFile(FLAGS_hexfile);
-    printf("hex len: %zu data: %s\n", hexdata.size(), formatHex(hexdata).c_str());
+    printf("hex len: %zu data: %s\n", hexdata.size(),
+           formatHex(hexdata).c_str());
     return 0;
   }
 
