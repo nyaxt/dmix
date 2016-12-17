@@ -11,9 +11,10 @@
 
 DEFINE_int32(verbose, 0, "increase verbosity");
 DEFINE_bool(test, false, "test adaptor hardware");
-DEFINE_string(prefix, "", "prefix to send in hex. e.g. \"de,ad,be,ef\"");
-DEFINE_string(hex, "", "data to send in hex. e.g. \"de,ad,be,ef\"");
-DEFINE_string(hexfile, "", "intel HEX file to send");
+DEFINE_string(prefix, "", "prefix to send in hex, such as \"de,ad,be,ef\"");
+DEFINE_string(hex, "", "data to send in hex, such as \"de,ad,be,ef\"");
+DEFINE_string(hexfile, "", "intel HEX file to send.");
+DEFINE_string(csrcmd, "", "nkmd csr_spi cmd. \"[read|write] [csr|progrom] [offset]");
 bool g_verbose;
 
 static const int USBI2C_VENDOR_ID = 0xF055;
@@ -205,12 +206,7 @@ std::vector<uint8_t> doTest(USBDeviceHandle* devhandle,
   return std::move(rxdata);
 }
 
-int main(int argc, char* argv[]) {
-  google::SetUsageMessage(std::string("dmixlpc test client.\n Usage: ") +
-                          argv[0]);
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  g_verbose = FLAGS_verbose;
-
+void cmdDefault() {
   std::vector<uint8_t> txdata;
   if (FLAGS_prefix != "") {
     txdata = parseHex(FLAGS_prefix);
@@ -232,26 +228,82 @@ int main(int argc, char* argv[]) {
 
   printf("tx hex len: %zu data: %s\n", txdata.size(), formatHex(txdata).c_str());
 
-  try {
-    if (libusb_init(&g_usbctx) != 0)
-      throw std::runtime_error("libusb init failed");
+  USBDeviceHandle devhandle = findDevice();
+  devhandle.claim();
 
-    USBDeviceHandle devhandle = findDevice();
-    devhandle.claim();
+  auto rxdata = doTest(&devhandle, txdata);
+  printf("len: %zu\n", rxdata.size());
+  size_t count = 0;
+  for (uint8_t byte : rxdata) {
+    printf("%02x ", byte);
+    if (count++ % 4 == 3) printf("\n");
+  }
+  printf("\n");
+}
 
-    auto rxdata = doTest(&devhandle, txdata);
-    printf("len: %zu\n", rxdata.size());
-    size_t count = 0;
-    for (uint8_t byte : rxdata) {
-      printf("%02x ", byte);
-      if (count++ % 4 == 3) printf("\n");
-    }
-    printf("\n");
-  } catch (std::exception& e) {
-    fprintf(stderr, "Error: %s\n", e.what());
-    return 1;
+enum class CSRTarget {
+  CSR,
+  Progrom,
+};
+
+void cmdCSRCmd() {
+  std::string cmdstr = FLAGS_csrcmd;
+  int i = 0;
+  for (; i < cmdstr.size(); ++ i)
+    if (!isspace(cmdstr[i]))
+      break;
+
+#define MATCH_PREFIX(prefix) \
+  if (cmdstr.size() >= i + sizeof(prefix)-1 && cmdstr.substr(i, sizeof(prefix)-1) == prefix && ({i += sizeof(prefix)-1; true;}))
+
+  bool isWrite = false;
+  MATCH_PREFIX("read ") {
+  } else MATCH_PREFIX("write ") {
+    isWrite = true; 
+  } else {
+    throw std::runtime_error(stringPrintF("Failed to find read/write in cmd: \"%s\"", cmdstr.c_str()));
   }
 
-  libusb_exit(nullptr);
-  return 0;
+  CSRTarget target;
+  MATCH_PREFIX("csr ") {
+    target = CSRTarget::CSR; 
+  } else MATCH_PREFIX("progrom ") {
+    target = CSRTarget::Progrom; 
+  } else {
+    throw std::runtime_error(stringPrintF("Failed to find valid target in cmd: \"%s\"", cmdstr.c_str()));
+  }
+
+#undef MATCH_PREFIX
+
+  int addr = ::strtol(cmdstr.substr(i).c_str(), nullptr, 16);
+  if (addr < 0 || 0xfffff >= addr)
+    
+  if (g_verbose) printf("parsed cmd: isWrite %d target %d addr %04x\n", isWrite, target, addr);
+}
+
+int main(int argc, char* argv[]) {
+  gflags::SetUsageMessage(std::string("dmixlpc test client.\n Usage: ") +
+                          argv[0]);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  g_verbose = FLAGS_verbose;
+
+  if (libusb_init(&g_usbctx) != 0)
+    throw std::runtime_error("libusb init failed");
+
+  try {
+    if (FLAGS_csrcmd != "")
+      cmdCSRCmd();
+    else
+      cmdDefault();
+
+    libusb_exit(nullptr);
+    gflags::ShutDownCommandLineFlags();
+    return 0;
+  } catch (std::exception& e) {
+    fprintf(stderr, "Error: %s\n", e.what());
+
+    libusb_exit(nullptr);
+    gflags::ShutDownCommandLineFlags();
+    return 1;
+  }
 }
