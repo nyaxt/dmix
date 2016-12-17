@@ -1,16 +1,19 @@
 #include <gflags/gflags.h>
 #include <libusb-1.0/libusb.h>
-#include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdexcept>
 #include <vector>
 
+#include "readhex.h"
 #include "util.h"
 
 DEFINE_int32(verbose, 0, "increase verbosity");
 DEFINE_bool(test, false, "test adaptor hardware");
-DEFINE_string(hex, "", "sata to send in hex. e.g. \"de,ad,be,ef\"");
+DEFINE_string(hex, "", "data to send in hex. e.g. \"de,ad,be,ef\"");
+DEFINE_string(hexfile, "", "intel HEX file to send");
+bool g_verbose;
 
 static const int USBI2C_VENDOR_ID = 0xF055;
 static const int USBI2C_PRODUCT_ID = 0xD316;
@@ -34,7 +37,9 @@ std::vector<uint8_t> prepareTxData() {
 class LibUSBError : public std::runtime_error {
  public:
   LibUSBError(const char* context, int err)
-      : std::runtime_error(stringPrintF("%s failed: %s", context, libusb_strerror(static_cast<libusb_error>(err)))) {}
+      : std::runtime_error(
+            stringPrintF("%s failed: %s", context,
+                         libusb_strerror(static_cast<libusb_error>(err)))) {}
 };
 
 class USBDeviceHandle : noncopyable {
@@ -48,8 +53,7 @@ class USBDeviceHandle : noncopyable {
 
   ~USBDeviceHandle() {
     if (devhandle_) {
-      if (claimed_)
-        libusb_release_interface(devhandle_, 0);
+      if (claimed_) libusb_release_interface(devhandle_, 0);
 
       // FIXME: this crashes.
       // libusb_close(devhandle_);
@@ -125,9 +129,9 @@ void USBDeviceHandle::sendBulk(const uint8_t* data, size_t len) {
   }
 
   int txlen = 0;
-  int success = libusb_bulk_transfer(
-      devhandle_, 0x01,
-      const_cast<uint8_t*>(data), static_cast<uint16_t>(len), &txlen, timeout_);
+  int success =
+      libusb_bulk_transfer(devhandle_, 0x01, const_cast<uint8_t*>(data),
+                           static_cast<uint16_t>(len), &txlen, timeout_);
   if (success < 0) throw LibUSBError("libusb_bulk_transfer Tx", success);
   if (txlen < len) throw std::runtime_error("sent data shorter than expected");
   if (FLAGS_verbose) printf("success!\n");
@@ -141,10 +145,9 @@ std::vector<uint8_t> USBDeviceHandle::recvBulk(size_t len) {
     fflush(stdout);
   }
   int rxlen = 0;
-  int success = libusb_bulk_transfer(
-      devhandle_, 0x81,
-      rxdata.data(), static_cast<uint16_t>(len),
-      &rxlen, timeout_);
+  int success =
+      libusb_bulk_transfer(devhandle_, 0x81, rxdata.data(),
+                           static_cast<uint16_t>(len), &rxlen, timeout_);
   if (success < 0) throw LibUSBError("libusb_bulk_transfer Rx", success);
   rxdata.resize(rxlen);
   if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxdata).c_str());
@@ -185,7 +188,7 @@ USBDeviceHandle findDevice() {
 }
 
 std::vector<uint8_t> doTest(USBDeviceHandle* devhandle,
-                           std::vector<uint8_t> txdata) {
+                            std::vector<uint8_t> txdata) {
   if (FLAGS_verbose)
     printf("Sending test data: %s\n", formatHex(txdata).c_str());
 
@@ -202,9 +205,16 @@ std::vector<uint8_t> doTest(USBDeviceHandle* devhandle,
 }
 
 int main(int argc, char* argv[]) {
-  google::SetUsageMessage(
-      std::string("dmixlpc test client.\n Usage: ") + argv[0]);
+  google::SetUsageMessage(std::string("dmixlpc test client.\n Usage: ") +
+                          argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
+  g_verbose = FLAGS_verbose;
+
+  if (FLAGS_hexfile != "") {
+    std::vector<uint8_t> hexdata = readIntelHexFile(FLAGS_hexfile);
+    printf("hex len: %zu data: %s\n", hexdata.size(), formatHex(hexdata).c_str());
+    return 0;
+  }
 
   try {
     if (libusb_init(&g_usbctx) != 0)
@@ -222,8 +232,7 @@ int main(int argc, char* argv[]) {
     size_t count = 0;
     for (uint8_t byte : rxdata) {
       printf("%02x ", byte);
-      if (count++ % 4 == 3)
-        printf("\n");
+      if (count++ % 4 == 3) printf("\n");
     }
     printf("\n");
   } catch (std::exception& e) {

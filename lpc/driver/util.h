@@ -1,9 +1,10 @@
 #ifndef _driver_util_h
 #define _driver_util_h
 
-#include <vector>
-#include <string>
 #include <unistd.h>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 class noncopyable {
  public:
@@ -16,8 +17,14 @@ class noncopyable {
   noncopyable& operator=(const noncopyable&) = delete;
 };
 
+class ErrnoError : public std::runtime_error {
+ public:
+  ErrnoError(const std::string& context, int errnoC);
+};
+
+extern bool g_verbose;
 std::vector<uint8_t> parseHex(const std::string& str);
 std::string stringPrintF(const char* fmt, ...);
 std::string formatHex(const std::vector<uint8_t>& data);
 
-#endif // _driver_util_h
+#endif  // _driver_util_h

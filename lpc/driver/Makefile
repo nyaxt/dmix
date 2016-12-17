@@ -3,9 +3,9 @@ GFLAGS_PREFIX:=$(shell brew --prefix gflags)
 LDFLAGS:=-L$(LIBUSB_PREFIX)/lib -lusb-1.0 -L$(GFLAGS_PREFIX)/lib -lgflags
 CFLAGS:=-O0 -g -std=c++1y -I$(LIBUSB_PREFIX)/include -I$(GFLAGS_PREFIX)/include
 CXX:=clang++
-CLANG_FORMAT:=~/cx/src/buildtools/mac/clang-format
+CLANG_FORMAT:=clang-format
 
-dmixlpccli: dmixlpccli.o util.o
+dmixlpccli: dmixlpccli.o readhex.o util.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 -include Makefile.deps

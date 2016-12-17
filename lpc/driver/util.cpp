@@ -2,6 +2,11 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
+
+ErrnoError::ErrnoError(const std::string& context, int errnoC)
+    : std::runtime_error(
+          stringPrintF("%s errno: %s", context.c_str(), strerror(errnoC))) {}
 
 std::vector<uint8_t> parseHex(const std::string& str) {
   std::vector<uint8_t> parsed;
@@ -33,7 +38,7 @@ std::vector<uint8_t> parseHex(const std::string& str) {
 
 std::string stringPrintF(const char* fmt, ...) {
   va_list arg;
-  char tmp[512]; // FIXME
+  char tmp[512];  // FIXME
 
   va_start(arg, fmt);
   vsprintf(tmp, fmt, arg);
@@ -47,8 +52,7 @@ std::string formatHex(const std::vector<uint8_t>& data) {
 
   std::string ret;
 
-  for (uint8_t b : data)
-    ret += stringPrintF("%02x ", b);
+  for (uint8_t b : data) ret += stringPrintF("%02x ", b);
 
   return std::move(ret);
 }
