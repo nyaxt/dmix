@@ -206,24 +206,28 @@ std::vector<uint8_t> doTest(USBDeviceHandle* devhandle,
   return std::move(rxdata);
 }
 
+std::vector<uint8_t> getTxBodyFromFlags() {
+  if (FLAGS_hex != "") {
+    if (FLAGS_hexfile != "")
+      throw std::runtime_error("Specify either --hex or --hexfile. Not both.");
+
+    return parseHex(FLAGS_hex);
+  } else if (FLAGS_hexfile != "") {
+    if (FLAGS_hex != "")
+      throw std::runtime_error("Specify either --hex or --hexfile. Not both.");
+
+    return readIntelHexFile(FLAGS_hexfile);
+  } else
+    throw std::runtime_error("Specify either --hex or --hexfile.");
+}
+
 void cmdDefault() {
   std::vector<uint8_t> txdata;
   if (FLAGS_prefix != "") {
     txdata = parseHex(FLAGS_prefix);
   }
 
-  std::vector<uint8_t> body;
-  if (FLAGS_hex != "") {
-    if (FLAGS_hexfile != "")
-      throw std::runtime_error("Specify either --hex or --hexfile");
-
-    body = parseHex(FLAGS_hex);
-  } else if (FLAGS_hexfile != "") {
-    if (FLAGS_hex != "")
-      throw std::runtime_error("Specify either --hex or --hexfile");
-
-    body = readIntelHexFile(FLAGS_hexfile);
-  }
+  std::vector<uint8_t> body = getTxBodyFromFlags();
   txdata.insert(txdata.end(), body.begin(), body.end());
 
   printf("tx hex len: %zu data: %s\n", txdata.size(), formatHex(txdata).c_str());
@@ -275,10 +279,68 @@ void cmdCSRCmd() {
 
 #undef MATCH_PREFIX
 
-  int addr = ::strtol(cmdstr.substr(i).c_str(), nullptr, 16);
-  if (addr < 0 || 0xfffff >= addr)
+  for (; i < cmdstr.size(); ++ i)
+    if (!isspace(cmdstr[i]))
+      break;
+  int j = i;
+  for (; j < cmdstr.size(); ++ j)
+    if (!isalnum(cmdstr[j]))
+      break;
+  std::string addrStr = cmdstr.substr(i, j-i);
+  int addr = ::strtol(addrStr.c_str(), nullptr, 16);
+  if (addr < 0 || addr >= 0xfffff)
+    throw std::runtime_error(stringPrintF("addr %05x out of range", addr));
+  if (target == CSRTarget::CSR && addr >= 0xfff)
+    throw std::runtime_error(stringPrintF("addr %05x out of range (csr)", addr));
+
+  int len;
+  if (!isWrite) {
+    i = j;
+    for (; i < cmdstr.size(); ++ i)
+      if (!isspace(cmdstr[i]))
+        break;
+    j = i;
+    for (; j < cmdstr.size(); ++ j)
+      if (!isalnum(cmdstr[j]))
+        break;
+    std::string lenStr = cmdstr.substr(i, j-i);
+    len = ::strtol(lenStr.c_str(), nullptr, 16);
+    if (len < 0 || len >= 0xfff)
+      throw std::runtime_error(stringPrintF("len %05x out of range", addr));
+  }
     
-  if (g_verbose) printf("parsed cmd: isWrite %d target %d addr %04x\n", isWrite, target, addr);
+  if (g_verbose) printf("parsed cmd: isWrite %d target %d addr %05x len %03x\n", isWrite, target, addr, len);
+
+  std::vector<uint8_t> txdata;
+  uint8_t targetByte = 0;
+  switch (target) {
+  case CSRTarget::CSR:
+    targetByte = 0x0 << 4;
+    addr <<= 8;
+    break;
+  case CSRTarget::Progrom:
+    targetByte = 0x1 << 4;
+    break;
+  }
+  uint8_t cmdbyte = (isWrite ? 0x80 : 0x00) | targetByte | ((addr >> 16) & 0xf);
+  txdata.push_back(cmdbyte);
+  txdata.push_back((addr >> 8) & 0xff);
+  if (target == CSRTarget::Progrom)
+    txdata.push_back((addr >> 0) & 0xff);
+
+  if (isWrite) {
+    std::vector<uint8_t> body = getTxBodyFromFlags();
+    txdata.insert(txdata.end(), body.begin(), body.end());
+
+    printf("tx hex len: %zu data: %s\n", txdata.size(), formatHex(txdata).c_str());
+  } else {
+    size_t fillLen = len + 1; // +1 as nkmd requires one more cycle to start read reply
+    for (int i = 0; i < fillLen; ++ i) {
+      txdata.push_back(0xdd);
+    }
+
+    printf("tx hex len: %zu data: %s\n", txdata.size(), formatHex(txdata).c_str());
+  }
 }
 
 int main(int argc, char* argv[]) {
