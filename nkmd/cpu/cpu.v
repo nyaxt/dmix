@@ -326,12 +326,16 @@ module nkmd_cpu_mem(
     input [31:0] wb_data_i,
     input [31:0] wb_addr_i,
     input wb_r_we_i,
-    input wb_c_we_i);
+    input wb_c_we_i,
+
+    output r_rw_conflict_o);
 
 // FIXME: would need arbitration with WB stage in future
 assign r_data_o = wb_data_i;
 assign r_addr_o = wb_r_we_i ? wb_addr_i : mem_r_addr_i;
 assign r_we_o = wb_r_we_i;
+
+assign r_rw_conflict_o = wb_r_we_i == 1'b1 && mem_r_read_en == 1'b1;
 
 reg [31:0] r_eff_addr_ff;
 reg r_read_en_ff;
@@ -615,6 +619,7 @@ assign dcd_seq_repn = dcd_repn_o;
 
 // MEM: Memory fetch
 wire [31:0] mem_r_addr_i = dcd_mem_imm_en ? dcd_mem_imm : rf_mem_rtval;
+wire mem_r_rw_conflict;
 nkmd_cpu_mem nkmd_cpu_mem(
     .clk(clk), .rst(rst),
 
@@ -637,7 +642,9 @@ nkmd_cpu_mem nkmd_cpu_mem(
     .wb_addr_i(wb_mem_addr),
     .wb_data_i(wb_mem_data),
     .wb_r_we_i(wb_mem_r_we),
-    .wb_c_we_i(wb_mem_c_we));
+    .wb_c_we_i(wb_mem_c_we),
+
+    .r_rw_conflict_o(mem_r_rw_conflict));
 // - MEM thrus
 reg [`DCD_ALUSEL_W-1:0] mem_alusel_ff;
 reg [`DCD_REGSEL_W-1:0] mem_rdsel_ff;
@@ -868,7 +875,7 @@ if (!rst) begin
     nkmd_cpu_regfile.dump();
 
     $display("------------------------------------------------------------------------------");
-    $display("Rbus data_i %h data_o %h addr_o %h we_o %h", r_data_i, r_data_o, r_addr_o, r_we_o);
+    $display("Rbus data_i %h data_o %h addr_o %h we_o %h conflict %d", r_data_i, r_data_o, r_addr_o, r_we_o, mem_r_rw_conflict);
     $display("Pbus data_i %h addr_o %h", p_data_i, p_addr_o);
     $display("</statedump>");
 end
