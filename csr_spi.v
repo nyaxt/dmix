@@ -186,12 +186,7 @@ always @(posedge clk) begin
                     data_tx_ff <= {4'hd, 2'b00, data_offset_ff};
                     data_ready_ff <= 1;
 
-                    case (data_offset_ff)
-                        4'h0: wdata_ff <= {wdata_ff[31:24], wdata_ff[23:16], wdata_ff[15:8], spi_data_rx[7:0]};
-                        4'h1: wdata_ff <= {wdata_ff[31:24], wdata_ff[23:16], spi_data_rx[7:0], wdata_ff[7:0]};
-                        4'h2: wdata_ff <= {wdata_ff[31:24], spi_data_rx[7:0], wdata_ff[15:8], wdata_ff[7:0]};
-                        4'h3: wdata_ff <= {spi_data_rx[7:0], wdata_ff[23:16], wdata_ff[15:8], wdata_ff[7:0]};
-                    endcase
+                    wdata_ff <= {wdata_ff[23:0], spi_data_rx[7:0]};
                     if (cmd_we_ff == 1'b1 && data_offset_ff == 4'h3)
                         state_ff <= ST_WRITING_NKMDPROM_DATA;
                     else

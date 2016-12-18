@@ -230,6 +230,24 @@ initial begin
 
     #(100);
 
+    $display("--- NKMD dbgin");
+    #(TCLK*3);
+    ss = 0;
+    spi_cycle({4'b1_0_00, 4'h6});
+    spi_cycle(8'h00); // offset
+    spi_cycle(8'h01);
+    spi_cycle(8'h02);
+    spi_cycle(8'h03);
+    spi_cycle(8'h04);
+    spi_cycle(8'h05);
+    spi_cycle(8'h06);
+    spi_cycle(8'h07);
+    spi_cycle(8'h08);
+    ss = 1;
+    #(TCLK*3);
+    $display("--- NKMD rst => 1");
+    #(TCLK*3);
+
     $display("--- NKMD rst => 0");
     #(TCLK*3);
     ss = 0;
@@ -239,9 +257,9 @@ initial begin
     ss = 1;
     #(TCLK*3);
 
-    $finish(2);
-
     replay_capture = 1'b1;
+    #(30000);
+    $finish(2);
 end
 
 `ifndef USE_CAPTURE
