@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
@@ -14,7 +15,8 @@ DEFINE_bool(test, false, "test adaptor hardware");
 DEFINE_string(prefix, "", "prefix to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hex, "", "data to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hexfile, "", "intel HEX file to send.");
-DEFINE_string(csrcmd, "", "nkmd csr_spi cmd. \"[read|write] [csr|progrom] [offset]");
+DEFINE_string(csrcmd, "",
+              "nkmd csr_spi cmd. \"[read|write] [csr|progrom] [offset]");
 bool g_verbose;
 
 static const int USBI2C_VENDOR_ID = 0xF055;
@@ -46,9 +48,8 @@ class LibUSBError : public std::runtime_error {
 
 class USBDeviceHandle : noncopyable {
  public:
-  USBDeviceHandle(libusb_device* device) : device_(device) {
-    int err = libusb_open(device, &devhandle_);
-    if (err != 0) throw LibUSBError("libusb_open", err);
+  static std::unique_ptr<USBDeviceHandle> from(libusb_device* device) {
+    return std::unique_ptr<USBDeviceHandle>(new USBDeviceHandle(device));
   }
 
   USBDeviceHandle(USBDeviceHandle&&) = default;
@@ -112,6 +113,11 @@ class USBDeviceHandle : noncopyable {
   // std::vector<uint8_t> recvFeatureReportInterrupt(size_t len);
 
  private:
+  USBDeviceHandle(libusb_device* device) : device_(device) {
+    int err = libusb_open(device, &devhandle_);
+    if (err != 0) throw LibUSBError("libusb_open", err);
+  }
+
   libusb_device* device_ = nullptr;
   libusb_device_handle* devhandle_ = nullptr;
   bool claimed_ = false;
@@ -121,6 +127,8 @@ class USBDeviceHandle : noncopyable {
 };
 
 void USBDeviceHandle::sendBulk(const uint8_t* data, size_t len) {
+  if (len == 0) throw std::runtime_error("test txdata not specified.");
+
   if (len > MAX_BULK_LEN)
     throw std::runtime_error("txdata too long for a bulk tx");
 
@@ -174,36 +182,19 @@ class USBDeviceList : noncopyable {
   ssize_t ndevices_;
 };
 
-USBDeviceHandle findDevice() {
+std::unique_ptr<USBDeviceHandle> findDevice() {
   USBDeviceList list;
   for (libusb_device* device : list) {
-    USBDeviceHandle devhandle(device);
+    std::unique_ptr<USBDeviceHandle> devhandle = USBDeviceHandle::from(device);
 
-    if (devhandle.getDescriptor().idVendor != USBI2C_VENDOR_ID) continue;
-    if (devhandle.getDescriptor().idProduct != USBI2C_PRODUCT_ID) continue;
-    if (devhandle.getProductStringDescriptor() != "dmix_lpc") continue;
+    if (devhandle->getDescriptor().idVendor != USBI2C_VENDOR_ID) continue;
+    if (devhandle->getDescriptor().idProduct != USBI2C_PRODUCT_ID) continue;
+    if (devhandle->getProductStringDescriptor() != "dmix_lpc") continue;
 
-    return std::move(devhandle);
+    return devhandle;
   }
 
   throw std::runtime_error("device not found");
-}
-
-std::vector<uint8_t> doTest(USBDeviceHandle* devhandle,
-                            std::vector<uint8_t> txdata) {
-  if (FLAGS_verbose)
-    printf("Sending test data: %s\n", formatHex(txdata).c_str());
-
-  if (txdata.size() == 0)
-    throw std::runtime_error("test txdata not specified.");
-
-  if (txdata.size() > MAX_BULK_LEN)
-    throw std::runtime_error("test txdata too long.");
-
-  devhandle->sendBulk(txdata);
-  sleep(1);
-  std::vector<uint8_t> rxdata = devhandle->recvBulk(4096);
-  return std::move(rxdata);
 }
 
 std::vector<uint8_t> getTxBodyFromFlags() {
@@ -221,7 +212,7 @@ std::vector<uint8_t> getTxBodyFromFlags() {
     throw std::runtime_error("Specify either --hex or --hexfile.");
 }
 
-void cmdDefault() {
+void cmdDefault(USBDeviceHandle* devhandle) {
   std::vector<uint8_t> txdata;
   if (FLAGS_prefix != "") {
     txdata = parseHex(FLAGS_prefix);
@@ -230,19 +221,15 @@ void cmdDefault() {
   std::vector<uint8_t> body = getTxBodyFromFlags();
   txdata.insert(txdata.end(), body.begin(), body.end());
 
-  printf("tx hex len: %zu data: %s\n", txdata.size(), formatHex(txdata).c_str());
+  printf("tx hex len: %zu data: %s\n", txdata.size(),
+         formatHex(txdata).c_str());
 
-  USBDeviceHandle devhandle = findDevice();
-  devhandle.claim();
-
-  auto rxdata = doTest(&devhandle, txdata);
-  printf("len: %zu\n", rxdata.size());
-  size_t count = 0;
-  for (uint8_t byte : rxdata) {
-    printf("%02x ", byte);
-    if (count++ % 4 == 3) printf("\n");
-  }
-  printf("\n");
+  devhandle->sendBulk(txdata);
+  sleep(1);
+  auto rxdata = devhandle->recvBulk(4096);
+  ;
+  printf("rx hex len: %zu data: %s\n", rxdata.size(),
+         formatHex(rxdata).c_str());
 }
 
 enum class CSRTarget {
@@ -253,93 +240,100 @@ enum class CSRTarget {
 void cmdCSRCmd() {
   std::string cmdstr = FLAGS_csrcmd;
   int i = 0;
-  for (; i < cmdstr.size(); ++ i)
-    if (!isspace(cmdstr[i]))
-      break;
+  for (; i < cmdstr.size(); ++i)
+    if (!isspace(cmdstr[i])) break;
 
-#define MATCH_PREFIX(prefix) \
-  if (cmdstr.size() >= i + sizeof(prefix)-1 && cmdstr.substr(i, sizeof(prefix)-1) == prefix && ({i += sizeof(prefix)-1; true;}))
+#define MATCH_PREFIX(prefix)                               \
+  if (cmdstr.size() >= i + sizeof(prefix) - 1 &&           \
+      cmdstr.substr(i, sizeof(prefix) - 1) == prefix && ({ \
+        i += sizeof(prefix) - 1;                           \
+        true;                                              \
+      }))
 
   bool isWrite = false;
-  MATCH_PREFIX("read ") {
-  } else MATCH_PREFIX("write ") {
-    isWrite = true; 
-  } else {
-    throw std::runtime_error(stringPrintF("Failed to find read/write in cmd: \"%s\"", cmdstr.c_str()));
+  MATCH_PREFIX("read ") {}
+  else MATCH_PREFIX("write ") {
+    isWrite = true;
+  }
+  else {
+    throw std::runtime_error(stringPrintF(
+        "Failed to find read/write in cmd: \"%s\"", cmdstr.c_str()));
   }
 
   CSRTarget target;
-  MATCH_PREFIX("csr ") {
-    target = CSRTarget::CSR; 
-  } else MATCH_PREFIX("progrom ") {
-    target = CSRTarget::Progrom; 
-  } else {
-    throw std::runtime_error(stringPrintF("Failed to find valid target in cmd: \"%s\"", cmdstr.c_str()));
+  MATCH_PREFIX("csr ") { target = CSRTarget::CSR; }
+  else MATCH_PREFIX("progrom ") {
+    target = CSRTarget::Progrom;
+  }
+  else {
+    throw std::runtime_error(stringPrintF(
+        "Failed to find valid target in cmd: \"%s\"", cmdstr.c_str()));
   }
 
 #undef MATCH_PREFIX
 
-  for (; i < cmdstr.size(); ++ i)
-    if (!isspace(cmdstr[i]))
-      break;
+  for (; i < cmdstr.size(); ++i)
+    if (!isspace(cmdstr[i])) break;
   int j = i;
-  for (; j < cmdstr.size(); ++ j)
-    if (!isalnum(cmdstr[j]))
-      break;
-  std::string addrStr = cmdstr.substr(i, j-i);
+  for (; j < cmdstr.size(); ++j)
+    if (!isalnum(cmdstr[j])) break;
+  std::string addrStr = cmdstr.substr(i, j - i);
   int addr = ::strtol(addrStr.c_str(), nullptr, 16);
   if (addr < 0 || addr >= 0xfffff)
     throw std::runtime_error(stringPrintF("addr %05x out of range", addr));
   if (target == CSRTarget::CSR && addr >= 0xfff)
-    throw std::runtime_error(stringPrintF("addr %05x out of range (csr)", addr));
+    throw std::runtime_error(
+        stringPrintF("addr %05x out of range (csr)", addr));
 
   int len;
   if (!isWrite) {
     i = j;
-    for (; i < cmdstr.size(); ++ i)
-      if (!isspace(cmdstr[i]))
-        break;
+    for (; i < cmdstr.size(); ++i)
+      if (!isspace(cmdstr[i])) break;
     j = i;
-    for (; j < cmdstr.size(); ++ j)
-      if (!isalnum(cmdstr[j]))
-        break;
-    std::string lenStr = cmdstr.substr(i, j-i);
+    for (; j < cmdstr.size(); ++j)
+      if (!isalnum(cmdstr[j])) break;
+    std::string lenStr = cmdstr.substr(i, j - i);
     len = ::strtol(lenStr.c_str(), nullptr, 16);
     if (len < 0 || len >= 0xfff)
       throw std::runtime_error(stringPrintF("len %05x out of range", addr));
   }
-    
-  if (g_verbose) printf("parsed cmd: isWrite %d target %d addr %05x len %03x\n", isWrite, target, addr, len);
+
+  if (g_verbose)
+    printf("parsed cmd: isWrite %d target %d addr %05x len %03x\n", isWrite,
+           target, addr, len);
 
   std::vector<uint8_t> txdata;
   uint8_t targetByte = 0;
   switch (target) {
-  case CSRTarget::CSR:
-    targetByte = 0x0 << 4;
-    addr <<= 8;
-    break;
-  case CSRTarget::Progrom:
-    targetByte = 0x1 << 4;
-    break;
+    case CSRTarget::CSR:
+      targetByte = 0x0 << 4;
+      addr <<= 8;
+      break;
+    case CSRTarget::Progrom:
+      targetByte = 0x1 << 4;
+      break;
   }
   uint8_t cmdbyte = (isWrite ? 0x80 : 0x00) | targetByte | ((addr >> 16) & 0xf);
   txdata.push_back(cmdbyte);
   txdata.push_back((addr >> 8) & 0xff);
-  if (target == CSRTarget::Progrom)
-    txdata.push_back((addr >> 0) & 0xff);
+  if (target == CSRTarget::Progrom) txdata.push_back((addr >> 0) & 0xff);
 
   if (isWrite) {
     std::vector<uint8_t> body = getTxBodyFromFlags();
     txdata.insert(txdata.end(), body.begin(), body.end());
 
-    printf("tx hex len: %zu data: %s\n", txdata.size(), formatHex(txdata).c_str());
+    printf("tx hex len: %zu data: %s\n", txdata.size(),
+           formatHex(txdata).c_str());
   } else {
-    size_t fillLen = len + 1; // +1 as nkmd requires one more cycle to start read reply
-    for (int i = 0; i < fillLen; ++ i) {
+    size_t fillLen =
+        len + 1;  // +1 as nkmd requires one more cycle to start read reply
+    for (int i = 0; i < fillLen; ++i) {
       txdata.push_back(0xdd);
     }
 
-    printf("tx hex len: %zu data: %s\n", txdata.size(), formatHex(txdata).c_str());
+    printf("tx hex len: %zu data: %s\n", txdata.size(),
+           formatHex(txdata).c_str());
   }
 }
 
@@ -352,20 +346,21 @@ int main(int argc, char* argv[]) {
   if (libusb_init(&g_usbctx) != 0)
     throw std::runtime_error("libusb init failed");
 
+  std::unique_ptr<USBDeviceHandle> devhandle = findDevice();
+  devhandle->claim();
+
+  int ret = 0;
   try {
     if (FLAGS_csrcmd != "")
       cmdCSRCmd();
     else
-      cmdDefault();
+      cmdDefault(devhandle.get());
 
-    libusb_exit(nullptr);
-    gflags::ShutDownCommandLineFlags();
     return 0;
   } catch (std::exception& e) {
     fprintf(stderr, "Error: %s\n", e.what());
-
-    libusb_exit(nullptr);
-    gflags::ShutDownCommandLineFlags();
-    return 1;
+    ret = 1;
   }
+  libusb_exit(nullptr);
+  gflags::ShutDownCommandLineFlags();
 }
