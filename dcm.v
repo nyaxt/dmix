@@ -3,7 +3,7 @@
 
 module dmix_dcm(
     input clk245760_pad,
-	 input rst_dcm,
+    input rst_dcm,
     output clk245760,
     output clk491520,
     output clk983040);

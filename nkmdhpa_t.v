@@ -5,10 +5,28 @@ module dmix_t;
 // ins
 reg rst;
 
+reg clk;
+parameter TCLK = 40;
+initial clk = 0;
+always #(TCLK/2) clk = ~clk;
+
 reg signal;
 
+reg sck;
+parameter TCLK_SCK = 80;
+reg mosi;
+reg ss;
+
 parameter TclkSPDIF = 40; // 24.576MHz == 192Khz * 32 bit * 2 (biphase)
-nkmdhpa uut(.rst(rst), .spdif_i(signal));
+nkmdhpa uut(
+    .rst(rst),
+    .clk245760_pad(clk),
+
+    .spdif_i(signal),
+
+    .csr_sck(sck),
+    .csr_mosi(mosi),
+    .csr_ss(ss));
 
 task recv_rawbit;
     input b;
@@ -146,7 +164,45 @@ task recv_subframe;
     end
 endtask
 
+task spi_cycle;
+    input [7:0] data;
+    begin
+        $display("spi tx cycle: %x", data);
+        mosi = data[7];
+        sck = 0; #(TCLK_SCK/2);
+        sck = 1; #(TCLK_SCK/2);
+        mosi = data[6];
+        sck = 0; #(TCLK_SCK/2);
+        sck = 1; #(TCLK_SCK/2);
+        mosi = data[5];
+        sck = 0; #(TCLK_SCK/2);
+        sck = 1; #(TCLK_SCK/2);
+        mosi = data[4];
+        sck = 0; #(TCLK_SCK/2);
+        sck = 1; #(TCLK_SCK/2);
+        mosi = data[3];
+        sck = 0; #(TCLK_SCK/2);
+        sck = 1; #(TCLK_SCK/2);
+        mosi = data[2];
+        sck = 0; #(TCLK_SCK/2);
+        sck = 1; #(TCLK_SCK/2);
+        mosi = data[1];
+        sck = 0; #(TCLK_SCK/2);
+        sck = 1; #(TCLK_SCK/2);
+        mosi = data[0];
+        sck = 0; #(TCLK_SCK/2);
+        sck = 1; #(TCLK_SCK/2);
+    end
+endtask
+
 `define USE_CAPTURE
+
+reg [7:0] progcmd [66:0];
+initial $readmemh("progcmd.memh", progcmd);
+
+reg replay_capture;
+initial replay_capture = 1'b0;
+integer i;
 
 reg [22:0] counter;
 initial begin
@@ -155,13 +211,37 @@ initial begin
 
 	rst = 1'b0;
     signal = 0;
-    counter <= 0;
+    counter = 0;
 
-	#(10);
+    mosi = 1'b0;
+    ss = 1'b1;
+
+	#(100);
 	rst = 1'b1;
 	#(200);
 	rst = 1'b0;
-	#(10);
+	#(1500);
+
+    ss = 0;
+    for (i = 0; i < 67; i = i + 1) begin
+        spi_cycle(progcmd[i]);
+    end
+    ss = 1;
+
+    #(100);
+
+    $display("--- NKMD rst => 0");
+    #(TCLK*3);
+    ss = 0;
+    spi_cycle({4'b1_0_00, 4'h4});
+    spi_cycle(8'h00); // offset
+    spi_cycle(8'h00);
+    ss = 1;
+    #(TCLK*3);
+
+    $finish(2);
+
+    replay_capture = 1'b1;
 end
 
 `ifndef USE_CAPTURE
@@ -206,10 +286,12 @@ integer capture_iter;
 initial $readmemh("spdif_capture3", capture);
 initial capture_iter = 0;
 always begin
-    signal = capture[capture_iter][2];
-    capture_iter = capture_iter + 1;
-    if (capture_iter > 262143)
-        $finish(2);
+    if (replay_capture) begin
+        signal = capture[capture_iter][2];
+        capture_iter = capture_iter + 1;
+        if (capture_iter > 262143)
+            $finish(2);
+    end
     #(5);
 end
 `endif

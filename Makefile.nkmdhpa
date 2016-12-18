@@ -12,8 +12,8 @@ runsim: $(TARGET)_t.lxt
 .vvp.lxt:
 	vvp $< -lxt2
 
-$(TARGET)_t.vvp: $(TARGET)_t.v $(DEPS)
-	iverilog $(IVFLAGS) -o $@ $^
+$(TARGET)_t.vvp: $(TARGET)_t.v $(DEPS) progcmd.memh spdif_capture3
+	iverilog $(IVFLAGS) -o $@ $(TARGET)_t.v $(DEPS)
 
 .SUFFIXES:t .vvp .lxt
 
