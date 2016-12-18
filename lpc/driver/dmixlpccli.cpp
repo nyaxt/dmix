@@ -11,7 +11,7 @@
 #include "util.h"
 
 DEFINE_int32(verbose, 0, "increase verbosity");
-DEFINE_bool(test, false, "test adaptor hardware");
+DEFINE_bool(dryrun, false, "test adaptor hardware");
 DEFINE_string(prefix, "", "prefix to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hex, "", "data to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hexfile, "", "intel HEX file to send.");
@@ -46,7 +46,39 @@ class LibUSBError : public std::runtime_error {
                          libusb_strerror(static_cast<libusb_error>(err)))) {}
 };
 
-class USBDeviceHandle : noncopyable {
+class DeviceHandle {
+ public:
+  virtual ~DeviceHandle() {}
+
+  void sendBulk(const std::vector<uint8_t>& txdata) {
+    sendBulk(txdata.data(), txdata.size());
+  }
+
+  virtual void sendBulk(const uint8_t* data, size_t len) = 0;
+  virtual std::vector<uint8_t> recvBulk(size_t len) = 0;
+};
+
+class DummyDeviceHandle : public DeviceHandle {
+ public:
+  ~DummyDeviceHandle() {}
+
+  void sendBulk(const uint8_t* data, size_t len) override {
+    printf("Tx bulk: %s\n",
+           formatHex(std::vector<uint8_t>(data, data + len)).c_str());
+    fflush(stdout);
+  }
+  std::vector<uint8_t> recvBulk(size_t len) override {
+    printf("Rx bulk. len %zu\n", len);
+
+    std::vector<uint8_t> ret;
+    for (size_t i = 0; i < len; ++ i) {
+      ret.push_back(static_cast<uint8_t>(i));
+    }
+    return ret;
+  }
+};
+
+class USBDeviceHandle : public DeviceHandle, noncopyable {
  public:
   static std::unique_ptr<USBDeviceHandle> from(libusb_device* device) {
     return std::unique_ptr<USBDeviceHandle>(new USBDeviceHandle(device));
@@ -104,13 +136,9 @@ class USBDeviceHandle : noncopyable {
     return getStringDescriptor(getDescriptor().iProduct);
   }
 
-  void sendBulk(const std::vector<uint8_t>& txdata) {
-    sendBulk(txdata.data(), txdata.size());
-  }
-  void sendBulk(const uint8_t* data, size_t len);
-
-  std::vector<uint8_t> recvBulk(size_t len);
-  // std::vector<uint8_t> recvFeatureReportInterrupt(size_t len);
+  using DeviceHandle::sendBulk;
+  void sendBulk(const uint8_t* data, size_t len) override;
+  std::vector<uint8_t> recvBulk(size_t len) override;
 
  private:
   USBDeviceHandle(libusb_device* device) : device_(device) {
@@ -212,7 +240,7 @@ std::vector<uint8_t> getTxBodyFromFlags() {
     throw std::runtime_error("Specify either --hex or --hexfile.");
 }
 
-void cmdDefault(USBDeviceHandle* devhandle) {
+void cmdDefault(DeviceHandle* devhandle) {
   std::vector<uint8_t> txdata;
   if (FLAGS_prefix != "") {
     txdata = parseHex(FLAGS_prefix);
@@ -237,7 +265,7 @@ enum class CSRTarget {
   Progrom,
 };
 
-void cmdCSRCmd() {
+void cmdCSRCmd(DeviceHandle* devhandle) {
   std::string cmdstr = FLAGS_csrcmd;
   int i = 0;
   for (; i < cmdstr.size(); ++i)
@@ -322,18 +350,20 @@ void cmdCSRCmd() {
   if (isWrite) {
     std::vector<uint8_t> body = getTxBodyFromFlags();
     txdata.insert(txdata.end(), body.begin(), body.end());
-
-    printf("tx hex len: %zu data: %s\n", txdata.size(),
-           formatHex(txdata).c_str());
+    devhandle->sendBulk(txdata);
   } else {
-    size_t fillLen =
-        len + 1;  // +1 as nkmd requires one more cycle to start read reply
+    size_t fillLen = len;
     for (int i = 0; i < fillLen; ++i) {
       txdata.push_back(0xdd);
     }
-
-    printf("tx hex len: %zu data: %s\n", txdata.size(),
-           formatHex(txdata).c_str());
+    txdata.push_back(0x00); // NOP byte
+    devhandle->sendBulk(txdata);
+  }
+  sleep(1); // FIXME: remove
+  std::vector<uint8_t> rxdata = devhandle->recvBulk(txdata.size());
+  if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxdata).c_str());
+  if (!isWrite) {
+    printf("result: %s\n", formatHex(std::vector<uint8_t>(&rxdata[3], &rxdata[3] + len)).c_str());
   }
 }
 
@@ -346,13 +376,19 @@ int main(int argc, char* argv[]) {
   if (libusb_init(&g_usbctx) != 0)
     throw std::runtime_error("libusb init failed");
 
-  std::unique_ptr<USBDeviceHandle> devhandle = findDevice();
-  devhandle->claim();
+  std::unique_ptr<DeviceHandle> devhandle;
+  if (FLAGS_dryrun) {
+    devhandle.reset(new DummyDeviceHandle());
+  } else {
+    std::unique_ptr<USBDeviceHandle> usbdevhandle = findDevice();
+    usbdevhandle->claim();
+    devhandle = std::move(usbdevhandle);
+  }
 
   int ret = 0;
   try {
     if (FLAGS_csrcmd != "")
-      cmdCSRCmd();
+      cmdCSRCmd(devhandle.get());
     else
       cmdDefault(devhandle.get());
 
