@@ -1,3 +1,4 @@
+#!/usr/bin/ruby
 require 'rubygems'
 wd = Dir.pwd
 Dir.chdir File.dirname(__FILE__)
