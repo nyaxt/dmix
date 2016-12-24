@@ -93,4 +93,8 @@ modifyInsnExpr f i@ArithInsn{t = (Right e)} = i {t = Right (f e)}
 modifyInsnExpr f i@CntlFInsn{} = i {imm = (f (imm i))}
 modifyInsnExpr _ i = i
 
+branchTargetAddr :: Insn -> Maybe Int
+branchTargetAddr CntlFInsn{rd = Rc0, imm = (ExprInteger immI)} = Just (fromIntegral immI)
+branchTargetAddr _ = Nothing
+
 type Object = [Insn]

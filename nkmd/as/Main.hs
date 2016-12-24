@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Analyzer
 import Compiler
 import Expr
 import Parser
@@ -58,4 +59,7 @@ main = do opts <- execParser optionsI
           guard (isJust prep)
           obj <- doCompile (fromJust prep) (fromJust prog)
           guard (isJust obj)
+          let errs = analyze (fromJust obj)
+          mapM_ (hPutStrLn stderr) errs
+          guard (null errs)
           putStr $ outputObj (outputFormat opts) (fromJust obj)
