@@ -4,6 +4,7 @@ import Insn
 
 import Data.Array
 import Data.Maybe
+import Text.Printf (printf)
 
 objArray :: Object -> Array Int Insn
 objArray obj = listArray (0, (length obj)) obj
@@ -82,11 +83,35 @@ possibleStates obja = populateStates obja initialState []
                                step :: PipelineState -> [PipelineState] -> [PipelineState]
                                step = populateStates obja
 
+checkMemRWConflict :: Array Int Insn -> PipelineState -> Maybe String
+checkMemRWConflict obja PipelineState{mem=Just mi, wb=Just wbi} =
+  case (minsn, wbinsn) of
+    (_, ArithInsn{memw=MNone}) -> Nothing
+    -- (ArithInsn{memrs=rtgt}, ArithInsn{memw=wtgt}) -> if rtgt == wtgt then Just (errmsg "rs") else Nothing
+    (ArithInsn{memrt=rtgt}, ArithInsn{memw=wtgt}) -> if rtgt == wtgt then Just (errmsg "rt") else Nothing
+    (_, _) -> Nothing
+  where
+    minsn  = obja!mi
+    wbinsn = obja!wbi
+    errmsg rloc = printf (unlines [
+      "Found a Memory RW conflict:",
+      "  MEM stage reading \"%s\" executing insn:",
+      "    %s",
+      "  conflicts with WB stage executing insn:",
+      "    %s"]) rloc (show minsn) (show wbinsn)
+
+checkMemRWConflict _ _ = Nothing
+
+type CheckFunc = Array Int Insn -> PipelineState -> Maybe String
+
 analyze :: Object -> [String]
-analyze obj = map show states
+analyze obj = checks >>= (\check -> catMaybes $ map (check obja) states)
   where
     obja :: Array Int Insn
     obja = objArray obj
 
     states :: [PipelineState]
     states = possibleStates obja
+
+    checks :: [CheckFunc]
+    checks = [checkMemRWConflict]
