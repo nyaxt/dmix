@@ -17,7 +17,7 @@ lexer = P.makeTokenParser style
   where style = 
           emptyDef {P.reservedOpNames = 
                       ["=","+","-","|","&","^","!",";","[","]",";"]
-                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f","g","h","i","j","ra","sl","sh","n","pc","const","jmp"]
+                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f","g","h","i","j","ra","sl","sh","n","pc","const","jmp","nop"]
                    ,P.commentLine = "#"}
 
 reserved :: String -> Parser ()
@@ -129,6 +129,12 @@ memLBracket =
      reservedOp "["
      return m
 
+nopInsnP :: Parser Insn
+nopInsnP =
+  do reserved "nop"
+     reservedOp ";"
+     return nopInsn
+
 arithInsn :: Parser Insn
 arithInsn = 
   do memw <- option MNone memLBracket
@@ -163,7 +169,7 @@ jmpInsn =
                       ,imm = e}
 
 insn :: Parser Insn
-insn = choice [arithInsn,jmpInsn]
+insn = choice [nopInsnP,arithInsn,jmpInsn]
 
 labelp :: Parser Stmt
 labelp = 

@@ -77,6 +77,15 @@ data Insn =
             -- ,rt :: RegSel
             }
 
+nopInsn :: Insn
+nopInsn = ArithInsn { memw = MNone
+                    , alusel = OpAdd
+                    , s = Rc0
+                    , t = Left Rc0
+                    , memrs = MNone
+                    , memrt = MNone
+                    , rd = Rc0 }
+
 showT :: Either RegSel Expr -> String
 showT (Left l) = show l
 showT (Right r) = show r
