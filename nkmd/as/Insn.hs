@@ -97,4 +97,12 @@ branchTargetAddr :: Insn -> Maybe Int
 branchTargetAddr CntlFInsn{rd = Rc0, imm = (ExprInteger immI)} = Just (fromIntegral immI)
 branchTargetAddr _ = Nothing
 
+maybeRs :: Insn -> Maybe RegSel
+maybeRs ArithInsn{s=rs} = Just rs
+maybeRs _ = Nothing
+
+maybeRt :: Insn -> Maybe RegSel
+maybeRt ArithInsn{t=Left rt} = Just rt
+maybeRt _ = Nothing
+
 type Object = [Insn]

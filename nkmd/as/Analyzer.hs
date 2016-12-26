@@ -115,8 +115,8 @@ checkMemRWConflict :: Array Int Insn -> PipelineState -> Maybe String
 checkMemRWConflict obja PipelineState{mem=Just mi, wb=Just wbi} =
   case (minsn, wbinsn) of
     (_, ArithInsn{memw=MNone}) -> Nothing
-    (ArithInsn{memrs=stgt}, ArithInsn{memw=wtgt}) | stgt == wtgt -> Just (errmsg "rs")
-    (ArithInsn{memrt=ttgt}, ArithInsn{memw=wtgt}) | ttgt == wtgt -> Just (errmsg "rt")
+    (ArithInsn{memrs=stgt}, ArithInsn{memw=wtgt}) | stgt == wtgt -> Just (errmsg $ "s = "++(show stgt))
+    (ArithInsn{memrt=ttgt}, ArithInsn{memw=wtgt}) | ttgt == wtgt -> Just (errmsg $ "t = "++(show ttgt))
     (_, _) -> Nothing
   where
     minsn  = obja!mi
@@ -125,14 +125,24 @@ checkMemRWConflict obja PipelineState{mem=Just mi, wb=Just wbi} =
       "Found a Memory RW conflict:",
       "  MEM stage reading \"%s\" executing insn:",
       "    %s",
-      "  conflicts with WB stage executing insn:",
-      "    %s"]) rloc (show minsn) (show wbinsn)
+      "  conflicts with WB stage writing to \"%s\" executing insn:",
+      "    %s"]) rloc (show minsn) (show $ memw wbinsn) (show wbinsn)
 
 checkMemRWConflict _ _ = Nothing
 
 checkStaleRegRead :: Array Int Insn -> PipelineState -> Maybe String
-checkStaleRegRead obja PipelineState{ifetch = Just ifi, staleRegs=staleRegs} =
-  Just $ (show ifi) ++ ": " ++ (show staleRegs)
+checkStaleRegRead obja PipelineState{ifetch = Just ifi, staleRegs=staleRegs} | isValidAddr obja ifi
+  = if null sregs then Nothing else Just $ errmsg sregs
+    where ifinsn = obja!ifi
+          rsStale = do rs <- maybeRs ifinsn
+                       if elem rs staleRegs then Just rs else Nothing
+          rtStale = do rt <- maybeRt ifinsn
+                       if elem rt staleRegs then Just rt else Nothing
+          sregs = catMaybes [rsStale, rtStale]
+          errmsg :: [RegSel] -> String
+          errmsg sregs = printf (unlines [
+            "Found a stale reg read of registers %s:",
+            "  %s"]) (show sregs) (show ifinsn)
 checkStaleRegRead _ _ = Nothing
   
 type CheckFunc = Array Int Insn -> PipelineState -> Maybe String
