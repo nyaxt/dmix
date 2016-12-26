@@ -18,7 +18,7 @@ data RegSel
   | Rsl
   | Rsh
   | Rn
-  | Rpc
+  | Rpc deriving (Eq)
 
 instance Show RegSel where
   show Rc0 = "c0"

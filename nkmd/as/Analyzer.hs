@@ -14,10 +14,18 @@ data PipelineState = PipelineState
   , dcd :: Maybe Int
   , mem :: Maybe Int
   , ex :: Maybe Int
-  , wb :: Maybe Int } deriving (Show, Eq)
+  , wb :: Maybe Int
+  , staleRegs :: [RegSel] } deriving (Show)
+
+instance Eq PipelineState where
+  x == y = (ifetch x) == (ifetch y)
+           && (dcd x) == (dcd y)
+           && (mem x) == (mem y)
+           && (ex x) == (ex y)
+           && (wb x) == (wb y)
 
 initialState :: PipelineState 
-initialState = PipelineState { ifetch = Just 0, dcd = Nothing, mem = Nothing, ex = Nothing, wb = Nothing }
+initialState = PipelineState { ifetch = Just 0, dcd = Nothing, mem = Nothing, ex = Nothing, wb = Nothing, staleRegs = [] }
 
 isValidAddr :: Array Int a -> Int -> Bool
 isValidAddr obja i = (b <= i) && (i < t)
@@ -42,32 +50,41 @@ invalidState = PipelineState
                , dcd = Nothing
                , mem = Nothing
                , ex = Nothing
-               , wb = Nothing }
+               , wb = Nothing
+               , staleRegs = [] }
 
 tryAdvanceAddr :: Array Int a -> Maybe Int -> Maybe Int
 tryAdvanceAddr obja (Just i) = if isValidAddr obja (i + 1) then Just (i + 1) else Nothing
 tryAdvanceAddr obja Nothing  = Nothing
 
-nextState :: PipelineState -> Maybe Int -> PipelineState
-nextState curr ifetchAddr = PipelineState
-                            { ifetch = ifetchAddr
-                            , dcd = ifetch curr
-                            , mem = dcd curr
-                            , ex = mem curr
-                            , wb = ex curr }
+nextState :: Array Int Insn -> PipelineState -> Maybe Int -> PipelineState
+nextState obja curr ifetchAddr = PipelineState
+                                 { ifetch = ifetchAddr
+                                 , dcd = ifetch curr
+                                 , mem = dcd curr
+                                 , ex = mem curr
+                                 , wb = ex curr
+                                 , staleRegs = newStaleRegs}
+  where
+    nonStale = Rc0
+    newStale = Rc0
+
+    filtered = filter (nonStale ==) (staleRegs curr)
+
+    newStaleRegs = if newStale == Rc0 then filtered else newStale:filtered
 
 nextStates :: Array Int Insn -> PipelineState -> [PipelineState]
 nextStates obja curr = filter (isValidState obja) [bnt, bt]
   where
     bnt :: PipelineState
-    bnt = nextState curr $ tryAdvanceAddr obja (ifetch curr)
+    bnt = nextState obja curr $ tryAdvanceAddr obja (ifetch curr)
 
     bt :: PipelineState
     bt = case (ex curr) of
          Nothing -> invalidState
          Just jex -> case (branchTargetAddr $ obja!jex) of
                      Nothing -> invalidState
-                     Just ja -> nextState curr (Just ja)
+                     Just ja -> nextState obja curr (Just ja)
 
 
 possibleStates :: Array Int Insn -> [PipelineState]
