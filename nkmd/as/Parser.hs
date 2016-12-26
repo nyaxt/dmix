@@ -135,6 +135,26 @@ nopInsnP =
      reservedOp ";"
      return nopInsn
 
+assignInsnP :: Parser Insn
+assignInsnP =
+  do memw <- option MNone memLBracket
+     rd <- regSel
+     when (memw /= MNone)
+          (reservedOp "]")
+     reservedOp "="
+     memrt <- option MNone memLBracket
+     t <- regImm
+     when (memrt /= MNone)
+          (reservedOp "]")
+     reservedOp ";"
+     return ArithInsn {memw = memw
+                      ,alusel = OpAdd
+                      ,s = Rc0
+                      ,t = t
+                      ,memrs = MNone
+                      ,memrt = memrt
+                      ,rd = rd}
+
 arithInsn :: Parser Insn
 arithInsn = 
   do memw <- option MNone memLBracket
@@ -169,7 +189,7 @@ jmpInsn =
                       ,imm = e}
 
 insn :: Parser Insn
-insn = choice [nopInsnP,arithInsn,jmpInsn]
+insn = choice [nopInsnP,(try assignInsnP),arithInsn,jmpInsn]
 
 labelp :: Parser Stmt
 labelp = 
