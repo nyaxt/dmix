@@ -3,6 +3,7 @@ module Analyzer (analyze) where
 import Insn
 
 import Data.Array
+import Data.List
 import Data.Maybe
 import Text.Printf (printf)
 
@@ -23,9 +24,6 @@ instance Eq PipelineState where
            && (mem x) == (mem y)
            && (ex x) == (ex y)
            && (wb x) == (wb y)
-
-initialState :: PipelineState 
-initialState = PipelineState { ifetch = Just 0, dcd = Nothing, mem = Nothing, ex = Nothing, wb = Nothing, staleRegs = [] }
 
 isValidAddr :: Array Int a -> Int -> Bool
 isValidAddr obja i = (b <= i) && (i < t)
@@ -66,12 +64,26 @@ nextState obja curr ifetchAddr = PipelineState
                                  , wb = ex curr
                                  , staleRegs = newStaleRegs}
   where
-    nonStale = Rc0
-    newStale = Rc0
+    staleRegFromAddr addr | isValidAddr obja addr =
+      case (obja!addr) of
+        ArithInsn{memw=MNone, rd=rd} -> rd
+        _                            -> Rc0 
+    staleRegFromAddr _ = Rc0
 
-    filtered = filter (nonStale ==) (staleRegs curr)
+    nonStale = fromMaybe Rc0 $ do addr <- wb curr
+                                  Just $ staleRegFromAddr addr
+
+    newStale = fromMaybe Rc0 $ do addr <- ifetchAddr
+                                  Just $ staleRegFromAddr addr
+
+    -- delete only deletes the first nonStale, but it is on purpose. There may be multiple stale writes for the same reg in the pipeline.
+    filtered = delete nonStale (staleRegs curr) 
 
     newStaleRegs = if newStale == Rc0 then filtered else newStale:filtered
+
+initialState :: Array Int Insn -> PipelineState 
+initialState obja = nextState obja nullState (Just 0)
+  where nullState = PipelineState { ifetch = Nothing, dcd = Nothing, mem = Nothing, ex = Nothing, wb = Nothing, staleRegs = [] }
 
 nextStates :: Array Int Insn -> PipelineState -> [PipelineState]
 nextStates obja curr = filter (isValidState obja) [bnt, bt]
@@ -79,16 +91,15 @@ nextStates obja curr = filter (isValidState obja) [bnt, bt]
     bnt :: PipelineState
     bnt = nextState obja curr $ tryAdvanceAddr obja (ifetch curr)
 
-    bt :: PipelineState
-    bt = case (ex curr) of
-         Nothing -> invalidState
-         Just jex -> case (branchTargetAddr $ obja!jex) of
-                     Nothing -> invalidState
-                     Just ja -> nextState obja curr (Just ja)
+    btm :: Maybe PipelineState
+    btm = do jex <- ex curr
+             ja <- branchTargetAddr $ obja!jex
+             Just $ nextState obja curr (Just ja)
+    bt = fromMaybe invalidState btm
 
 
 possibleStates :: Array Int Insn -> [PipelineState]
-possibleStates obja = populateStates obja initialState []
+possibleStates obja = populateStates obja (initialState obja) []
   where
     populateStates :: Array Int Insn -> PipelineState -> [PipelineState] -> [PipelineState]
     populateStates obja s ss | (elem s ss) = ss -- Already explored
@@ -119,6 +130,11 @@ checkMemRWConflict obja PipelineState{mem=Just mi, wb=Just wbi} =
 
 checkMemRWConflict _ _ = Nothing
 
+checkStaleRegRead :: Array Int Insn -> PipelineState -> Maybe String
+checkStaleRegRead obja PipelineState{ifetch = Just ifi, staleRegs=staleRegs} =
+  Just $ (show ifi) ++ ": " ++ (show staleRegs)
+checkStaleRegRead _ _ = Nothing
+  
 type CheckFunc = Array Int Insn -> PipelineState -> Maybe String
 
 analyze :: Object -> [String]
@@ -131,7 +147,7 @@ analyze obj = pipelineCheckResults
     states = possibleStates obja
 
     checks :: [CheckFunc]
-    checks = [checkMemRWConflict]
+    checks = [checkStaleRegRead, checkMemRWConflict]
 
     pipelineCheckResults :: [String]
     pipelineCheckResults = checks >>= (\check -> catMaybes $ map (check obja) states)
