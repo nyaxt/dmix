@@ -87,8 +87,8 @@ checkMemRWConflict :: Array Int Insn -> PipelineState -> Maybe String
 checkMemRWConflict obja PipelineState{mem=Just mi, wb=Just wbi} =
   case (minsn, wbinsn) of
     (_, ArithInsn{memw=MNone}) -> Nothing
-    -- (ArithInsn{memrs=rtgt}, ArithInsn{memw=wtgt}) -> if rtgt == wtgt then Just (errmsg "rs") else Nothing
-    (ArithInsn{memrt=rtgt}, ArithInsn{memw=wtgt}) -> if rtgt == wtgt then Just (errmsg "rt") else Nothing
+    (ArithInsn{memrs=stgt}, ArithInsn{memw=wtgt}) | stgt == wtgt -> Just (errmsg "rs")
+    (ArithInsn{memrt=ttgt}, ArithInsn{memw=wtgt}) | ttgt == wtgt -> Just (errmsg "rt")
     (_, _) -> Nothing
   where
     minsn  = obja!mi
@@ -105,7 +105,7 @@ checkMemRWConflict _ _ = Nothing
 type CheckFunc = Array Int Insn -> PipelineState -> Maybe String
 
 analyze :: Object -> [String]
-analyze obj = checks >>= (\check -> catMaybes $ map (check obja) states)
+analyze obj = pipelineCheckResults
   where
     obja :: Array Int Insn
     obja = objArray obj
@@ -115,3 +115,6 @@ analyze obj = checks >>= (\check -> catMaybes $ map (check obja) states)
 
     checks :: [CheckFunc]
     checks = [checkMemRWConflict]
+
+    pipelineCheckResults :: [String]
+    pipelineCheckResults = checks >>= (\check -> catMaybes $ map (check obja) states)
