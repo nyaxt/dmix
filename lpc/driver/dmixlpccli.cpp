@@ -17,6 +17,7 @@ DEFINE_string(hex, "", "data to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hexfile, "", "intel HEX file to send.");
 DEFINE_string(csrcmd, "",
               "nkmd csr_spi cmd. \"[read|write] [csr|progrom] [offset]");
+DEFINE_string(memh, "", "output SPI cmd to memh file");
 bool g_verbose;
 
 static const int USBI2C_VENDOR_ID = 0xF055;
@@ -71,7 +72,7 @@ class DummyDeviceHandle : public DeviceHandle {
     printf("Rx bulk. len %zu\n", len);
 
     std::vector<uint8_t> ret;
-    for (size_t i = 0; i < len; ++ i) {
+    for (size_t i = 0; i < len; ++i) {
       ret.push_back(static_cast<uint8_t>(i));
     }
     return ret;
@@ -347,6 +348,8 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
   txdata.push_back((addr >> 8) & 0xff);
   if (target == CSRTarget::Progrom) txdata.push_back((addr >> 0) & 0xff);
 
+  if (FLAGS_memh != "") writeMemh(FLAGS_memh, txdata);
+
   if (isWrite) {
     std::vector<uint8_t> body = getTxBodyFromFlags();
     txdata.insert(txdata.end(), body.begin(), body.end());
@@ -356,14 +359,16 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     for (int i = 0; i < fillLen; ++i) {
       txdata.push_back(0xdd);
     }
-    txdata.push_back(0x00); // NOP byte
+    txdata.push_back(0x00);  // NOP byte
     devhandle->sendBulk(txdata);
   }
-  sleep(1); // FIXME: remove
+  sleep(1);  // FIXME: remove
   std::vector<uint8_t> rxdata = devhandle->recvBulk(txdata.size());
   if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxdata).c_str());
   if (!isWrite) {
-    printf("result: %s\n", formatHex(std::vector<uint8_t>(&rxdata[3], &rxdata[3] + len)).c_str());
+    printf(
+        "result: %s\n",
+        formatHex(std::vector<uint8_t>(&rxdata[3], &rxdata[3] + len)).c_str());
   }
 }
 

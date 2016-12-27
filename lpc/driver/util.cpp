@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <memory>
 
 ErrnoError::ErrnoError(const std::string& context, int errnoC)
     : std::runtime_error(
@@ -55,4 +56,13 @@ std::string formatHex(const std::vector<uint8_t>& data) {
   for (uint8_t b : data) ret += stringPrintF("%02x ", b);
 
   return std::move(ret);
+}
+
+void writeMemh(const std::string& path, const std::vector<uint8_t>& data) {
+  std::unique_ptr<FILE, decltype(&fclose)> fp(fopen(path.c_str(), "w"), fclose);
+  if (!fp) throw ErrnoError("fopen", errno);
+
+  for (uint8_t byte : data) {
+    fprintf(fp.get(), "%02x\n", byte);
+  }
 }

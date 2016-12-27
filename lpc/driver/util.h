@@ -26,5 +26,6 @@ extern bool g_verbose;
 std::vector<uint8_t> parseHex(const std::string& str);
 std::string stringPrintF(const char* fmt, ...);
 std::string formatHex(const std::vector<uint8_t>& data);
+void writeMemh(const std::string& path, const std::vector<uint8_t>& data);
 
 #endif  // _driver_util_h
