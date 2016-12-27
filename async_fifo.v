@@ -97,8 +97,9 @@ end
 wire [2:0] raddr_delayed = gray_dec(raddr_gray_delay_ff[2:0]);
 
 assign full_o = (raddr_delayed[1:0] == waddr_next[1:0]) && (raddr_delayed[2] != waddr_next[2]);
+/*
 reg last_full_ff;
 always @(posedge wclk)
     last_full_ff <= full_o;
-
+*/
 endmodule

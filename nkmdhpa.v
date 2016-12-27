@@ -205,10 +205,10 @@ nkmd_arch nkmd_arch(
     .uart_tx(nkmd_uart_tx),
 
     // FIXME
-    .dai_data_i(0),
-    .dai_ack_i(0),
+    .dai_data_i(24'b0),
+    .dai_ack_i(1'b0),
     // output wire [23:0] dai_data_o,
-    .dai_pop_i(0),
+    .dai_pop_i(1'b0),
     // output wire dai_ack_o,
 
 `ifdef PROMW

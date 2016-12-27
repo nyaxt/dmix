@@ -129,7 +129,7 @@ always @(posedge clk) begin
             end
             ST_PENDING_CSR_ADDR: begin
                 if (spi_ack_pop_o) begin
-                    addr_ff <= {addr_ff[20:16], spi_data_rx[7:0], 8'h0};
+                    addr_ff <= {addr_ff[19:16], spi_data_rx[7:0], 8'h0};
 
                     data_tx_ff <= 8'had;
                     data_ready_ff <= 1;
