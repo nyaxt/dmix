@@ -41,16 +41,16 @@
 `define OP_MUL 3'h7
 
 module nkmd_cpu_if(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input [31:0] p_data_i,
-    output [31:0] p_addr_o,
+    input wire [31:0] p_data_i,
+    output wire [31:0] p_addr_o,
 
-    input seq_stop_inc_pc_i,
-    input [31:0] jmp_pc_i,
-    input jmp_pc_en_i,
-    output [31:0] inst_o);
+    input wire seq_stop_inc_pc_i,
+    input wire [31:0] jmp_pc_i,
+    input wire jmp_pc_en_i,
+    output wire [31:0] inst_o);
 
 assign p_addr_o = pc_ff;
 assign inst_o = p_data_i;
@@ -133,7 +133,7 @@ end
 endfunction
 
 always @(posedge clk) begin
-    if (rst || delayed_rst_ff)
+    if (rst == 1'b1 || delayed_rst_ff == 1'b1)
         {repn_ff, jmp_en_ff, imm_en_ff, mwsel_ff, sval_c_read_en_ff, tval_r_read_en_ff, jmprel_ff, imm_ff, alusel_ff, rdsel_ff, rtsel_ff, rssel_ff} <= 0;
     else
         {repn_ff, jmp_en_ff, imm_en_ff, mwsel_ff, sval_c_read_en_ff, tval_r_read_en_ff, jmprel_ff, imm_ff, alusel_ff, rdsel_ff, rtsel_ff, rssel_ff} <= nkmd_cpu_dcd_func(inst_i);
