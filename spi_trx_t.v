@@ -27,7 +27,7 @@ spi_trx uut(
     .ack_i(ack_i));
 
 task spi_cycle;
-    input [7:0] data;
+    input wire [7:0] data;
     begin
         mosi = data[7];
         sck = 0; #(TCLK_SCK/2);

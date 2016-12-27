@@ -1,10 +1,10 @@
 module nkmd_ram(
-    input clk,
+    input wire clk,
 
-    input [31:0] data_i,
-    output [31:0] data_o,
-    input [31:0] addr_i,
-    input we_i);
+    input wire [31:0] data_i,
+    output wire [31:0] data_o,
+    input wire [31:0] addr_i,
+    input wire we_i);
 
 reg [31:0] ram [1023:0];
 

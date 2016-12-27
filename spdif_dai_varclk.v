@@ -5,19 +5,19 @@ module spdif_dai_varclk #(
 
     parameter NUM_RATE = 5
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input signal_i,
+    input wire signal_i,
 
-    output [23:0] data_o,
-    output ack_o,
-    output locked_o,
-    output rst_o,
-    output lrck_o,
-    output [191:0] udata_o,
-    output [191:0] cdata_o,
-    output [(NUM_RATE-1):0] rate_o);
+    output wire [23:0] data_o,
+    output wire ack_o,
+    output wire locked_o,
+    output wire rst_o,
+    output wire lrck_o,
+    output wire [191:0] udata_o,
+    output wire [191:0] cdata_o,
+    output wire [(NUM_RATE-1):0] rate_o);
 
 wire [(MAX_CLK_PER_HALFBIT_LOG2-1):0] clk_per_halfbit;
 wire locked;

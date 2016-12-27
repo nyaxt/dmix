@@ -1,11 +1,11 @@
 `default_nettype none
 
 module csr_cmd_decoder(
-    input [7:0] cmd,
-    output we,
-    output target_nkmdprom,
-    output target_csr,
-    output [3:0] addr_high);
+    input wire [7:0] cmd,
+    output wire we,
+    output wire target_nkmdprom,
+    output wire target_csr,
+    output wire [3:0] addr_high);
 
 assign we = cmd[7];
 
@@ -29,28 +29,28 @@ module csr_spi #(
     parameter UDATA_WIDTH = NUM_SPDIF_IN*192,
     parameter CDATA_WIDTH = UDATA_WIDTH
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
     // spi access
-    input sck,
-    output miso,
-    input mosi,
-    input ss,
+    input wire sck,
+    output wire miso,
+    input wire mosi,
+    input wire ss,
 
     // csr registers access
-    output [(VOL_WIDTH-1):0] vol_o,
-    output nkmd_rst_o,
-    input [(NKMDDBG_WIDTH-1):0] nkmd_dbgout_i,
-    output [(NKMDDBG_WIDTH-1):0] nkmd_dbgin_o,
-    input [(RATE_WIDTH-1):0] rate_i,
-    input [(UDATA_WIDTH-1):0] udata_i,
-    input [(CDATA_WIDTH-1):0] cdata_i,
+    output wire [(VOL_WIDTH-1):0] vol_o,
+    output wire nkmd_rst_o,
+    input wire [(NKMDDBG_WIDTH-1):0] nkmd_dbgout_i,
+    output wire [(NKMDDBG_WIDTH-1):0] nkmd_dbgin_o,
+    input wire [(RATE_WIDTH-1):0] rate_i,
+    input wire [(UDATA_WIDTH-1):0] udata_i,
+    input wire [(CDATA_WIDTH-1):0] cdata_i,
 
     // nkmd prom
-    output [31:0] prom_addr_o,
-    output [31:0] prom_data_o,
-    output prom_ack_o);
+    output wire [31:0] prom_addr_o,
+    output wire [31:0] prom_data_o,
+    output wire prom_ack_o);
 
 wire spi_rst;
 wire [7:0] spi_data_rx;
@@ -221,8 +221,9 @@ csr #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr(
     .nkmd_rst_o(nkmd_rst_o), .nkmd_dbgout_i(nkmd_dbgout_i), .nkmd_dbgin_o(nkmd_dbgin_o),
     .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
 
-wire prom_addr_o = {12'b0, addr_ff[19:0]};
-wire prom_data_o = wdata_ff;
-wire prom_ack_o = (state_ff == ST_WRITING_NKMDPROM_DATA);
+assign prom_addr_o = {12'b0, addr_ff[19:0]};
+assign prom_data_o = wdata_ff;
+assign prom_ack_o = (state_ff == ST_WRITING_NKMDPROM_DATA);
 
 endmodule
+`default_nettype wire

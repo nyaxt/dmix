@@ -3,16 +3,16 @@
 module nkmd_debug #(
     parameter NKMDDBG_WIDTH = 16*8
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    output [(NKMDDBG_WIDTH-1):0] dbgout_o,
-    input [(NKMDDBG_WIDTH-1):0] dbgin_i,
+    output wire [(NKMDDBG_WIDTH-1):0] dbgout_o,
+    input wire [(NKMDDBG_WIDTH-1):0] dbgin_i,
     
-    input [31:0] data_i,
-    output [31:0] data_o,
-    input [31:0] addr_i,
-    input we_i);
+    input wire [31:0] data_i,
+    output wire [31:0] data_o,
+    input wire [31:0] addr_i,
+    input wire we_i);
 
 wire [1:0] addr_offset = addr_i[1:0];
 
@@ -39,3 +39,4 @@ end
 assign dbgout_o = dbgout_ff;
 
 endmodule
+`default_nettype wire

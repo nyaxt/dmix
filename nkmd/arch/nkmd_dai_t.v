@@ -30,7 +30,7 @@ nkmd_dai_rx uut(
     .we_i(nkmd_we));
 
 task push_sample;
-    input [23:0] data;
+    input wire [23:0] data;
     begin
         data_ff = data;
         ack_ff = 1'b1;

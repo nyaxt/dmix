@@ -5,20 +5,20 @@ module resample_pipeline
 
     parameter NUM_RATE = 5
 )(
-    input clk,
-    input rst,
-    input [(NUM_CH-1):0] rst_ch,
+    input wire clk,
+    input wire rst,
+    input wire [(NUM_CH-1):0] rst_ch,
 
     // data in
-    input [(NUM_RATE*NUM_CH-1):0] rate_i,
-    input [(NUM_CH-1):0] ack_i,
-    input [(24*NUM_CH-1):0] data_i,
-    output [(NUM_CH-1):0] pop_o,
+    input wire [(NUM_RATE*NUM_CH-1):0] rate_i,
+    input wire [(NUM_CH-1):0] ack_i,
+    input wire [(24*NUM_CH-1):0] data_i,
+    output wire [(NUM_CH-1):0] pop_o,
 
     // data out
-    input [(NUM_CH-1):0] pop_i,
-    output [(24*NUM_CH-1):0] data_o,
-    output [(NUM_CH-1):0] ack_o);
+    input wire [(NUM_CH-1):0] pop_i,
+    output wire [(24*NUM_CH-1):0] data_o,
+    output wire [(NUM_CH-1):0] ack_o);
 
 parameter RATE_32 = 0;
 parameter RATE_441 = 1;

@@ -6,15 +6,15 @@ module ringbuf
     parameter LEN_LOG2 = 4,
     parameter RITER_START = LEN/2
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input [23:0] data_i,
-    input we_i,
+    input wire [23:0] data_i,
+    input wire we_i,
     
-    input pop_i,
-    input [(LEN_LOG2-1):0] offset_i,
-    output [23:0] data_o);
+    input wire pop_i,
+    input wire [(LEN_LOG2-1):0] offset_i,
+    output wire [23:0] data_o);
 
 reg [23:0] mem [(LEN-1):0];
 

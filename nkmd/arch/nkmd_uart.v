@@ -1,14 +1,14 @@
 module nkmd_uart(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input rx,
-    output tx,
+    input wire rx,
+    output wire tx,
 
-    input [31:0] data_i,
-    output [31:0] data_o,
-    input [31:0] addr_i,
-    input we_i);
+    input wire [31:0] data_i,
+    output wire [31:0] data_o,
+    input wire [31:0] addr_i,
+    input wire we_i);
 
 wire [7:0] uart_data_o;
 wire uart_ack_o;

@@ -2,11 +2,11 @@
 // `define DEBUG_SLOW
 
 module dmix_dcm(
-    input clk245760_pad,
-    input rst_dcm,
-    output clk245760,
-    output clk491520,
-    output clk983040);
+    input wire clk245760_pad,
+    input wire rst_dcm,
+    output wire clk245760,
+    output wire clk491520,
+    output wire clk983040);
 
 `ifdef DEBUG_SLOW
 reg [1:0] mul_counter_ff;

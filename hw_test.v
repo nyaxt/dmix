@@ -1,9 +1,9 @@
 `timescale 1ns / 1ps
 
 module hw_test(
-    input clk50000,
-    input rst,
-    input [6:0] sw,
+    input wire clk50000,
+    input wire rst,
+    input wire [6:0] sw,
 
 	output sck_o,
 	output bck_o,

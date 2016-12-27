@@ -2,9 +2,9 @@
 // Depth: 32
 
 module rom_firbank_48_96(
-    input clk,
-    input [4:0] addr,
-    output [23:0] data);
+    input wire clk,
+    input wire [4:0] addr,
+    output wire [23:0] data);
 reg [23:0] data_ff;
 assign data = data_ff;
 always @(posedge clk) begin

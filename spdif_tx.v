@@ -1,15 +1,15 @@
 module spdif_tx(
-    input clk, // 24.576Mhz
-    input rst,
+    input wire clk, // 24.576Mhz
+    input wire rst,
 
-    input [1:0] ack_i,
+    input wire [1:0] ack_i,
 	input [47:0] data_i,
-    output [1:0] pop_o,
+    output wire [1:0] pop_o,
 
-    input [191:0] udata_i,
-    input [191:0] cdata_i,
+    input wire [191:0] udata_i,
+    input wire [191:0] cdata_i,
 
-    output spdif_o
+    output wire spdif_o
 );
 
 reg halfbit_ff;

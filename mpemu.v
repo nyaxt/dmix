@@ -1,11 +1,11 @@
 // simulates multiplier ip core provided by xilinx
 
 module mpemu(
-    input clk,
+    input wire clk,
     
-    input [23:0] mpcand_i,
-    input [23:0] mplier_i,
-    output [27:0] mprod_o);
+    input wire [23:0] mpcand_i,
+    input wire [23:0] mplier_i,
+    output wire [27:0] mprod_o);
 
 `ifndef NO_IP
 // A: signed 24 bit
@@ -44,11 +44,11 @@ assign mprod_o = prod_full[46:19];
 endmodule
 
 module mpemu_scale(
-    input clk,
+    input wire clk,
     
-    input [23:0] mpcand_i,
-    input [31:0] scale_i,
-    output [31:0] mprod_o);
+    input wire [23:0] mpcand_i,
+    input wire [31:0] scale_i,
+    output wire [31:0] mprod_o);
 
 `ifndef NO_IP
 // A: signed 24 bit

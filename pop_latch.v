@@ -1,10 +1,10 @@
 module pop_latch(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input pop_i,
-    input ack_pop_i, // read enable
-    output pop_latched_o);
+    input wire pop_i,
+    input wire ack_pop_i, // read enable
+    output wire pop_latched_o);
 
 reg latch;
 always @(posedge clk) begin

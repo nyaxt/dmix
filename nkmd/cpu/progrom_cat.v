@@ -2,10 +2,10 @@
 `timescale 1ns / 1ps
 
 module nkmd_progrom(
-    input clk,
+    input wire clk,
 
-    output [31:0] data_o,
-    input [31:0] addr_i);
+    output wire [31:0] data_o,
+    input wire [31:0] addr_i);
 
 reg [31:0] data_ff;
 
@@ -47,3 +47,4 @@ end
 assign data_o = data_ff;
 
 endmodule
+`default_nettype wire

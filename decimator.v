@@ -2,16 +2,16 @@ module decimator
 #(
     parameter DATA_WIDTH = 24
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input [2:0] factor,
+    input wire [2:0] factor,
 
-    input [(DATA_WIDTH-1):0] data_i,
-    input ack_i,
+    input wire [(DATA_WIDTH-1):0] data_i,
+    input wire ack_i,
 
-    output [(DATA_WIDTH-1):0] data_o,
-    input ack_o);
+    output wire [(DATA_WIDTH-1):0] data_o,
+    input wire ack_o);
 
 reg [(DATA_WIDTH-1):0] latch;
 always @(posedge clk) begin

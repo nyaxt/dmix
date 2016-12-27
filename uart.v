@@ -1,16 +1,16 @@
 // 8-N-1: 8bit no parity 1 stop bit
 module uart(
-    input clk,
+    input wire clk,
 
-    input rx,
-    output tx,
+    input wire rx,
+    output wire tx,
 
-    output [7:0] data_o,
-    output ack_o,
+    output wire [7:0] data_o,
+    output wire ack_o,
 
-    input [7:0] data_i,
-    input ack_i,
-    output pop_o);
+    input wire [7:0] data_i,
+    input wire ack_i,
+    output wire pop_o);
 
 // trig_baud16 is 1 at 9600 * 16Hz = 153600Hz
 // 50MHz / 153600Hz = 325.52

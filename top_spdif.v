@@ -1,12 +1,12 @@
 `timescale 1ns / 1ps
 
 module top_spdif(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
     
-    input signal_i,
-    output ack_o,
-    output [23:0] data_o
+    input wire signal_i,
+    output wire ack_o,
+    output wire [23:0] data_o
     );
     
 

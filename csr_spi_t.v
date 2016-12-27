@@ -32,7 +32,7 @@ csr_spi uut(
     .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
 
 task spi_cycle;
-    input [7:0] data;
+    input wire [7:0] data;
     begin
         mosi = data[7];
         sck = 0; #(TCLK_SCK/2);

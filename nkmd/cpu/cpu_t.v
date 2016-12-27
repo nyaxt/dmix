@@ -56,3 +56,4 @@ nkmd_progrom nkmd_progrom(
     .data_o(cpu_p_data_i));
 
 endmodule
+`default_nettype wire

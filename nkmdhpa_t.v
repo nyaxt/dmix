@@ -29,7 +29,7 @@ nkmdhpa uut(
     .csr_ss(ss));
 
 task recv_rawbit;
-    input b;
+    input wire b;
     begin
         signal = b;
         #(TclkSPDIF);//*6);
@@ -109,7 +109,7 @@ task recv_W;
 endtask
 
 task recv_bmcbit;
-    input b;
+    input wire b;
     begin
         if(signal) begin
             if(b) begin
@@ -132,7 +132,7 @@ task recv_bmcbit;
 endtask
 
 task recv_bmcbyte;
-    input [7:0] byte;
+    input wire [7:0] byte;
     begin
         recv_bmcbit(byte[0]);
         recv_bmcbit(byte[1]);
@@ -155,7 +155,7 @@ task recv_bmcctl;
 endtask
 
 task recv_subframe;
-    input [23:0] data;
+    input wire [23:0] data;
     begin
         recv_bmcbyte(data[7:0]);
         recv_bmcbyte(data[15:8]);
@@ -165,7 +165,7 @@ task recv_subframe;
 endtask
 
 task spi_cycle;
-    input [7:0] data;
+    input wire [7:0] data;
     begin
         $display("spi tx cycle: %x", data);
         mosi = data[7];

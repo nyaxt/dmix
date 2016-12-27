@@ -9,19 +9,19 @@ module mixer #(
 
     parameter VOL_WIDTH = 32
 )(
-    input clk, // 49.152Mhz
-    input rst,
+    input wire clk, // 49.152Mhz
+    input wire rst,
 
-    input [(NUM_CH_IN-1):0] rst_ch,
-    output [(NUM_CH_IN-1):0] pop_o, // optional: ack_i accepted any time
-    input [(NUM_CH_IN-1):0] ack_i,
-    input [(NUM_CH_IN*24-1):0] data_i,
+    input wire [(NUM_CH_IN-1):0] rst_ch,
+    output wire [(NUM_CH_IN-1):0] pop_o, // optional: ack_i accepted any time
+    input wire [(NUM_CH_IN-1):0] ack_i,
+    input wire [(NUM_CH_IN*24-1):0] data_i,
 
-    input [(NUM_CH_IN*VOL_WIDTH-1):0] vol_i,
+    input wire [(NUM_CH_IN*VOL_WIDTH-1):0] vol_i,
 
-    input [(NUM_CH_OUT-1):0] pop_i,
-    output [23:0] data_o,
-    output [(NUM_CH_OUT-1):0] ack_o);
+    input wire [(NUM_CH_OUT-1):0] pop_i,
+    output wire [23:0] data_o,
+    output wire [(NUM_CH_OUT-1):0] ack_o);
 
 parameter MULT_LATENCY = 6;
 

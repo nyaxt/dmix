@@ -4,14 +4,14 @@
 module nkmd_progrom_w #(
     parameter WIDTH = 1024
 )(
-    input clk,
+    input wire clk,
 
-    output [31:0] data_o,
-    input [31:0] addr_i,
+    output wire [31:0] data_o,
+    input wire [31:0] addr_i,
 
-    input [31:0] prog_addr_i,
-    input [31:0] prog_data_i,
-    input prog_ack_i);
+    input wire [31:0] prog_addr_i,
+    input wire [31:0] prog_data_i,
+    input wire prog_ack_i);
 
 reg [31:0] pram [(WIDTH-1):0];
 
@@ -27,3 +27,4 @@ always @(posedge clk) begin
 end
 
 endmodule
+`default_nettype wire

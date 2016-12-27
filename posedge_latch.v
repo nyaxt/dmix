@@ -1,8 +1,8 @@
 module posedge_latch(
-    input clk,
+    input wire clk,
 
-    input pulse_i,
-    output pulse_o);
+    input wire pulse_i,
+    output wire pulse_o);
 
 reg [1:0] pulse_hist_ff;
 always @(posedge clk) begin
@@ -14,11 +14,11 @@ assign pulse_o = (pulse_hist_ff == 2'b01);
 endmodule
 
 module conv_pulse(
-    input clk_i,
-    input clk_o,
+    input wire clk_i,
+    input wire clk_o,
     
-    input pulse_i,
-    output pulse_o);
+    input wire pulse_i,
+    output wire pulse_o);
 
 reg [3:0] pulse_counter;
 always @(posedge clk_i) begin

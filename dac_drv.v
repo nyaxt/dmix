@@ -3,16 +3,16 @@
 
 // Output Left-Justified 24bit 192kHz 2ch (Stereo) Audio Stream
 module dac_drv(
-	input clk,
-	input rst,
+    input wire clk,
+    input wire rst,
 
-	output bck_o,
-	output data_o,
-	output lrck_o,
+    output wire bck_o,
+    output wire data_o,
+    output wire lrck_o,
 
-    input [1:0] ack_i,
-	input [23:0] data_i,
-    output [1:0] pop_o);
+    input wire [1:0] ack_i,
+	input wire [23:0] data_i,
+    output wire [1:0] pop_o);
 
 // 256fs * 192kHz = 49.152Mhz
 reg [7:0] clk_counter;

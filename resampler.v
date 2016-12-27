@@ -15,22 +15,22 @@ module resampler_core
     parameter TIMESLICE = 64,
     parameter TIMESLICE_LOG2 = 6
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
     // to firbank
-    output [(BANK_WIDTH-1):0] bank_addr_o,
-    input [23:0] bank_data_i,
+    output wire [(BANK_WIDTH-1):0] bank_addr_o,
+    input wire [23:0] bank_data_i,
 
     // to ringbuf array
-    output [(NUM_CH-1):0] pop_o,
-    output [(HALFDEPTH_LOG2+1-1):0] offset_o,
-    input [(NUM_CH*24-1):0] data_i,
+    output wire [(NUM_CH-1):0] pop_o,
+    output wire [(HALFDEPTH_LOG2+1-1):0] offset_o,
+    input wire [(NUM_CH*24-1):0] data_i,
 
-    // data output
-    input [(NUM_CH-1):0] pop_i,
-    output [23:0] data_o,
-    output [(NUM_CH-1):0] ack_o);
+    // data output wire
+    input wire [(NUM_CH-1):0] pop_i,
+    output wire [23:0] data_o,
+    output wire [(NUM_CH-1):0] ack_o);
 
 // Latch pop_i request
 wire [(NUM_CH-1):0] ack_pop_i;
@@ -306,23 +306,23 @@ module ringbuffered_resampler
     parameter TIMESLICE = 64, // Not sure if this is OK.
     parameter TIMESLICE_LOG2 = 6
 )(
-    input clk,
-    input rst,
-    input [(NUM_CH-1):0] rst_ch,
+    input wire clk,
+    input wire rst,
+    input wire [(NUM_CH-1):0] rst_ch,
 
     // to firbank
-    output [(BANK_WIDTH-1):0] bank_addr_o,
-    input [23:0] bank_data_i,
+    output wire [(BANK_WIDTH-1):0] bank_addr_o,
+    input wire [23:0] bank_data_i,
 
-    // data input
-    input [(NUM_CH-1):0] ack_i,
-    input [(24*NUM_CH-1):0] data_i,
-    output [(NUM_CH-1):0] pop_o,
+    // data input wire
+    input wire [(NUM_CH-1):0] ack_i,
+    input wire [(24*NUM_CH-1):0] data_i,
+    output wire [(NUM_CH-1):0] pop_o,
 
-    // data output
-    input [(NUM_CH-1):0] pop_i,
-    output [23:0] data_o,
-    output [(NUM_CH-1):0] ack_o);
+    // data output wire
+    input wire [(NUM_CH-1):0] pop_i,
+    output wire [23:0] data_o,
+    output wire [(NUM_CH-1):0] ack_o);
 
 wire [(NUM_CH-1):0] pop;
 wire [(HALFDEPTH_LOG2+1-1):0] rb_offset;
@@ -332,7 +332,7 @@ genvar ig;
 generate
 for (ig = 0; ig < NUM_CH; ig = ig + 1) begin:rbunit
     ringbuf #(
-        .LEN(HALFDEPTH*4), // should work w/ *2, but buffer a little longer to address input jitter
+        .LEN(HALFDEPTH*4), // should work w/ *2, but buffer a little longer to address input wire jitter
         .LEN_LOG2(HALFDEPTH_LOG2+2)
     ) rb(
         .clk(clk), .rst(rst | rst_ch[ig]),

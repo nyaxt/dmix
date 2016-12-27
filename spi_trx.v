@@ -1,18 +1,18 @@
 module spi_trx (
-    input clk,
+    input wire clk,
 
-    input sck,
-    output miso,
-    input mosi,
-    input ss,
+    input wire sck,
+    output wire miso,
+    input wire mosi,
+    input wire ss,
 
-    output rst_o,
+    output wire rst_o,
 
-    output [7:0] data_o,
-    output ack_pop_o,
+    output wire [7:0] data_o,
+    output wire ack_pop_o,
 
-    input [7:0] data_i,
-    input ack_i);
+    input wire [7:0] data_i,
+    input wire ack_i);
 
 // detect sck posedge
 reg [1:0] sck_hist_ff;

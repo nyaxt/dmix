@@ -8,26 +8,26 @@ module dmix_top #(
     parameter NUM_RATE = 5,
     parameter VOL_WIDTH = 32
 )(
-    input clk245760_pad,
-    input rst,
+    input wire clk245760_pad,
+    input wire rst,
 
-    input [0:(NUM_SPDIF_IN-1)] spdif_i,
+    input wire [0:(NUM_SPDIF_IN-1)] spdif_i,
     
     // I2S to DAC
-    output dac_sck_o,
-    output dac_bck_o,
-    output dac_lrck_o,
-    output dac_data_o,
+    output wire dac_sck_o,
+    output wire dac_bck_o,
+    output wire dac_lrck_o,
+    output wire dac_data_o,
 
     // SPI
-    input spi_sck,
-    input spi_mosi,
-    output spi_miso,
-    input spi_ss,
+    input wire spi_sck,
+    input wire spi_mosi,
+    output wire spi_miso,
+    input wire spi_ss,
 
     // debug
-    output led_o, // T3
-    output [3:0] debug_o
+    output wire led_o, // T3
+    output wire [3:0] debug_o
     );
 
 wire clk245760;

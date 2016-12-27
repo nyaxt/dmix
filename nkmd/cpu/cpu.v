@@ -70,23 +70,23 @@ end
 endmodule
 
 module nkmd_cpu_dcd(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input [31:0] inst_i,
+    input wire [31:0] inst_i,
 
-    output [`DCD_REGSEL_W-1:0] rssel_o,    
-    output [`DCD_REGSEL_W-1:0] rtsel_o,    
-    output [`DCD_REGSEL_W-1:0] rdsel_o,    
-    output [`DCD_ALUSEL_W-1:0] alusel_o,
-    output [`DCD_IMM_W-1:0] imm_o,
-    output [`DCD_JMPREL_W-1:0] jmprel_o,
-    output tval_r_read_en_o,
-    output sval_c_read_en_o,
-    output [`DCD_MWSEL_W-1:0] mwsel_o,
-    output imm_en_o,
-    output jmp_en_o,
-    output repn_o);
+    output wire [`DCD_REGSEL_W-1:0] rssel_o,
+    output wire [`DCD_REGSEL_W-1:0] rtsel_o,
+    output wire [`DCD_REGSEL_W-1:0] rdsel_o,
+    output wire [`DCD_ALUSEL_W-1:0] alusel_o,
+    output wire [`DCD_IMM_W-1:0] imm_o,
+    output wire [`DCD_JMPREL_W-1:0] jmprel_o,
+    output wire tval_r_read_en_o,
+    output wire sval_c_read_en_o,
+    output wire [`DCD_MWSEL_W-1:0] mwsel_o,
+    output wire imm_en_o,
+    output wire jmp_en_o,
+    output wire repn_o);
 
 reg delayed_rst_ff;
 always @(posedge clk)
@@ -155,21 +155,21 @@ assign repn_o = repn_ff;
 endmodule
 
 module nkmd_cpu_regfile(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input dcd_decn_i,
-    input [`DCD_REGSEL_W-1:0] dcd_rssel_i,
-    input [`DCD_REGSEL_W-1:0] dcd_rtsel_i,
-    input [`DCD_REGSEL_W-1:0] dcd_rdsel_i,
-    output [31:0] mem_rsval_o,
-    output [31:0] mem_rtval_o,
-    output [31:0] mem_rdval_o,
+    input wire dcd_decn_i,
+    input wire [`DCD_REGSEL_W-1:0] dcd_rssel_i,
+    input wire [`DCD_REGSEL_W-1:0] dcd_rtsel_i,
+    input wire [`DCD_REGSEL_W-1:0] dcd_rdsel_i,
+    output wire [31:0] mem_rsval_o,
+    output wire [31:0] mem_rtval_o,
+    output wire [31:0] mem_rdval_o,
 
-    input [`DCD_REGSEL_W-1:0] wb_sel_i,
-    input [31:0] wb_val_i,
+    input wire [`DCD_REGSEL_W-1:0] wb_sel_i,
+    input wire [31:0] wb_val_i,
 
-    output seq_regn_is_zero_o);
+    output wire seq_regn_is_zero_o);
 
 reg [31:0] a_ff;
 reg [31:0] b_ff;
@@ -299,36 +299,36 @@ endtask
 endmodule
 
 module nkmd_cpu_mem(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
     // BUS R
-    input [31:0] r_data_i,
-    output [31:0] r_data_o,
-    output [31:0] r_addr_o,
-    output r_we_o,
+    input wire [31:0] r_data_i,
+    output wire [31:0] r_data_o,
+    output wire [31:0] r_addr_o,
+    output wire r_we_o,
 
     // BUS C: RAM2
-    input [31:0] c_data_i,
-    output [31:0] c_data_o,
-    output [31:0] c_addr_o,
-    output c_we_o,
+    input wire [31:0] c_data_i,
+    output wire [31:0] c_data_o,
+    output wire [31:0] c_addr_o,
+    output wire c_we_o,
 
     // MEM stage
-    input [31:0] mem_r_addr_i,
-    input mem_r_read_en,
-    output [31:0] mem_r_data_o,
-    input [31:0] mem_c_addr_i,
-    input mem_c_read_en,
-    output [31:0] mem_c_data_o,
+    input wire [31:0] mem_r_addr_i,
+    input wire mem_r_read_en,
+    output wire [31:0] mem_r_data_o,
+    input wire [31:0] mem_c_addr_i,
+    input wire mem_c_read_en,
+    output wire [31:0] mem_c_data_o,
 
     // WB stage
-    input [31:0] wb_data_i,
-    input [31:0] wb_addr_i,
-    input wb_r_we_i,
-    input wb_c_we_i,
+    input wire [31:0] wb_data_i,
+    input wire [31:0] wb_addr_i,
+    input wire wb_r_we_i,
+    input wire wb_c_we_i,
 
-    output r_rw_conflict_o);
+    output wire r_rw_conflict_o);
 
 // FIXME: would need arbitration with WB stage in future
 assign r_data_o = wb_data_i;
@@ -370,25 +370,25 @@ assign mem_c_data_o = c_read_en_ff ? c_data_i : c_eff_addr_ff;
 endmodule
 
 module nkmd_cpu_ex(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input [31:0] rsval_i,
-    input [31:0] rtval_i,
-    input [`DCD_ALUSEL_W-1:0] alusel_i,
-    input [`DCD_REGSEL_W-1:0] rdsel_i,
+    input wire [31:0] rsval_i,
+    input wire [31:0] rtval_i,
+    input wire [`DCD_ALUSEL_W-1:0] alusel_i,
+    input wire [`DCD_REGSEL_W-1:0] rdsel_i,
 
-    input jmp_en_i,
-    input [31:0] rdval_i,
-    input [`DCD_MWSEL_W-1:0] mwsel_i,
-    input [`DCD_JMPREL_W-1:0] jmprel_i,
+    input wire jmp_en_i,
+    input wire [31:0] rdval_i,
+    input wire [`DCD_MWSEL_W-1:0] mwsel_i,
+    input wire [`DCD_JMPREL_W-1:0] jmprel_i,
 
-    output [`DCD_REGSEL_W-1:0] rdsel_o,
-    output [31:0] val_o,
-    output [31:0] rdval_o,
-    output [`DCD_MWSEL_W-1:0] mwsel_o,
-    output jmp_en_o,
-    output [31:0] jmp_pc_o);
+    output wire [`DCD_REGSEL_W-1:0] rdsel_o,
+    output wire [31:0] val_o,
+    output wire [31:0] rdval_o,
+    output wire [`DCD_MWSEL_W-1:0] mwsel_o,
+    output wire jmp_en_o,
+    output wire [31:0] jmp_pc_o);
 
 reg [31:0] val_ff;
 assign val_o = val_ff;
@@ -450,23 +450,23 @@ assign jmp_pc_o = jmp_pc_ff;
 endmodule
 
 module nkmd_cpu_wb(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
     
-    input [`DCD_REGSEL_W-1:0] regsel_i,
-    input [31:0] val_i,
-    input [31:0] rdval_i,
-    input [`DCD_MWSEL_W-1:0] mwsel_i,
+    input wire [`DCD_REGSEL_W-1:0] regsel_i,
+    input wire [31:0] val_i,
+    input wire [31:0] rdval_i,
+    input wire [`DCD_MWSEL_W-1:0] mwsel_i,
 
     // to RF
-    output [`DCD_REGSEL_W-1:0] rf_rdsel_o,
-    output [31:0] rf_val_o,
+    output wire [`DCD_REGSEL_W-1:0] rf_rdsel_o,
+    output wire [31:0] rf_val_o,
 
     // to MEM
-    output [31:0] mem_data_o,
-    output [31:0] mem_addr_o,
-    output mem_r_we_o,
-    output mem_c_we_o);
+    output wire [31:0] mem_data_o,
+    output wire [31:0] mem_addr_o,
+    output wire mem_r_we_o,
+    output wire mem_c_we_o);
 
 assign rf_rdsel_o = (mwsel_i == `MWSEL_NO) ? regsel_i : 4'h0;
 assign rf_val_o = val_i;
@@ -479,11 +479,11 @@ assign mem_c_we_o = mwsel_i == `MWSEL_C;
 endmodule
 
 module nkmd_cpu_seq(
-    input rf_regn_is_zero_i,
-    input dcd_repn_i,
+    input wire rf_regn_is_zero_i,
+    input wire dcd_repn_i,
 
-    output if_stop_inc_pc_o,
-    output dcd_latch_curr_output_o);
+    output wire if_stop_inc_pc_o,
+    output wire dcd_latch_curr_output_o);
 
 wire stall = (dcd_repn_i == 1'b1) && (rf_regn_is_zero_i == 1'b0);
 
@@ -493,24 +493,24 @@ assign dcd_latch_curr_output_o = stall;
 endmodule
 
 module nkmd_cpu(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
     // BUS R: RAM + MMAPIO
-    input [31:0] r_data_i,
-    output [31:0] r_data_o,
-    output [31:0] r_addr_o,
-    output r_we_o,
+    input wire [31:0] r_data_i,
+    output wire [31:0] r_data_o,
+    output wire [31:0] r_addr_o,
+    output wire r_we_o,
 
     // BUS P: PROGRAM
-    input [31:0] p_data_i,
-    output [31:0] p_addr_o,
+    input wire [31:0] p_data_i,
+    output wire [31:0] p_addr_o,
 
     // BUS C: RAM2
-    input [31:0] c_data_i,
-    output [31:0] c_data_o,
-    output [31:0] c_addr_o,
-    output c_we_o);
+    input wire [31:0] c_data_i,
+    output wire [31:0] c_data_o,
+    output wire [31:0] c_addr_o,
+    output wire c_we_o);
 
 // *** Inter-stage wires ***
 
@@ -748,7 +748,7 @@ nkmd_cpu_regfile nkmd_cpu_regfile(
 `ifdef SIMULATION
 
 task print_regsel;
-    input [`DCD_REGSEL_W-1:0] regsel;
+    input wire [`DCD_REGSEL_W-1:0] regsel;
 begin
     case (regsel)
     4'h0: $write("c0");
@@ -773,7 +773,7 @@ end
 endtask
 
 task print_alusel;
-    input [`DCD_ALUSEL_W-1:0] alusel;
+    input wire [`DCD_ALUSEL_W-1:0] alusel;
 begin
     case (alusel)
     3'h0: $write("add");
@@ -790,7 +790,7 @@ end
 endtask
 
 task print_mwsel;
-    input [`DCD_MWSEL_W-1:0] mwsel;
+    input wire [`DCD_MWSEL_W-1:0] mwsel;
 begin
     case (mwsel)
     `MWSEL_NO: $write("-");
@@ -883,3 +883,4 @@ end
 `endif
 
 endmodule
+`default_nettype wire

@@ -12,25 +12,25 @@ module nkmdhpa#(
     parameter UDATA_WIDTH = NUM_SPDIF_IN*192,
     parameter CDATA_WIDTH = UDATA_WIDTH
 )(
-    input clk245760_pad,
-    input rst,
+    input wire clk245760_pad,
+    input wire rst,
 
-    input spdif_i,
+    input wire spdif_i,
 
-    output led_locked,
+    output wire led_locked,
 
-    output dac_mclk_o,
-    output dac_lrck_o,
-    output dac_sda_o,
-    output dac_sck_o,
+    output wire dac_mclk_o,
+    output wire dac_lrck_o,
+    output wire dac_sda_o,
+    output wire dac_sck_o,
 
-    input csr_sck,
-    output csr_miso,
-    input csr_mosi,
-    input csr_ss,
+    input wire csr_sck,
+    output wire csr_miso,
+    input wire csr_mosi,
+    input wire csr_ss,
 
-    input nkmd_uart_rx,
-    output nkmd_uart_tx);
+    input wire nkmd_uart_rx,
+    output wire nkmd_uart_tx);
 
 wire clk245760;
 wire clk491520;
@@ -207,9 +207,9 @@ nkmd_arch nkmd_arch(
     // FIXME
     .dai_data_i(0),
     .dai_ack_i(0),
-    // output [23:0] dai_data_o,
+    // output wire [23:0] dai_data_o,
     .dai_pop_i(0),
-    // output dai_ack_o,
+    // output wire dai_ack_o,
 
 `ifdef PROMW
     .prog_addr_i(csr_nkmd_prog_addr),
@@ -221,3 +221,4 @@ nkmd_arch nkmd_arch(
     .dbgin_i(csr_nkmd_dbgin));
 
 endmodule
+`default_nettype wire

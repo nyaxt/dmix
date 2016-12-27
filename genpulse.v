@@ -3,10 +3,10 @@ module genpulse
     parameter WAVELENGTH = 256, // 49.152MHz / 192kHz
     parameter WAVELENGTH_LOG2 = 8
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    output pulse_o);
+    output wire pulse_o);
 
 reg [(WAVELENGTH_LOG2-1):0] counter;
 wire pulse_condition = counter == (WAVELENGTH-1);

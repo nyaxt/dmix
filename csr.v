@@ -9,25 +9,25 @@ module csr#(
     parameter UDATA_WIDTH = NUM_SPDIF_IN*192,
     parameter CDATA_WIDTH = UDATA_WIDTH
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
     // memory if
-    input [11:0] addr_i,
+    input wire [11:0] addr_i,
 
-    input ack_i,
-    input [7:0] data_i,
+    input wire ack_i,
+    input wire [7:0] data_i,
 
-    output [7:0] data_o,
+    output wire [7:0] data_o,
 
     // registers access
-    output [(VOL_WIDTH-1):0] vol_o, // addr: 12'h000 ~
-    output nkmd_rst_o, // addr: 12'h400
-    input [(NKMDDBG_WIDTH-1):0] nkmd_dbgout_i, // addr: 12'h500 ~ 12'h50f
-    output [(NKMDDBG_WIDTH-1):0] nkmd_dbgin_o, // addr: 12'h600 ~ 12'h60f
-    input [(RATE_WIDTH-1):0] rate_i,  // addr: 12'h800 ~
-    input [(UDATA_WIDTH-1):0] udata_i,  // addr: 12'h900 ~
-    input [(CDATA_WIDTH-1):0] cdata_i  // addr: 12'ha00 ~
+    output wire [(VOL_WIDTH-1):0] vol_o, // addr: 12'h000 ~
+    output wire nkmd_rst_o, // addr: 12'h400
+    input wire [(NKMDDBG_WIDTH-1):0] nkmd_dbgout_i, // addr: 12'h500 ~ 12'h50f
+    output wire [(NKMDDBG_WIDTH-1):0] nkmd_dbgin_o, // addr: 12'h600 ~ 12'h60f
+    input wire [(RATE_WIDTH-1):0] rate_i,  // addr: 12'h800 ~
+    input wire [(UDATA_WIDTH-1):0] udata_i,  // addr: 12'h900 ~
+    input wire [(CDATA_WIDTH-1):0] cdata_i  // addr: 12'ha00 ~
     );
 
 reg [7:0] data_o_ff;

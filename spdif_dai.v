@@ -3,18 +3,18 @@
 module spdif_dai #(
     parameter MAX_CLK_PER_HALFBIT_LOG2 = 5 // 32 max
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
-    input [(MAX_CLK_PER_HALFBIT_LOG2-1):0] clk_per_halfbit,
-    input signal_i,
+    input wire [(MAX_CLK_PER_HALFBIT_LOG2-1):0] clk_per_halfbit,
+    input wire signal_i,
 
-    output [23:0] data_o,
-    output ack_o,
-    output locked_o,
-    output lrck_o,
-    output [191:0] udata_o,
-    output [191:0] cdata_o);
+    output wire [23:0] data_o,
+    output wire ack_o,
+    output wire locked_o,
+    output wire lrck_o,
+    output wire [191:0] udata_o,
+    output wire [191:0] cdata_o);
 
 // read async signal through chained ffs to avoid meta stable
 wire buffed_signal;
@@ -132,7 +132,7 @@ always @(posedge clk) begin
 end
 assign subbit_counter_rst = subbit_counter_rst_ff;
 
-// output locked status / lrck
+// output wire locked status / lrck
 reg [5:0] unlock_tolerance_counter;
 parameter UNLOCK_TOLERANCE = 48;
 always @(posedge clk) begin
@@ -144,7 +144,7 @@ always @(posedge clk) begin
 assign locked_o = (unlock_tolerance_counter != UNLOCK_TOLERANCE);
 assign lrck_o = lrck_ff;
 
-// output data
+// output wire data
 wire audiodata_ready = (subbit_counter == 24*2) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
 reg [23:0] data_ff;
 reg ack_ff;
@@ -161,7 +161,7 @@ end
 assign data_o = data_ff;
 assign ack_o = ack_ff;
 
-// output {u,c}data
+// output wire {u,c}data
 wire extradata_ready = (subbit_counter == (24+4)*2) && subbit_ready; // subbit_ready is for 1clk pulse width and pipeline wait
 reg [191:0] udata_shiftreg;
 reg [191:0] cdata_shiftreg;

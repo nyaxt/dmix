@@ -28,7 +28,7 @@ nkmd_dai_tx uut(
     .we_i(nkmd_we));
 
 task queue;
-    input [23:0] sample;
+    input wire [23:0] sample;
     begin
         nkmd_addr = 32'h0000d001;
         nkmd_data_i = {8'h0, sample};

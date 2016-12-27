@@ -1,27 +1,27 @@
 module nkmd_arch #(
     parameter NKMDDBG_WIDTH = 16*8
 )(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
     
-    input uart_rx,
-    output uart_tx,
+    input wire uart_rx,
+    output wire uart_tx,
 
-    input [23:0] dai_data_i,
-    input dai_ack_i,
+    input wire [23:0] dai_data_i,
+    input wire dai_ack_i,
 
-    output [23:0] dai_data_o,
-    input dai_pop_i,
-    output dai_ack_o,
+    output wire [23:0] dai_data_o,
+    input wire dai_pop_i,
+    output wire dai_ack_o,
 
 `ifdef PROMW
-    input [31:0] prog_addr_i,
-    input [31:0] prog_data_i,
-    input prog_ack_i,
+    input wire [31:0] prog_addr_i,
+    input wire [31:0] prog_data_i,
+    input wire prog_ack_i,
 `endif
 
-    output [(NKMDDBG_WIDTH-1):0] dbgout_o,
-    input [(NKMDDBG_WIDTH-1):0] dbgin_i);
+    output wire [(NKMDDBG_WIDTH-1):0] dbgout_o,
+    input wire [(NKMDDBG_WIDTH-1):0] dbgin_i);
 
 wire [31:0] cpu_data_i;
 wire [31:0] cpu_data_o;

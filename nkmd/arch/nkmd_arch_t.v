@@ -46,3 +46,4 @@ nkmd_arch uut(
     .dbgin_i(128'h0123456789abcdef_0123456789abcdef));
 
 endmodule
+`default_nettype wire

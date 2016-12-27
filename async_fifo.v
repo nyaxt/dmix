@@ -3,18 +3,18 @@ module async_fifo
     parameter DATA_WIDTH = 8    
 )(
     // write if
-    input wclk,
-    input wrst,
-    input [(DATA_WIDTH-1):0] data_i,
-    input ack_i,
-    output full_o, // use with caution. may be buggy
+    input wire wclk,
+    input wire wrst,
+    input wire [(DATA_WIDTH-1):0] data_i,
+    input wire ack_i,
+    output wire full_o, // use with caution. may be buggy
 
     // read if
-    input rclk,
-    input rrst,
-    output [(DATA_WIDTH-1):0] data_o,
-    input pop_i,
-    output empty_o);
+    input wire rclk,
+    input wire rrst,
+    output wire [(DATA_WIDTH-1):0] data_o,
+    input wire pop_i,
+    output wire empty_o);
 
 reg [(DATA_WIDTH-1):0] mem [3:0];
 
@@ -59,7 +59,7 @@ function [2:0] gray_enc(
 endfunction
 
 function [2:0] gray_dec(
-    input [2:0] in);
+    input  [2:0] in);
     case (in)
     3'b000: gray_dec = 3'b000;
     3'b001: gray_dec = 3'b001;

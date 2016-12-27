@@ -1,12 +1,12 @@
 module uarttest_top(
-    input clk_50mhz,
+    input wire clk_50mhz,
 
-    input rx,
-    output tx,
+    input wire rx,
+    output wire tx,
 
-    output [7:0] debug_led,
-    input [7:0] switch,
-    input [3:0] button);
+    output wire [7:0] debug_led,
+    input wire [7:0] switch,
+    input wire [3:0] button);
 
 wire [7:0] uart_data_o;
 wire uart_ack_o;

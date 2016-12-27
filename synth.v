@@ -1,9 +1,9 @@
 module synth(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
 	input pop_i,
-    output ack_o,
+    output wire ack_o,
 	output [23:0] data_o
 );
 

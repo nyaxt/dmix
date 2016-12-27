@@ -1,16 +1,16 @@
 module nkmd_dai_rx(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
     // dmix interface
-    input [23:0] rx_data_i,
-    input rx_ack_i,
+    input wire [23:0] rx_data_i,
+    input wire rx_ack_i,
 
     // To nkmm R bus
-    input [31:0] data_i,
-    output [31:0] data_o,
-    input [31:0] addr_i,
-    input we_i);
+    input wire [31:0] data_i,
+    output wire [31:0] data_o,
+    input wire [31:0] addr_i,
+    input wire we_i);
 
 reg [5:0] nextw_ff;
 always @(posedge clk) begin
@@ -67,19 +67,19 @@ end
 endmodule
 
 module nkmd_dai_tx(
-    input clk,
-    input rst,
+    input wire clk,
+    input wire rst,
 
     // dmix interface
-    output [23:0] tx_data_o,
-    input tx_pop_i,
-    output tx_ack_o,
+    output wire [23:0] tx_data_o,
+    input wire tx_pop_i,
+    output wire tx_ack_o,
 
     // To nkmm R bus
-    input [31:0] data_i,
-    output [31:0] data_o,
-    input [31:0] addr_i,
-    input we_i);
+    input wire [31:0] data_i,
+    output wire [31:0] data_o,
+    input wire [31:0] addr_i,
+    input wire we_i);
 
 reg [5:0] queued_ff;
 reg [5:0] lastr_ff;
