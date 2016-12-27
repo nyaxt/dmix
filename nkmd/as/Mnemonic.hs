@@ -72,6 +72,7 @@ assembleCommon i@ArithInsn{} =
     (memrsBits (memrs i)) .|.
     (memrtBits (memrt i)) .|.
     ((regSelBits (rd i)) `shiftL` 24) .|.
+    ((regSelBits (s i)) `shiftL` 17) .|.
     ((aluSelBits (alusel i)) `shiftL` 21)
 
 assemble :: Insn -> Word32

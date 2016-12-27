@@ -197,7 +197,8 @@ endtask
 
 `define USE_CAPTURE
 
-reg [7:0] progcmd [66:0];
+`define PROGCMD_LEN 103
+reg [7:0] progcmd [(`PROGCMD_LEN-1):0];
 initial $readmemh("progcmd.memh", progcmd);
 
 reg replay_capture;
@@ -223,7 +224,7 @@ initial begin
 	#(1500);
 
     ss = 0;
-    for (i = 0; i < 67; i = i + 1) begin
+    for (i = 0; i < (`PROGCMD_LEN-1); i = i + 1) begin
         spi_cycle(progcmd[i]);
     end
     ss = 1;

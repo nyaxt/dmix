@@ -348,8 +348,6 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
   txdata.push_back((addr >> 8) & 0xff);
   if (target == CSRTarget::Progrom) txdata.push_back((addr >> 0) & 0xff);
 
-  if (FLAGS_memh != "") writeMemh(FLAGS_memh, txdata);
-
   if (isWrite) {
     std::vector<uint8_t> body = getTxBodyFromFlags();
     txdata.insert(txdata.end(), body.begin(), body.end());
@@ -362,6 +360,7 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     txdata.push_back(0x00);  // NOP byte
     devhandle->sendBulk(txdata);
   }
+  if (FLAGS_memh != "") writeMemh(FLAGS_memh, txdata);
   sleep(1);  // FIXME: remove
   std::vector<uint8_t> rxdata = devhandle->recvBulk(txdata.size());
   if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxdata).c_str());
