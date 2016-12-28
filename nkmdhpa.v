@@ -1,6 +1,8 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
+//`define HWTEST
+
 module nkmdhpa#(
     parameter NUM_CH = 2,
     parameter NUM_SPDIF_IN = 1,
@@ -18,6 +20,7 @@ module nkmdhpa#(
     input wire spdif_i,
 
     output wire led_locked,
+    output wire [3:0] led,
 
     output wire dac_mclk_o,
     output wire dac_lrck_o,
@@ -41,7 +44,23 @@ dmix_dcm dcm(
     .clk245760(clk245760),
     .clk491520(clk491520),
     .clk983040(clk983040));
+`ifdef HWTEST
+assign led_locked = 1'b1;
 
+reg [22:0] counter_ff;
+always @(posedge clk245760_pad)
+  counter_ff <= counter_ff + 1;
+
+assign led[2:0] = counter_ff[22:20];
+assign led[3] = rst;
+
+assign dac_mclk_o = counter_ff[16];
+assign dac_lrck_o = counter_ff[18];
+assign dac_sda_o = counter_ff[17];
+assign dac_sck_o = counter_ff[15];
+assign csr_miso = counter_ff[18];
+assign nkmd_uart_tx = counter_ff[18];
+`else
 `ifdef SIMULATION
 assign dac_mclk_o = clk245760;
 `else
@@ -115,6 +134,11 @@ csr_spi #(
     .prom_addr_o(csr_nkmd_prog_addr),
     .prom_data_o(csr_nkmd_prog_data),
     .prom_ack_o(csr_nkmd_prog_ack));
+
+assign led[0] = rst_ip;
+assign led[1] = csr_miso;
+assign led[2] = csr_mosi;
+assign led[3] = csr_ss;
 
 wire [23:0] dai_data_o_983040;
 wire dai_lrck_o_983040;
@@ -219,6 +243,6 @@ nkmd_arch nkmd_arch(
 
     .dbgout_o(nkmd_csr_dbgout),
     .dbgin_i(csr_nkmd_dbgin));
-
+`endif
 endmodule
 `default_nettype wire

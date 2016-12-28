@@ -15,9 +15,6 @@
   <version xil_pn:ise_version="14.7" xil_pn:schema_version="2"/>
 
   <files>
-    <file xil_pn:name="mvp.ucf" xil_pn:type="FILE_UCF">
-      <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
-    </file>
     <file xil_pn:name="../../nkmdhpa.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="56"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="27"/>
@@ -138,6 +135,9 @@
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="143"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="6"/>
     </file>
+    <file xil_pn:name="nkmdhpa.ucf" xil_pn:type="FILE_UCF">
+      <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
+    </file>
     <file xil_pn:name="ipcore_dir/mp.xise" xil_pn:type="FILE_COREGENISE">
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
@@ -177,7 +177,7 @@
   </properties>
 
   <bindings>
-    <binding xil_pn:location="/mvp" xil_pn:name="mvp.ucf"/>
+    <binding xil_pn:location="/nkmdhpa" xil_pn:name="nkmdhpa.ucf"/>
   </bindings>
 
   <libraries/>

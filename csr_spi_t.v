@@ -32,8 +32,11 @@ csr_spi uut(
     .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
 
 task spi_cycle;
-    input wire [7:0] data;
+    input [7:0] data;
     begin
+        #(TCLK_SCK/2);
+        ss = 0;
+        #(TCLK_SCK/2);
         mosi = data[7];
         sck = 0; #(TCLK_SCK/2);
         sck = 1; #(TCLK_SCK/2);
@@ -58,6 +61,9 @@ task spi_cycle;
         mosi = data[0];
         sck = 0; #(TCLK_SCK/2);
         sck = 1; #(TCLK_SCK/2);
+        #(TCLK_SCK/2);
+        ss = 1;
+        #(TCLK_SCK/2);
     end
 endtask
 
@@ -79,90 +85,69 @@ initial begin
     $display("vol_ff: %x", uut.csr.vol_ff);
 
     #(TCLK*3);
-    ss = 0;
-    spi_cycle(8'b1_0_00_0000);
+    spi_cycle(8'b1_01_0_0000);
     spi_cycle(8'h03);
     spi_cycle(8'h99);
     spi_cycle(8'h00); // NOP padding
-    ss = 1;
 
     #(TCLK*3);
     $display("after csr[12'h003] <= 8'h99");
     $display("vol_ff: %x", uut.csr.vol_ff);
 
     #(TCLK*3);
-    ss = 0;
-    spi_cycle({4'b0_0_00, 4'h8}); // high 8
+    spi_cycle({4'b0_01_0, 4'h8}); // high 8
     spi_cycle(8'h01); //             low 01
     spi_cycle(8'h00); // read result 12'h801
     spi_cycle(8'h00); // NOP padding
-    ss = 1;
     #(TCLK*3);
     $display("---");
     #(TCLK*3);
-    ss = 0;
-    spi_cycle({4'b0_0_00, 4'h9}); // high 9
-    spi_cycle(8'h00); //             low 00 
+    spi_cycle({4'b0_10_0, 4'h9}); // high 9
+    spi_cycle(8'h00); //             low 00
     spi_cycle(8'h00); // read result 000
     spi_cycle(8'h00); // read result 001
     spi_cycle(8'h00); // read result 002
     spi_cycle(8'h00); // read result 003
     spi_cycle(8'h00); // NOP padding
-    ss = 1;
     #(TCLK*3);
     $display("---");
     #(TCLK*3);
-    ss = 0;
-    spi_cycle(8'b1_0_00_0000); 
+    spi_cycle(8'b1_10_0_0000); 
     spi_cycle(8'h04); // offset
     spi_cycle(8'hef); // data[4]
     spi_cycle(8'hbe); // data[5]
     spi_cycle(8'had); // data[6]
     spi_cycle(8'hde); // data[7]
-    ss = 1;
     #(TCLK*3);
     $display("vol_ff: %x", uut.csr.vol_ff);
     $display("--- PROM write begin");
     #(TCLK*3);
-    ss = 0;
-    spi_cycle(8'b1_0_01_0000); // high 0
+    spi_cycle(8'b1_01_1_0000); // high 0
     spi_cycle(8'h00); // mid 00
     spi_cycle(8'h00); // low 00
     spi_cycle(8'hef); //
     spi_cycle(8'hbe); //
     spi_cycle(8'had); //
     spi_cycle(8'hde); //
-    // ArithInsn{M[---] d=i alu=OpAdd s=c0 memrs=MNone t=0xf180=61824 memrt=MNone}
-    spi_cycle(8'h80);
-    spi_cycle(8'hf1);
-    spi_cycle(8'h01);
-    spi_cycle(8'h09);
     // write prom[20'h00000] => 32'hdeadbeef
-    ss = 1;
     #(TCLK*3);
     $display("--- NKMD dbgin[3] => 8'hac");
     #(TCLK*3);
-    ss = 0;
-    spi_cycle({4'b1_0_00, 4'h6});
+    spi_cycle({4'b1_01_0, 4'h6});
     spi_cycle(8'h03); // offset
     spi_cycle(8'hac);
-    ss = 1;
     #(TCLK*3);
     $display("--- NKMD rst => 1");
     #(TCLK*3);
-    ss = 0;
-    spi_cycle({4'b1_0_00, 4'h4});
+    spi_cycle({4'b1_01_0, 4'h4});
     spi_cycle(8'h00); // offset
     spi_cycle(8'h01);
-    ss = 1;
     #(TCLK*3);
     $display("--- NKMD rst => 0");
     #(TCLK*3);
-    ss = 0;
-    spi_cycle({4'b1_0_00, 4'h4});
+    spi_cycle({4'b1_01_0, 4'h4});
     spi_cycle(8'h00); // offset
     spi_cycle(8'h00);
-    ss = 1;
     #(TCLK*3);
     $display("--- end");
     #(TCLK*3);
@@ -180,5 +165,9 @@ always @(posedge uut.nkmd_rst_o)
     $display("nkmd_rst_o posedge");
 always @(negedge uut.nkmd_rst_o)
     $display("nkmd_rst_o negedge");
+
+always @(posedge uut.csr.clk)
+    if (uut.csr.ack_i)
+        $display("csr write addr: %x data: %x", uut.csr.addr_i, uut.csr.data_i);
 
 endmodule

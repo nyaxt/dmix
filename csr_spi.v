@@ -2,17 +2,32 @@
 
 module csr_cmd_decoder(
     input wire [7:0] cmd,
+    output wire nop,
     output wire we,
+    output wire [7:0] nrep,
     output wire target_nkmdprom,
     output wire target_csr,
     output wire [3:0] addr_high);
 
+assign nop = cmd[6:5] == 2'b00;
+
 assign we = cmd[7];
 
-wire [1:0] target;
-assign target = cmd[5:4];
-assign target_nkmdprom = (target == 2'b01);
-assign target_csr = (target == 2'b00);
+function [7:0] decode_nrep(
+    input [1:0] enc);
+begin
+    case (enc)
+        2'b00: decode_nrep = 8'd0;
+        2'b01: decode_nrep = 8'd1;
+        2'b10: decode_nrep = 8'd4;
+        2'b11: decode_nrep = 8'd16;
+    endcase
+end
+endfunction
+
+assign nrep = decode_nrep(cmd[6:5]);
+assign target_nkmdprom = cmd[4] == 1'b1;
+assign target_csr = cmd[4] == 1'b0;
 
 assign addr_high = cmd[3:0];
 
@@ -65,19 +80,27 @@ spi_trx spi_trx(
     .data_o(spi_data_rx), .ack_pop_o(spi_ack_pop_o),
     .data_i(spi_data_tx), .ack_i(spi_ack_i));
 
+wire dec_nop;
 wire dec_we;
 wire dec_target_nkmdprom;
 wire dec_target_csr;
+wire [7:0] dec_nrep;
 wire [3:0] dec_addr_high;
 csr_cmd_decoder csr_cmd_decoder(
     .cmd(spi_data_rx),
-    .we(dec_we), .target_nkmdprom(dec_target_nkmdprom), .target_csr(dec_target_csr),
+    .nop(dec_nop),
+    .we(dec_we),
+    .nrep(dec_nrep),
+    .target_nkmdprom(dec_target_nkmdprom), .target_csr(dec_target_csr),
     .addr_high(dec_addr_high));
 
 reg cmd_we_ff;
+reg [7:0] nrep_ff;
 reg [19:0] addr_ff;
 reg [31:0] wdata_ff;
 
+wire [11:0] csr_addr;
+wire csr_ack_i;
 wire [7:0] csr_data_o;
 
 reg [15:0] state_ff;
@@ -97,7 +120,7 @@ reg data_ready_ff;
 assign spi_ack_i = data_ready_ff;
 
 always @(posedge clk) begin
-    if (rst || spi_rst) begin
+    if (rst) begin
         state_ff <= ST_INIT;
         data_tx_ff <= 8'h00;
         data_ready_ff <= 0;
@@ -110,18 +133,26 @@ always @(posedge clk) begin
         case (state_ff)
             ST_INIT: begin
                 if (spi_ack_pop_o) begin
-                    addr_ff <= {dec_addr_high, 16'h0};
                     cmd_we_ff <= dec_we;
+                    nrep_ff <= dec_nrep;
+                    addr_ff <= {dec_addr_high, 16'h0};
 
-                    data_tx_ff <= 8'hcc;
                     data_ready_ff <= 1;
 
-                    if (dec_target_csr)
-                        state_ff <= ST_PENDING_CSR_ADDR;
-                    else if (dec_target_nkmdprom)
-                        state_ff <= ST_PENDING_NKMDPROM_ADDR_MID;
-                    else
+                    if (dec_nop) begin
+                        data_tx_ff <= 8'h90;
                         state_ff <= ST_INIT;
+                    end else if (dec_target_csr) begin
+                        data_tx_ff <= 8'hcc;
+                        state_ff <= ST_PENDING_CSR_ADDR;
+                    end else if (dec_target_nkmdprom) begin
+                        data_tx_ff <= 8'hca;
+                        state_ff <= ST_PENDING_NKMDPROM_ADDR_MID;
+                    end else begin
+                        /* NOT REACHED */
+                        data_tx_ff <= 8'h90;
+                        state_ff <= ST_INIT;
+                    end
                 end else begin
                     data_ready_ff <= 0;
                     state_ff <= ST_INIT;
@@ -153,7 +184,13 @@ always @(posedge clk) begin
                 data_ready_ff <= 1;
 
                 addr_ff[19:8] <= addr_ff[19:8] + 1;
-                state_ff <= ST_PENDING_CSR_DATA;
+
+                if (nrep_ff != 8'h01) begin
+                    nrep_ff <= nrep_ff - 1;
+                    state_ff <= ST_PENDING_CSR_DATA;
+                end else begin
+                    state_ff <= ST_INIT;
+                end
             end
             ST_PENDING_NKMDPROM_ADDR_MID: begin
                 if (spi_ack_pop_o) begin
@@ -200,9 +237,14 @@ always @(posedge clk) begin
             end
             ST_WRITING_NKMDPROM_DATA: begin
                 data_ready_ff <= 0;
-                state_ff <= ST_PENDING_NKMDPROM_DATA;
 
                 addr_ff <= addr_ff + 1;
+                if (nrep_ff != 8'h01) begin
+                    nrep_ff <= nrep_ff - 1;
+                    state_ff <= ST_PENDING_NKMDPROM_DATA;
+                end else begin
+                    state_ff <= ST_INIT;
+                end
             end
             default: begin
                 data_ready_ff <= 0;
@@ -212,18 +254,19 @@ always @(posedge clk) begin
     end
 end
 
-wire [11:0] csr_addr = addr_ff[19:8];
-wire csr_ack_i = state_ff == ST_PENDING_CSR_DATA && spi_ack_pop_o == 1'b1 && cmd_we_ff == 1'b1;
 csr #(.NUM_CH(NUM_CH), .NUM_SPDIF_IN(NUM_SPDIF_IN)) csr(
     .clk(clk), .rst(rst),
     .addr_i(csr_addr), .ack_i(csr_ack_i), .data_i(spi_data_rx), .data_o(csr_data_o),
     .vol_o(vol_o),
     .nkmd_rst_o(nkmd_rst_o), .nkmd_dbgout_i(nkmd_dbgout_i), .nkmd_dbgin_o(nkmd_dbgin_o),
     .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
+assign csr_addr = addr_ff[19:8];
+assign csr_ack_i = state_ff == ST_PENDING_CSR_DATA && spi_ack_pop_o == 1'b1 && cmd_we_ff == 1'b1;
 
 assign prom_addr_o = {12'b0, addr_ff[19:0]};
 assign prom_data_o = wdata_ff;
 assign prom_ack_o = (state_ff == ST_WRITING_NKMDPROM_DATA);
 
 endmodule
+
 `default_nettype wire

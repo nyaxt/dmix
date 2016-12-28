@@ -9,4 +9,8 @@ runsim: csr_spi_t.lxt
 csr_spi_t.vvp: csr_spi.v csr.v spi_trx.v csr_spi_t.v
 	iverilog -o $@ $^
 
+clean:
+	rm -f csr_spi_t.lxt csr_spi_t.vvp
+
 .SUFFIXES: .lxt .vvp
+.PHONY: clean
