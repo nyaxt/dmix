@@ -25,3 +25,5 @@ nkmd/as/nkmmas
 nkmd/arch/dump
 ise/nkmm_arch/output.txt
 Debug/
+core
+debug.dump

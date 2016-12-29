@@ -390,6 +390,8 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     i += chunkLen;
     addr += nWord;
   }
+  // NOP padding
+  txdata.push_back(0x00);
 
   devhandle->sendBulk(txdata);
   if (FLAGS_memh != "") writeMemh(FLAGS_memh, txdata);
