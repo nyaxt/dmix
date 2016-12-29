@@ -314,8 +314,12 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     throw std::runtime_error(
         stringPrintF("addr %05x out of range (csr)", addr));
 
+  std::vector<uint8_t> body;
   int len;
-  if (!isWrite) {
+  if (isWrite) {
+    body = getTxBodyFromFlags();
+    len = body.size();
+  } else {
     i = j;
     for (; i < cmdstr.size(); ++i)
       if (!isspace(cmdstr[i])) break;
@@ -332,34 +336,62 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     printf("parsed cmd: isWrite %d target %d addr %05x len %03x\n", isWrite,
            target, addr, len);
 
-  std::vector<uint8_t> txdata;
+  int wordSize;
   uint8_t targetByte = 0;
   switch (target) {
     case CSRTarget::CSR:
-      targetByte = 0x0 << 4;
+      targetByte = 0x00;
+      wordSize = 1;
       addr <<= 8;
       break;
     case CSRTarget::Progrom:
-      targetByte = 0x1 << 4;
+      targetByte = 0x10;
+      wordSize = 4;
       break;
   }
-  uint8_t cmdbyte = (isWrite ? 0x80 : 0x00) | targetByte | ((addr >> 16) & 0xf);
-  txdata.push_back(cmdbyte);
-  txdata.push_back((addr >> 8) & 0xff);
-  if (target == CSRTarget::Progrom) txdata.push_back((addr >> 0) & 0xff);
+  if (len % wordSize != 0)
+    throw std::runtime_error("body len not multiple of wordSize");
+  uint8_t cmdByteBase =
+      (isWrite ? 0x80 : 0x00) | targetByte | ((addr >> 16) & 0xf);
 
-  if (isWrite) {
-    std::vector<uint8_t> body = getTxBodyFromFlags();
-    txdata.insert(txdata.end(), body.begin(), body.end());
-    devhandle->sendBulk(txdata);
-  } else {
-    size_t fillLen = len;
-    for (int i = 0; i < fillLen; ++i) {
-      txdata.push_back(0xdd);
+  std::vector<uint8_t> txdata;
+  for (int i = 0; i < len;) {
+    int left = len - i;
+
+    int nWord;
+    uint8_t encodedChunkLen;
+    if (left >= wordSize * 16) {
+      nWord = 16;
+      encodedChunkLen = 0x3 << 5;
+    } else if (left >= wordSize * 4) {
+      nWord = 4;
+      encodedChunkLen = 0x2 << 5;
+    } else {
+      if (left < wordSize)
+        throw std::runtime_error("body not multiple of wordSize");
+      nWord = 1;
+      encodedChunkLen = 0x1 << 5;
     }
-    txdata.push_back(0x00);  // NOP byte
-    devhandle->sendBulk(txdata);
+    int chunkLen = wordSize * nWord;
+
+    txdata.push_back(cmdByteBase | encodedChunkLen);
+    txdata.push_back((addr >> 8) & 0xff);
+    if (target == CSRTarget::Progrom) txdata.push_back(addr & 0xff);
+    if (isWrite) {
+      for (int j = 0; j < chunkLen; ++j) {
+        txdata.push_back(body[i + j]);
+      }
+    } else {
+      for (int j = 0; j < chunkLen; ++j) {
+        txdata.push_back(0xdd);
+      }
+    }
+
+    i += chunkLen;
+    addr += nWord;
   }
+
+  devhandle->sendBulk(txdata);
   if (FLAGS_memh != "") writeMemh(FLAGS_memh, txdata);
   sleep(1);  // FIXME: remove
   std::vector<uint8_t> rxdata = devhandle->recvBulk(txdata.size());

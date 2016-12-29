@@ -748,7 +748,7 @@ nkmd_cpu_regfile nkmd_cpu_regfile(
 `ifdef SIMULATION
 
 task print_regsel;
-    input wire [`DCD_REGSEL_W-1:0] regsel;
+    input [`DCD_REGSEL_W-1:0] regsel;
 begin
     case (regsel)
     4'h0: $write("c0");
@@ -773,7 +773,7 @@ end
 endtask
 
 task print_alusel;
-    input wire [`DCD_ALUSEL_W-1:0] alusel;
+    input [`DCD_ALUSEL_W-1:0] alusel;
 begin
     case (alusel)
     3'h0: $write("add");
@@ -790,7 +790,7 @@ end
 endtask
 
 task print_mwsel;
-    input wire [`DCD_MWSEL_W-1:0] mwsel;
+    input [`DCD_MWSEL_W-1:0] mwsel;
 begin
     case (mwsel)
     `MWSEL_NO: $write("-");

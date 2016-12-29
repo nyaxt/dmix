@@ -29,7 +29,7 @@ nkmdhpa uut(
     .csr_ss(ss));
 
 task recv_rawbit;
-    input wire b;
+    input b;
     begin
         signal = b;
         #(TclkSPDIF);//*6);
@@ -109,7 +109,7 @@ task recv_W;
 endtask
 
 task recv_bmcbit;
-    input wire b;
+    input b;
     begin
         if(signal) begin
             if(b) begin
@@ -132,7 +132,7 @@ task recv_bmcbit;
 endtask
 
 task recv_bmcbyte;
-    input wire [7:0] byte;
+    input [7:0] byte;
     begin
         recv_bmcbit(byte[0]);
         recv_bmcbit(byte[1]);
@@ -155,7 +155,7 @@ task recv_bmcctl;
 endtask
 
 task recv_subframe;
-    input wire [23:0] data;
+    input [23:0] data;
     begin
         recv_bmcbyte(data[7:0]);
         recv_bmcbyte(data[15:8]);
@@ -165,9 +165,11 @@ task recv_subframe;
 endtask
 
 task spi_cycle;
-    input wire [7:0] data;
+    input [7:0] data;
     begin
-        $display("spi tx cycle: %x", data);
+        #(TCLK_SCK/2);
+        ss = 0;
+        #(TCLK_SCK/2);
         mosi = data[7];
         sck = 0; #(TCLK_SCK/2);
         sck = 1; #(TCLK_SCK/2);
@@ -192,12 +194,15 @@ task spi_cycle;
         mosi = data[0];
         sck = 0; #(TCLK_SCK/2);
         sck = 1; #(TCLK_SCK/2);
+        #(TCLK_SCK/2);
+        ss = 1;
+        #(TCLK_SCK/2);
     end
 endtask
 
 `define USE_CAPTURE
 
-`define PROGCMD_LEN 103
+`define PROGCMD_LEN 112
 reg [7:0] progcmd [(`PROGCMD_LEN-1):0];
 initial $readmemh("progcmd.memh", progcmd);
 
@@ -223,18 +228,15 @@ initial begin
 	rst = 1'b0;
 	#(1500);
 
-    ss = 0;
-    for (i = 0; i < (`PROGCMD_LEN-1); i = i + 1) begin
+    for (i = 0; i < `PROGCMD_LEN; i = i + 1) begin
         spi_cycle(progcmd[i]);
     end
-    ss = 1;
 
     #(100);
 
     $display("--- NKMD dbgin");
     #(TCLK*3);
-    ss = 0;
-    spi_cycle({4'b1_0_00, 4'h6});
+    spi_cycle({4'b1_11_0, 4'h6});
     spi_cycle(8'h00); // offset
     spi_cycle(8'h01);
     spi_cycle(8'h02);
@@ -244,18 +246,20 @@ initial begin
     spi_cycle(8'h06);
     spi_cycle(8'h07);
     spi_cycle(8'h08);
-    ss = 1;
+    spi_cycle(8'h09);
+    spi_cycle(8'h0a);
+    spi_cycle(8'h0b);
+    spi_cycle(8'h0c);
+    spi_cycle(8'h0d);
+    spi_cycle(8'h0e);
+    spi_cycle(8'h0f);
+    spi_cycle(8'h10);
     #(TCLK*3);
-    $display("--- NKMD rst => 1");
-    #(TCLK*3);
-
     $display("--- NKMD rst => 0");
     #(TCLK*3);
-    ss = 0;
-    spi_cycle({4'b1_0_00, 4'h4});
+    spi_cycle({4'b1_01_0, 4'h4});
     spi_cycle(8'h00); // offset
-    spi_cycle(8'h00);
-    ss = 1;
+    spi_cycle(8'h00); // data
     #(TCLK*3);
 
     replay_capture = 1'b1;
