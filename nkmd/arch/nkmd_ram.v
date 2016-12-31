@@ -8,17 +8,19 @@ module nkmd_ram(
 
 reg [31:0] ram [1023:0];
 
+wire [9:0] offset_i;
+assign offset_i = addr_i[9:0];
+
 reg [31:0] out_ff;
 always @(posedge clk) begin
-    if (addr_i < 1024) begin
+    if (addr_i[15:12] == 4'h0) begin
         if (we_i)
-            ram[addr_i] <= data_i;
+            ram[offset_i] <= data_i;
 
-        out_ff <= ram[addr_i];
+        out_ff <= ram[addr_i[11:0]];
     end else begin
         out_ff <= 0;
     end
-end
 assign data_o = out_ff;
 
 endmodule

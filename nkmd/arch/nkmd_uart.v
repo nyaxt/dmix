@@ -1,3 +1,4 @@
+`default_nettype none
 module nkmd_uart(
     input wire clk,
     input wire rst,
@@ -73,9 +74,10 @@ always @(posedge clk) begin
         data_o_ff <= {7'b0, uart_rx_ready_ff};
     default:
         data_o_ff <= 8'b0;
-endcase
+    endcase
 end
 assign data_o[31:8] = 0;
 assign data_o[7:0] = data_o_ff;
 
 endmodule
+`default_nettype wire
