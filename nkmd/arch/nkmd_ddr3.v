@@ -49,32 +49,39 @@ wire dma_complete;
 
 reg [31:0] out_ff;
 always @(posedge clk) begin
-    if (addr[15:12] == SPAD_OFFSET) begin
-        if (we_i)
-            spad[offset_i] <= data_i;
-
-        out_ff <= spad[offset_i];
-    end else if (addr_i == 16'hc100) begin
-        if (we_i)
-            dma_dram_addr_ff <= data_i[26:2];
-
-        out_ff <= {5'b00000, dma_dram_addr_ff, 2'b00};
-    end else if (addr_i == 16'hc101) begin
-        if (we_i)
-            dma_spad_addr_ff <= data_i[9:0];
-
-        out_ff <= {12'b0, dma_spad_len_ff};
-    end else if (addr_i == 16'hc102) begin
-        if (we_i)
-            dma_burst_len_ff <= data_i[5:0];
-
-        out_ff <= {26'b0, dma_burst_len_ff};
-    end else if (addr_i == 16'hc103) begin
-        out_ff <= {31'b0, dma_complete};
+    if (rst) begin
+        dma_dram_word_addr_ff <= 25'h0000;
+        dma_spad_addr_ff <= 10'h000;
+        dma_burst_len_ff <= 6'h00;
     end else begin
-        out_ff <= 32'h0;
+        if (addr_i[15:12] == SPAD_OFFSET) begin
+            if (we_i)
+                spad[offset_i] <= data_i;
+
+            out_ff <= spad[offset_i];
+        end else if (addr_i == 16'hc100) begin
+            if (we_i)
+                dma_dram_word_addr_ff <= data_i[26:2];
+
+            out_ff <= {5'b00000, dma_dram_word_addr_ff, 2'b00};
+        end else if (addr_i == 16'hc101) begin
+            if (we_i)
+                dma_spad_addr_ff <= data_i[9:0];
+
+            out_ff <= {12'b0, dma_spad_addr_ff};
+        end else if (addr_i == 16'hc102) begin
+            if (we_i)
+                dma_burst_len_ff <= data_i[5:0];
+
+            out_ff <= {26'b0, dma_burst_len_ff};
+        end else if (addr_i == 16'hc103) begin
+            out_ff <= {31'b0, dma_complete};
+        end else begin
+            out_ff <= 32'h0;
+        end
     end
 end
+assign data_o = out_ff;
 
 reg [5:0] dma_state_ff;
 localparam ST_INIT = 0;
@@ -88,7 +95,7 @@ always @(posedge clk) begin
     if (rst) begin
         dma_state_ff <= ST_INIT;
     end else begin
-        case (dma_state_ff) begin
+        case (dma_state_ff)
             ST_INIT: begin
                 dma_burst_left_ff <= dma_burst_len_ff;
                 if (we_i && addr_i == 16'hc103) begin
@@ -101,9 +108,9 @@ always @(posedge clk) begin
                 end
             end
             ST_FILL_WRBUF: begin
-                dma_spad_addr_ff <= dma_spad_addr_ff + 1;
-                dma_burst_left_ff <= dma_burst_left_ff - 1;
                 if (dma_burst_left_ff != 6'h00) begin
+                    dma_spad_addr_ff <= dma_spad_addr_ff + 1;
+                    dma_burst_left_ff <= dma_burst_left_ff - 1;
                     dma_state_ff <= ST_FILL_WRBUF;
                 end else begin
                     dma_state_ff <= ST_EMIT_WR_CMD;
@@ -116,13 +123,13 @@ always @(posedge clk) begin
                 dma_state_ff <= ST_WAIT_RD_DATA;
             end
             ST_WAIT_RD_DATA: begin
-                if (mig_rd_count == 6'h00) begin
+                if (mig_rd_count == 6'h00) begin // FIXME: mig_rd_empty?
                     dma_state_ff <= ST_WAIT_RD_DATA;
                 end else begin
-                    dma_spad_addr_ff <= dma_spad_addr_ff + 1;
-                    dma_burst_left_ff <= dma_burst_left_ff - 1;
                     spad[dma_spad_addr_ff] <= mig_rd_data;
                     if (dma_burst_left_ff != 6'h00) begin
+                        dma_spad_addr_ff <= dma_spad_addr_ff + 1;
+                        dma_burst_left_ff <= dma_burst_left_ff - 1;
                         dma_state_ff <= ST_WAIT_RD_DATA;
                     end else begin
                         dma_state_ff <= ST_INIT;
@@ -138,7 +145,7 @@ assign mig_cmd_clk = clk;
 assign mig_cmd_en = (dma_state_ff == ST_EMIT_RD_CMD || dma_state_ff == ST_EMIT_WR_CMD) ? 1'b1 : 1'b0;
 assign mig_cmd_instr = dma_state_ff == ST_EMIT_RD_CMD ? 3'b011 : 3'b010;
 assign mig_cmd_bl = dma_burst_len_ff;
-assign mig_cmd_byte_addr[29:0] = {3'b000, dma_dram_addr_ff, 2'b00};
+assign mig_cmd_byte_addr[29:0] = {3'b000, dma_dram_word_addr_ff, 2'b00};
 // FIXME: wait until mig_cmd_empty or !mig_cmd_full?
 
 assign mig_wr_clk = clk;

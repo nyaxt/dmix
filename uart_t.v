@@ -26,7 +26,7 @@ uart uut(
     .ack_i(ack_i));
 
 task uart_cycle;
-    input wire [7:0] data;
+    input [7:0] data;
     begin
         rx = 0; // start bit
         #(TCLK_BAUD);
