@@ -1,5 +1,6 @@
 TARGET=nkmd_arch
-IVFLAGS=-DSIMULATION -DPROMW
+IVFLAGS=-DSIMULATION
+#-DPROMW
 
 dump: $(TARGET)_t.lxt
 	gtkwave $(TARGET)_t.lxt &

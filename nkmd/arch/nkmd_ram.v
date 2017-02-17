@@ -21,6 +21,7 @@ always @(posedge clk) begin
     end else begin
         out_ff <= 0;
     end
+end
 assign data_o = out_ff;
 
 endmodule

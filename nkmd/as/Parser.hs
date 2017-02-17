@@ -26,6 +26,9 @@ reserved = P.reserved lexer
 reservedOp :: String -> Parser ()
 reservedOp = P.reservedOp lexer
 
+whiteSpace :: Parser ()
+whiteSpace = P.whiteSpace lexer
+
 identifier :: Parser String
 identifier = P.identifier lexer
 
@@ -211,7 +214,8 @@ stmt = choice [(liftM StInsn insn), labelp, constp]
 
 nkmm :: Parser Program
 nkmm =
-  do is <- many1 stmt
+  do whiteSpace
+     is <- many1 stmt
      eof
      return is
 

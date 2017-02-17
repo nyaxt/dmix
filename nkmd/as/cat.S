@@ -1,18 +1,18 @@
 const ASIN = 0xf100;
 const ASOUT = 0xf180;
 
-	i = c0 + ASOUT;
+	i = ASOUT;
 start:
-	a = c0 + R[ASIN];
-	b = c0 + R[ASIN];
-	c = c0 + R[ASIN];
-	d = c0 + R[ASIN];
-	R[i] = c0 + a;
-	R[i] = c0 + b;
-	R[i] = c0 + c;
-	R[i] = c0 + d;
+	a = R[ASIN];
+	b = R[ASIN];
+	c = R[ASIN];
+	d = R[ASIN];
+	R[i] = a;
+	R[i] = b;
+	R[i] = c;
+	R[i] = d;
 	jmp start;
-    c0 = c0 + c0;
-    c0 = c0 + c0;
-    c0 = c0 + c0;
-    c0 = c0 + c0;
+	nop;
+	nop;
+	nop;
+	nop;

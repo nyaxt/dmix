@@ -73,7 +73,7 @@ nextState obja curr ifetchAddr = PipelineState
     nonStale = fromMaybe Rc0 $ do addr <- wb curr
                                   Just $ staleRegFromAddr addr
 
-    newStale = fromMaybe Rc0 $ do addr <- ifetchAddr
+    newStale = fromMaybe Rc0 $ do addr <- dcd curr
                                   Just $ staleRegFromAddr addr
 
     -- delete only deletes the first nonStale, but it is on purpose. There may be multiple stale writes for the same reg in the pipeline.
@@ -131,9 +131,9 @@ checkMemRWConflict obja PipelineState{mem=Just mi, wb=Just wbi} =
 checkMemRWConflict _ _ = Nothing
 
 checkStaleRegRead :: Array Int Insn -> PipelineState -> Maybe String
-checkStaleRegRead obja PipelineState{ifetch = Just ifi, staleRegs=staleRegs} | isValidAddr obja ifi
+checkStaleRegRead obja PipelineState{dcd = Just dcdi, staleRegs=staleRegs} | isValidAddr obja dcdi
   = if null sregs then Nothing else Just $ errmsg sregs
-    where ifinsn = obja!ifi
+    where ifinsn = obja!dcdi
           rsStale = do rs <- maybeRs ifinsn
                        if elem rs staleRegs then Just rs else Nothing
           rtStale = do rt <- maybeRt ifinsn
@@ -147,6 +147,7 @@ checkStaleRegRead _ _ = Nothing
   
 type CheckFunc = Array Int Insn -> PipelineState -> Maybe String
 
+-- map show $ reverse states
 analyze :: Object -> [String]
 analyze obj = pipelineCheckResults
   where
