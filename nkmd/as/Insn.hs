@@ -1,5 +1,6 @@
 module Insn where
 
+import Data.Bool
 import Expr
 
 data RegSel
@@ -47,7 +48,14 @@ data AluSel
   | OpReserved
   | OpClamp
   | OpMul 
-  deriving Show
+  deriving (Eq,Show)
+
+data CmpSel
+  = CmpNone
+  | CmpEq
+  | CmpGt
+  | CmpAnd
+  deriving (Eq,Show)
 
 data MemSel
   = MNone 
@@ -73,9 +81,10 @@ data Insn =
   CntlFInsn {rd :: RegSel
             ,imm :: Expr
             -- ,linked :: Bool
-            -- ,rs :: RegSel
-            -- ,rt :: RegSel
-            }
+	    ,cmpneg :: Bool
+            ,cmp :: CmpSel
+            ,rs :: RegSel
+            ,rt :: RegSel }
 
 nopInsn :: Insn
 nopInsn = ArithInsn { memw = MNone
@@ -94,8 +103,10 @@ instance Show Insn where
   show (i@ArithInsn{}) = 
     "ArithInsn{M[" ++
     (show1 (memw i)) ++ (show1 (memrs i)) ++ (show1 (memrt i)) ++ "] d=" ++ (show (rd i)) ++ " alu=" ++ (show (alusel i)) ++ " s=" ++ (show (s i)) ++ " memrs=" ++ (show (memrs i)) ++ " t=" ++ (showT (t i)) ++ " memrt=" ++ (show (memrt i)) ++ "}"
-  show (CntlFInsn{rd = rd, imm = imm}) =
-    "CntlFInsn{rd=" ++ (show rd) ++ ", imm=" ++ (show imm) ++ "}"
+  show (i@CntlFInsn{cmp = CmpNone}) =
+    "JmpInsn{rd=" ++ (show (rd i)) ++ ", imm=" ++ (show (imm i)) ++ "}"
+  show (i@CntlFInsn{}) =
+    "CondJmpInsn{"++(bool "" "!" (cmpneg i))++(show (cmp i))++"("++(show (rs i))++", "++(show (rd i))++") rd=" ++ (show (rd i)) ++ ", imm=" ++ (show (imm i)) ++ "}"
 
 modifyInsnExpr :: (Expr -> Expr) -> Insn -> Insn
 modifyInsnExpr f i@ArithInsn{t = (Right e)} = i {t = Right (f e)}

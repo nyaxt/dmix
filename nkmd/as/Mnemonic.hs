@@ -87,4 +87,4 @@ assemble i@CntlFInsn{imm = (ExprInteger n)} =
     (b1 `shiftL` 31) .|.
     ((regSelBits (rd i)) `shiftL` 24) .|.
     (immBits n)
-assemble _ = 0xdead
+assemble _ = 0xdeadbeef

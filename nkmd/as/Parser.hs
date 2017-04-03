@@ -16,8 +16,8 @@ lexer :: P.TokenParser ()
 lexer = P.makeTokenParser style
   where style = 
           emptyDef {P.reservedOpNames = 
-                      ["=","+","-","|","&","^","!",";","[","]",";"]
-                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f","g","h","i","j","ra","sl","sh","n","pc","const","jmp","nop"]
+                      ["=","+","-","|","&","^","!",";","[","]",";","(",")","=="]
+                   ,P.reservedNames = ["R","C","c0","a","b","c","d","e","f","g","h","i","j","ra","sl","sh","n","pc","const","jmp","nop","if"]
                    ,P.commentLine = "#"}
 
 reserved :: String -> Parser ()
@@ -183,16 +183,38 @@ arithInsn =
                       ,memrt = memrt
                       ,rd = rd}
 
+condJmpInsn :: Parser Insn
+condJmpInsn =
+  do reserved "if"
+     reservedOp "("
+     s <- regSel
+     reservedOp "=="
+     t <- regSel
+     reservedOp ")"
+     reserved "jmp"
+     e <- expr
+     reservedOp ";"
+     return CntlFInsn {rd = Rc0
+                      ,imm = e
+                      ,cmp = CmpEq
+                      ,cmpneg = False
+                      ,rs = s
+                      ,rt = t}
+
 jmpInsn :: Parser Insn
 jmpInsn =
   do reserved "jmp"
      e <- expr
      reservedOp ";"
      return CntlFInsn {rd = Rc0
-                      ,imm = e}
+                      ,imm = e
+                      ,cmp = CmpNone
+                      ,cmpneg = False
+                      ,rs = Rc0
+                      ,rt = Rc0}
 
 insn :: Parser Insn
-insn = choice [nopInsnP,(try assignInsnP),arithInsn,jmpInsn]
+insn = choice [nopInsnP,(try assignInsnP),arithInsn,jmpInsn,condJmpInsn]
 
 labelp :: Parser Stmt
 labelp = 
