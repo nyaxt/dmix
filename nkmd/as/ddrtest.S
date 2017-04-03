@@ -1,0 +1,6 @@
+const DRAM_WORD_ADDR = 0xc100;
+const DRAM_SPAD_ADDR = 0xc101;
+const DRAM_BURST_LEN = 0xc102;
+const DRAM_DMA_DONE = 0xc103;
+
+
