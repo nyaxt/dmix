@@ -15,6 +15,18 @@ b :: Bool -> Word32
 b True = b1
 b False = b0
 
+jmpEn :: Word32
+jmpEn = b1 `shiftL` 31
+
+cmpEn :: Word32
+cmpEn = b1 `shiftL` 30
+
+cmpBits :: CmpSel -> Word32
+cmpBits CmpNone = 0xdead
+cmpBits CmpEq = 0x0
+cmpBits CmpGt = 0x1
+cmpBits CmpAnd = 0x2
+
 memSelBits :: MemSel -> Word32
 memSelBits MNone = 0x0
 memSelBits MR = 0x1
@@ -63,6 +75,7 @@ regSelBits Rsh = 0xd
 regSelBits Rn = 0xe
 regSelBits Rpc = 0xf
 
+-- FIXME; handle neg
 immBits :: Integer -> Word32
 immBits n = (b1 `shiftL` 16) .|. ((fromInteger n :: Word32) .&. 0xffff)
 
@@ -82,9 +95,15 @@ assemble i@ArithInsn{t = Right (ExprInteger n)} =
 assemble i@ArithInsn{t = Left rt} =
     (assembleCommon i) .|.
     ((regSelBits rt) `shiftL` 8)
-    
-assemble i@CntlFInsn{imm = (ExprInteger n)} =
-    (b1 `shiftL` 31) .|.
+assemble i@CntlFInsn{cmp = CmpNone, imm = (ExprInteger n)} =
+    jmpEn .|.
     ((regSelBits (rd i)) `shiftL` 24) .|.
     (immBits n)
+assemble i@CntlFInsn{imm = (ExprInteger n)} | (n > 0 && n <= 0xff) =
+    jmpEn .|. cmpEn .|.
+    ((regSelBits (rd i)) `shiftL` 24) .|.
+    ((cmpBits (cmp i)) `shiftL` 22) .|. ((b (cmpneg i)) `shiftL` 21) .|.
+    ((regSelBits (rs i)) `shiftL` 17) .|.
+    ((regSelBits (rt i)) `shiftL` 8) .|.
+    (immBits n) -- FIXME: need immBits8
 assemble _ = 0xdeadbeef

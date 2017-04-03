@@ -81,7 +81,7 @@ data Insn =
   CntlFInsn {rd :: RegSel
             ,imm :: Expr
             -- ,linked :: Bool
-	    ,cmpneg :: Bool
+            ,cmpneg :: Bool
             ,cmp :: CmpSel
             ,rs :: RegSel
             ,rt :: RegSel }
@@ -106,7 +106,7 @@ instance Show Insn where
   show (i@CntlFInsn{cmp = CmpNone}) =
     "JmpInsn{rd=" ++ (show (rd i)) ++ ", imm=" ++ (show (imm i)) ++ "}"
   show (i@CntlFInsn{}) =
-    "CondJmpInsn{"++(bool "" "!" (cmpneg i))++(show (cmp i))++"("++(show (rs i))++", "++(show (rd i))++") rd=" ++ (show (rd i)) ++ ", imm=" ++ (show (imm i)) ++ "}"
+    "CondJmpInsn{"++(bool "" "!" (cmpneg i))++(show (cmp i))++"("++(show (rs i))++", "++(show (rt i))++") rd=" ++ (show (rd i)) ++ ", imm=" ++ (show (imm i)) ++ "}"
 
 modifyInsnExpr :: (Expr -> Expr) -> Insn -> Insn
 modifyInsnExpr f i@ArithInsn{t = (Right e)} = i {t = Right (f e)}

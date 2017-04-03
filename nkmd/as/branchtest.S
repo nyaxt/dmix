@@ -9,5 +9,10 @@
 	nop;
 	nop;
 	nop;
-	jmp 
+	c = 123;
 eq:
+	d = 456;
+	nop;
+	nop;
+	nop;
+	nop;
