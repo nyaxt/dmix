@@ -15,13 +15,6 @@
 
 #include "board.h"
 
-#if 0
-/* SSP */
-static uint8_t Tx_Buf[BUFFER_SIZE];
-static uint8_t Rx_Buf[BUFFER_SIZE];
-static uint8_t dmaChSSPTx, dmaChSSPRx;
-#endif
-
 static const uint32_t M0APP_BASEADDR = 0x14080000;
 
 void M0App_Boot(uint32_t baseaddr) {

@@ -41,11 +41,21 @@ STATIC const PINMUX_GRP_T pinmuxing[] = {
 	/* SSEL: P1.0: [Serial Expansion Interface] */
 	{0x1, 0, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
 	/* MISO: P1.1: [Serial Expansion Interface] */
-	{0x1, 1, (SCU_MODE_INACT | SCU_MODE_INBUFF_EN | SCU_MODE_ZIF_DIS | SCU_MODE_FUNC5)},
+	{0x1, 1, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
 	/* MOSI: P1.2: [Serial Expansion Interface] */
-	{0x1, 2, (SCU_MODE_INACT | SCU_MODE_INBUFF_EN | SCU_MODE_ZIF_DIS | SCU_MODE_FUNC5)},
+	{0x1, 2, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
 	/* SCLK: P3.0: [Serial Expansion Interface] */
 	{0x3, 0, (SCU_PINIO_FAST | SCU_MODE_FUNC4)},
+
+	// SSP1
+	/* SSEL: P1.5: [Serial Expansion Interface] */
+	{0x1, 5, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
+	/* MISO: P1.3: [Serial Expansion Interface] */
+	{0x1, 3, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
+	/* MOSI: P1.4: [Serial Expansion Interface] */
+	{0x1, 4, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
+	/* SCLK: PF.4: [Serial Expansion Interface] */
+	{0xF, 4, (SCU_PINIO_FAST | SCU_MODE_FUNC0)},
 };
 
 /* Sets up system pin muxing */
@@ -53,22 +63,17 @@ static void Board_SetupMuxing(void)
 {
 	/* Setup system level pin muxing */
 	Chip_SCU_SetPinMuxing(pinmuxing, sizeof(pinmuxing) / sizeof(PINMUX_GRP_T));
-
-	/* SPIFI pin setup is done prior to setting up system clocking */
-	Chip_SCU_SetPinMuxing(spifipinmuxing, sizeof(spifipinmuxing) / sizeof(PINMUX_GRP_T));
 }
 
 /* Set up and initialize clocking prior to call to main */
 static void Board_SetupClocking(void)
 {
-	int i;
-
 	Chip_SetupCoreClock(CLKIN_CRYSTAL, MAX_CLOCK_FREQ, true);
 
 	/* Setup system base clocks and initial states. This won't enable and
 	   disable individual clocks, but sets up the base clock sources for
 	   each individual peripheral clock. */
-	for (i = 0; i < (sizeof(InitClkStates) / sizeof(InitClkStates[0])); i++) {
+	for (unsigned i = 0; i < (sizeof(InitClkStates) / sizeof(InitClkStates[0])); i++) {
 		Chip_Clock_SetBaseClock(InitClkStates[i].clk, InitClkStates[i].clkin,
 								InitClkStates[i].autoblock_enab, InitClkStates[i].powerdn);
 	}
@@ -76,6 +81,9 @@ static void Board_SetupClocking(void)
 	/* Reset and enable 32Khz oscillator */
 	LPC_CREG->CREG0 &= ~((1 << 3) | (1 << 2));
 	LPC_CREG->CREG0 |= (1 << 1) | (1 << 0);
+
+	/* SPIFI pin setup is done prior to setting up system clocking */
+	Chip_SCU_SetPinMuxing(spifipinmuxing, sizeof(spifipinmuxing) / sizeof(PINMUX_GRP_T));
 
 	/* Setup a divider E for main PLL clock switch SPIFI clock to that divider.
 	   Divide rate is based on CPU speed and speed of SPI FLASH part. */
