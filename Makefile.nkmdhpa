@@ -2,7 +2,7 @@ TARGET=nkmdhpa
 IVFLAGS=-DSIMULATION -DNO_IP -DPROMW
 NKMD_CPU=$(filter-out $(wildcard nkmd/cpu/*_t.v), $(wildcard nkmd/cpu/*.v))
 NKMD_ARCH=$(filter-out $(wildcard nkmd/arch/*_t.v), $(wildcard nkmd/arch/*.v))
-DEPS=nkmdhpa.v spdif_dai_varclk.v spdif_dai.v resampler.v resample_pipeline.v dac_drv.v mpemu.v rom_*.v ringbuf.v dcm.v async_fifo.v posedge_latch.v pop_latch.v mixer.v uart.v csr_spi.v csr.v spi_trx.v $(NKMD_CPU) $(NKMD_ARCH)
+DEPS=nkmdhpa.v spdif_dai_varclk.v spdif_dai.v resampler.v resample_pipeline.v dac_drv.v mpemu.v rom_*.v ringbuf.v dcm.v async_fifo.v posedge_latch.v pop_latch.v mixer.v uart.v csr_spi.v csr.v spi_trx.v lcdc.v $(NKMD_CPU) $(NKMD_ARCH)
 
 dump: $(TARGET)_t.lxt
 	gtkwave $(TARGET)_t.lxt &

@@ -253,13 +253,47 @@ nkmd_arch nkmd_arch(
     .dbgin_i(csr_nkmd_dbgin));
 `endif
 
-assign lcd_de = 1'b1;
-assign lcd_vsync = 1'b0;
-assign lcd_hsync = 1'b0;
-assign lcd_nclk = ~clk245760;
-assign lcd_r[5:0] = 6'h00;
-assign lcd_g[5:0] = 6'h00;
-assign lcd_b[5:0] = 6'h00;
+wire [8:0] x_lcdc_ptn;
+wire [6:0] y_lcdc_ptn;
+wire pop_lcdc_ptn;
+wire [5:0] r_ptn_lcdc;
+wire [5:0] g_ptn_lcdc;
+wire [5:0] b_ptn_lcdc;
+wire ack_ptn_lcdc;
+
+lcdc lcdc(
+    .clk(clk491520),
+    .rst(rst_ip),
+
+    .x_o(x_lcdc_ptn),
+    .y_o(y_lcdc_ptn),
+    .pop_o(pop_lcdc_ptn),
+    .r_i(r_ptn_lcdc),
+    .g_i(g_ptn_lcdc),
+    .b_i(b_ptn_lcdc),
+    .ack_i(ack_ptn_lcdc),
+
+    .lcd_r(lcd_r),
+    .lcd_g(lcd_g),
+    .lcd_b(lcd_b),
+    .lcd_vsync(lcd_vsync),
+    .lcd_hsync(lcd_hsync),
+    .lcd_nclk(lcd_nclk),
+    .lcd_de(lcd_de));
+
+patterngen patterngen(
+    .clk(clk491520),
+    .rst(rst_ip),
+
+    .x_i(x_lcdc_ptn),
+    .y_i(y_lcdc_ptn),
+    .pop_i(pop_lcdc_ptn),
+    .r_o(r_ptn_lcdc),
+    .g_o(g_ptn_lcdc),
+    .b_o(b_ptn_lcdc),
+    .ack_o(ack_ptn_lcdc));
+
+// assign lcd_de = 1'b1;
 
 endmodule
 `default_nettype wire
