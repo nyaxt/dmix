@@ -33,7 +33,15 @@ module nkmdhpa#(
     input wire csr_ss,
 
     input wire nkmd_uart_rx,
-    output wire nkmd_uart_tx);
+    output wire nkmd_uart_tx,
+
+    output wire [5:0] lcd_r,
+    output wire [5:0] lcd_g,
+    output wire [5:0] lcd_b,
+    output wire lcd_vsync,
+    output wire lcd_hsync,
+    output wire lcd_nclk,
+    output wire lcd_de);
 
 wire clk245760;
 wire clk491520;
@@ -244,5 +252,14 @@ nkmd_arch nkmd_arch(
     .dbgout_o(nkmd_csr_dbgout),
     .dbgin_i(csr_nkmd_dbgin));
 `endif
+
+assign lcd_de = 1'b1;
+assign lcd_vsync = 1'b0;
+assign lcd_hsync = 1'b0;
+assign lcd_nclk = ~clk245760;
+assign lcd_r[5:0] = 6'h00;
+assign lcd_g[5:0] = 6'h00;
+assign lcd_b[5:0] = 6'h00;
+
 endmodule
 `default_nettype wire
