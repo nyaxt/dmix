@@ -128,7 +128,7 @@ end
 reg [6:0] curr_y_ff;
 always @(posedge clk) begin
     if (rst)
-        curr_y_ff <= 9'd96;
+        curr_y_ff <= 7'd96;
     else begin
         if (update_y && curr_x_ff == 9'd400) begin
             if (curr_y_ff == 7'd111)
@@ -145,7 +145,7 @@ always @(posedge clk) begin
         lcd_vsync_ff <= 1'b0;
     else begin
         if (update_data) begin
-            if (curr_y_ff == 7'd95 && curr_x_ff == 9'd400)
+            if (curr_y_ff == 7'd95)
                 lcd_vsync_ff <= 1'b1;
             else
                 lcd_vsync_ff <= 1'b0;
