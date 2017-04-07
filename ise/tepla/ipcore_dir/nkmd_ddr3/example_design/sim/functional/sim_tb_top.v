@@ -73,9 +73,23 @@ module sim_tb_top;
    parameter DEBUG_EN                = 0;
    localparam DBG_WR_STS_WIDTH       = 32;
    localparam DBG_RD_STS_WIDTH       = 32;
+   	parameter C1_MEMCLK_PERIOD     = 3000;
+   parameter C1_RST_ACT_LOW        = 0;
+   parameter C1_INPUT_CLK_TYPE     = "SINGLE_ENDED";
+   parameter C1_NUM_DQ_PINS        = 16;
+   parameter C1_MEM_ADDR_WIDTH     = 13;
+   parameter C1_MEM_BANKADDR_WIDTH = 3;
+   parameter C1_MEM_ADDR_ORDER     = "ROW_BANK_COLUMN"; 
+      parameter C1_P0_MASK_SIZE       = 4;
+   parameter C1_P0_DATA_PORT_SIZE  = 32;  
+   parameter C1_P1_MASK_SIZE       = 4;
+   parameter C1_P1_DATA_PORT_SIZE  = 32;
+   parameter C1_CALIB_SOFT_IP      = "TRUE";
+   parameter C1_SIMULATION      = "TRUE";
+   parameter C1_HW_TESTING      = "FALSE";
    	parameter C3_MEMCLK_PERIOD     = 3000;
    parameter C3_RST_ACT_LOW        = 0;
-   parameter C3_INPUT_CLK_TYPE     = "DIFFERENTIAL";
+   parameter C3_INPUT_CLK_TYPE     = "SINGLE_ENDED";
    parameter C3_NUM_DQ_PINS        = 16;
    parameter C3_MEM_ADDR_WIDTH     = 13;
    parameter C3_MEM_BANKADDR_WIDTH = 3;
@@ -91,6 +105,33 @@ module sim_tb_top;
 // ========================================================================== //
 // Signal Declarations                                                        //
 // ========================================================================== //
+ // Clocks
+   reg                              c1_sys_clk;
+   wire                             c1_sys_clk_p;
+   wire                             c1_sys_clk_n;
+// System Reset
+   reg                              c1_sys_rst;
+   wire                             c1_sys_rst_i;
+
+// Design-Top Port Map   
+   wire [C1_MEM_ADDR_WIDTH-1:0]    mcb1_dram_a;
+   wire [C1_MEM_BANKADDR_WIDTH-1:0]  mcb1_dram_ba;  
+   wire                             mcb1_dram_ck;  
+   wire                             mcb1_dram_ck_n;
+   wire [C1_NUM_DQ_PINS-1:0]        mcb1_dram_dq;   
+   wire                             mcb1_dram_dqs;  
+   wire                             mcb1_dram_dqs_n;
+   wire                             mcb1_dram_dm; 
+   wire                             mcb1_dram_ras_n; 
+   wire                             mcb1_dram_cas_n; 
+   wire                             mcb1_dram_we_n;  
+   wire                             mcb1_dram_cke; 
+   wire                             mcb1_dram_odt;
+   wire                             mcb1_dram_reset_n; 
+
+   wire                             mcb1_dram_udqs;    // for X16 parts
+   wire                             mcb1_dram_udqs_n;  // for X16 parts
+   wire                             mcb1_dram_udm;     // for X16 parts
  // Clocks
    reg                              c3_sys_clk;
    wire                             c3_sys_clk_p;
@@ -122,12 +163,21 @@ module sim_tb_top;
 // Error & Calib Signals
    wire                             error;
    wire                             calib_done;
-   wire				    rzq3;   wire				    zio3;
+   wire				    rzq1;
+   wire				    rzq3;   wire				    zio1;
+   wire				    zio3;
    
 // ========================================================================== //
 // Clocks Generation                                                          //
 // ========================================================================== //
 
+   initial
+      c1_sys_clk = 1'b0;
+   always
+      #(C1_MEMCLK_PERIOD/2) c1_sys_clk = ~c1_sys_clk;
+
+   assign                c1_sys_clk_p = c1_sys_clk;
+   assign                c1_sys_clk_n = ~c1_sys_clk;
    initial
       c3_sys_clk = 1'b0;
    always
@@ -140,6 +190,12 @@ module sim_tb_top;
 // Reset Generation                                                           //
 // ========================================================================== //
  
+   initial begin
+      c1_sys_rst = 1'b0;		
+      #20000;
+      c1_sys_rst = 1'b1;
+   end
+   assign c1_sys_rst_i = C1_RST_ACT_LOW ? c1_sys_rst : ~c1_sys_rst; 
    initial begin
       c3_sys_rst = 1'b0;		
       #20000;
@@ -157,9 +213,16 @@ module sim_tb_top;
    
 
    
+
+   
    // The PULLDOWN component is connected to the ZIO signal primarily to avoid the
 // unknown state in simulation. In real hardware, ZIO should be a no connect(NC) pin.
-   PULLDOWN zio_pulldown3 (.O(zio3));   PULLDOWN rzq_pulldown3 (.O(rzq3));
+   PULLDOWN zio_pulldown1 (.O(zio1));
+   
+   
+   PULLDOWN zio_pulldown3 (.O(zio3));   PULLDOWN rzq_pulldown1 (.O(rzq1));
+   
+   PULLDOWN rzq_pulldown3 (.O(rzq3));
    
 
 // ========================================================================== //
@@ -168,8 +231,28 @@ module sim_tb_top;
 
 
 
+
 example_top #(
 
+.C1_P0_MASK_SIZE       (C1_P0_MASK_SIZE      ),
+.C1_P0_DATA_PORT_SIZE  (C1_P0_DATA_PORT_SIZE ),
+.C1_P1_MASK_SIZE       (C1_P1_MASK_SIZE      ),
+.C1_P1_DATA_PORT_SIZE  (C1_P1_DATA_PORT_SIZE ),
+.C1_MEMCLK_PERIOD      (C1_MEMCLK_PERIOD),
+.C1_RST_ACT_LOW        (C1_RST_ACT_LOW),
+.C1_INPUT_CLK_TYPE     (C1_INPUT_CLK_TYPE),
+
+ 
+.DEBUG_EN              (DEBUG_EN),
+
+.C1_MEM_ADDR_ORDER     (C1_MEM_ADDR_ORDER    ),
+.C1_NUM_DQ_PINS        (C1_NUM_DQ_PINS       ),
+.C1_MEM_ADDR_WIDTH     (C1_MEM_ADDR_WIDTH    ),
+.C1_MEM_BANKADDR_WIDTH (C1_MEM_BANKADDR_WIDTH),
+
+.C1_HW_TESTING         (C1_HW_TESTING),
+.C1_SIMULATION         (C1_SIMULATION),
+.C1_CALIB_SOFT_IP      (C1_CALIB_SOFT_IP ),
 .C3_P0_MASK_SIZE       (C3_P0_MASK_SIZE      ),
 .C3_P0_DATA_PORT_SIZE  (C3_P0_DATA_PORT_SIZE ),
 .C3_P1_MASK_SIZE       (C3_P1_MASK_SIZE      ),
@@ -179,7 +262,6 @@ example_top #(
 .C3_INPUT_CLK_TYPE     (C3_INPUT_CLK_TYPE),
 
  
-.DEBUG_EN              (DEBUG_EN),
 
 .C3_MEM_ADDR_ORDER     (C3_MEM_ADDR_ORDER    ),
 .C3_NUM_DQ_PINS        (C3_NUM_DQ_PINS       ),
@@ -192,8 +274,34 @@ example_top #(
 )
 design_top (
 
-    .c3_sys_clk_p           (c3_sys_clk_p),
-  .c3_sys_clk_n           (c3_sys_clk_n),
+    .c1_sys_clk           (c1_sys_clk),
+  .c1_sys_rst_i           (c1_sys_rst_i),                        
+
+  .mcb1_dram_dq           (mcb1_dram_dq),  
+  .mcb1_dram_a            (mcb1_dram_a),  
+  .mcb1_dram_ba           (mcb1_dram_ba),
+  .mcb1_dram_ras_n        (mcb1_dram_ras_n),                        
+  .mcb1_dram_cas_n        (mcb1_dram_cas_n),                        
+  .mcb1_dram_we_n         (mcb1_dram_we_n),                          
+  .mcb1_dram_odt          (mcb1_dram_odt),
+  .mcb1_dram_cke          (mcb1_dram_cke),                          
+  .mcb1_dram_ck           (mcb1_dram_ck),                          
+  .mcb1_dram_ck_n         (mcb1_dram_ck_n),       
+  .mcb1_dram_dqs          (mcb1_dram_dqs),                          
+  .mcb1_dram_dqs_n        (mcb1_dram_dqs_n),
+    .calib_done                               (calib_done),
+  .error                                    (error),	
+  .mcb1_dram_udqs         (mcb1_dram_udqs),    // for X16 parts                        
+  .mcb1_dram_udqs_n       (mcb1_dram_udqs_n),  // for X16 parts
+  .mcb1_dram_udm          (mcb1_dram_udm),     // for X16 parts
+  .mcb1_dram_dm           (mcb1_dram_dm),
+     .mcb1_rzq               (rzq1),  
+        
+     .mcb1_zio               (zio1),
+	
+  .mcb1_dram_reset_n      (mcb1_dram_reset_n),
+
+    .c3_sys_clk           (c3_sys_clk),
   .c3_sys_rst_i           (c3_sys_rst_i),                        
 
   .mcb3_dram_dq           (mcb3_dram_dq),  
@@ -208,8 +316,7 @@ design_top (
   .mcb3_dram_ck_n         (mcb3_dram_ck_n),       
   .mcb3_dram_dqs          (mcb3_dram_dqs),                          
   .mcb3_dram_dqs_n        (mcb3_dram_dqs_n),
-    .calib_done                               (calib_done),
-  .error                                    (error),	
+  	
   .mcb3_dram_udqs         (mcb3_dram_udqs),    // for X16 parts                        
   .mcb3_dram_udqs_n       (mcb3_dram_udqs_n),  // for X16 parts
   .mcb3_dram_udm          (mcb3_dram_udm),     // for X16 parts
@@ -227,6 +334,47 @@ design_top (
 // Memory model instances                                                     // 
 // ========================================================================== //
 
+   generate
+   if(C1_NUM_DQ_PINS == 16) begin : MEM_INST1
+     ddr3_model_c1 u_mem_c1(
+      .ck         (mcb1_dram_ck),
+      .ck_n       (mcb1_dram_ck_n),
+      .cke        (mcb1_dram_cke),
+      .cs_n       (1'b0),
+      .ras_n      (mcb1_dram_ras_n),
+      .cas_n      (mcb1_dram_cas_n),
+      .we_n       (mcb1_dram_we_n),
+      .dm_tdqs    ({mcb1_dram_udm,mcb1_dram_dm}),
+      .ba         (mcb1_dram_ba),
+      .addr       (mcb1_dram_a),
+      .dq         (mcb1_dram_dq),
+      .dqs        ({mcb1_dram_udqs,mcb1_dram_dqs}),
+      .dqs_n      ({mcb1_dram_udqs_n,mcb1_dram_dqs_n}),
+      .tdqs_n     (),
+      .odt        (mcb1_dram_odt),
+      .rst_n      (mcb1_dram_reset_n)
+      );
+   end else begin
+     ddr3_model_c1 u_mem_c1(
+      .ck         (mcb1_dram_ck),
+      .ck_n       (mcb1_dram_ck_n),
+      .cke        (mcb1_dram_cke),
+      .cs_n       (1'b0),
+      .ras_n      (mcb1_dram_ras_n),
+      .cas_n      (mcb1_dram_cas_n),
+      .we_n       (mcb1_dram_we_n),
+      .dm_tdqs    (mcb1_dram_dm),
+      .ba         (mcb1_dram_ba),
+      .addr       (mcb1_dram_a),
+      .dq         (mcb1_dram_dq),
+      .dqs        (mcb1_dram_dqs),
+      .dqs_n      (mcb1_dram_dqs_n),
+      .tdqs_n     (),
+      .odt        (mcb1_dram_odt),
+      .rst_n      (mcb1_dram_reset_n)
+     );
+  end
+endgenerate
    generate
    if(C3_NUM_DQ_PINS == 16) begin : MEM_INST3
      ddr3_model_c3 u_mem_c3(

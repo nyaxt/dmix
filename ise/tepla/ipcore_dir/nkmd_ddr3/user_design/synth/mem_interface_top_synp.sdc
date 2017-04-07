@@ -12,6 +12,10 @@ define_attribute          {v:work.mcb_soft_calibration_top} syn_hier {hard}
 define_attribute          {v:work.mcb_ui_top} syn_hier {hard}
 
 # clock Constraints
+define_clock -disable -name {memc1_infrastructure_inst} -period 3000 -clockgroup default_clkgroup_1
+define_clock          -name {memc1_infrastructure_inst.SYS_CLK_INST} -period 3000 -clockgroup default_clkgroup_2
+define_clock -disable -name {memc1_infrastructure_inst.u_pll_adv} -period 3000 -clockgroup default_clkgroup_3
+
 define_clock -disable -name {memc3_infrastructure_inst} -period 3000 -clockgroup default_clkgroup_1
 define_clock          -name {memc3_infrastructure_inst.SYS_CLK_INST} -period 3000 -clockgroup default_clkgroup_2
 define_clock -disable -name {memc3_infrastructure_inst.u_pll_adv} -period 3000 -clockgroup default_clkgroup_3

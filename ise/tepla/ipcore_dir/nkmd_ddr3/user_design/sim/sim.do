@@ -88,6 +88,7 @@ vlog  $env(XILINX)/verilog/src/glbl.v
 vlog  ../sim/*.v
 
 #Pass the parameters for memory model parameter file#
+vlog  +incdir+. +define+x1Gb +define+sg187E +define+x16 ddr3_model_c1.v
 vlog  +incdir+. +define+x1Gb +define+sg187E +define+x16 ddr3_model_c3.v
 
 #Load the design. Use required libraries.#

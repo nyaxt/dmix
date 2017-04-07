@@ -27,6 +27,7 @@ verilog  work  ../../rtl/traffic_gen/write_data_path.v
 
 verilog  work  $XILINX/verilog/src/glbl.v
 verilog  work  ./sim_tb_top.v
+verilog  work  ./ddr3_model_c1.v -d x1Gb -d sg187E -d x16 -i ./
 verilog  work  ./ddr3_model_c3.v -d x1Gb -d sg187E -d x16 -i ./
 
 
