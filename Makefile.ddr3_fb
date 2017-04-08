@@ -8,10 +8,10 @@ dump: $(TARGET)_t.lxt
 runsim: $(TARGET)_t.lxt
 
 .vvp.lxt:
-	vvp $< -lxt2
+	time vvp $< -lxt2
 
 $(TARGET)_t.vvp: $(TARGET)_t.v $(DEPS)
-	iverilog $(IVFLAGS) -o $@ $^
+	time iverilog $(IVFLAGS) -o $@ $^
 
 .SUFFIXES: .vvp .lxt
 

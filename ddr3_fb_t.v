@@ -15,6 +15,8 @@ reg [6:0] mig_rd_count;
 
 wire [8:0] x_lcdc_fb;
 wire [6:0] y_lcdc_fb;
+wire in_hsync_lcdc_fb;
+wire in_vsync_lcdc_fb;
 wire pop_lcdc_fb;
 wire [5:0] r_fb_lcdc;
 wire [5:0] g_fb_lcdc;
@@ -27,6 +29,8 @@ lcdc lcdc(
 
     .x_o(x_lcdc_fb),
     .y_o(y_lcdc_fb),
+    .in_hsync_o(in_hsync_lcdc_fb),
+    .in_vsync_o(in_vsync_lcdc_fb),
     .pop_o(pop_lcdc_fb),
     .r_i(r_fb_lcdc),
     .g_i(g_fb_lcdc),
@@ -53,6 +57,8 @@ ddr3_fb uut(
 
     .x_i(x_lcdc_fb),
     .y_i(y_lcdc_fb),
+    .in_hsync_i(in_hsync_lcdc_fb),
+    .in_vsync_i(in_vsync_lcdc_fb),
     .pop_i(pop_lcdc_fb),
     .r_o(r_fb_lcdc),
     .g_o(g_fb_lcdc),
@@ -68,7 +74,7 @@ initial begin
     #(TCLK);
     rst = 1'b0;
     mig_rd_count = 'b0;
-    #(TCLK*100000);
+    #(TCLK*1500000);
 
     $finish(2);
 end
@@ -76,6 +82,20 @@ end
 always @(posedge clk) begin
     if (uut.mig_cmd_en) begin
         #(TCLK*5)
+        mig_rd_count = 'd3;
+        #(TCLK)
+        mig_rd_count = 'd3;
+        #(TCLK)
+        mig_rd_count = 'd4;
+        #(TCLK)
+        mig_rd_count = 'd3;
+        #(TCLK)
+        mig_rd_count = 'd3;
+        #(TCLK)
+        mig_rd_count = 'd3;
+        #(TCLK)
+        mig_rd_count = 'd2;
+        #(TCLK)
         mig_rd_count = 'd1;
         #(TCLK)
         mig_rd_count = 'd0;
