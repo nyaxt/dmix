@@ -5,6 +5,8 @@ module lcdc(
 
     output wire [8:0] x_o,
     output wire [6:0] y_o,
+    output wire in_vsync_o,
+    output wire in_hsync_o,
     output wire pop_o,
     input wire [5:0] r_i,
     input wire [5:0] g_i,
@@ -98,15 +100,20 @@ always @(posedge clk) begin
 end
 
 reg [8:0] curr_x_ff;
+reg in_hsync_ff;
 always @(posedge clk) begin
-    if (rst) 
+    if (rst) begin
         curr_x_ff <= 9'd400;
-    else begin
+        in_hsync_ff <= 1'b0;
+    end else begin
         if (update_x) begin
-            if (curr_x_ff == 9'd506)
+            if (curr_x_ff == 9'd506) begin
                 curr_x_ff <= 9'd000;
-            else
+                in_hsync_ff <= 0;
+            end else begin
                 curr_x_ff <= curr_x_ff + 1;
+                in_hsync_ff <= (curr_x_ff >= 9'd399) ? 1'b1 : 1'b0;
+            end
         end
     end
 end
@@ -126,15 +133,20 @@ always @(posedge clk) begin
 end
 
 reg [6:0] curr_y_ff;
+reg in_vsync_ff;
 always @(posedge clk) begin
-    if (rst)
+    if (rst) begin
         curr_y_ff <= 7'd96;
-    else begin
+        in_vsync_ff <= 1'b0;
+    end else begin
         if (update_y && curr_x_ff == 9'd400) begin
-            if (curr_y_ff == 7'd111)
+            if (curr_y_ff == 7'd111) begin
                 curr_y_ff <= 7'd0;
-            else
+                in_vsync_ff <= 1'b0;
+            end else begin
                 curr_y_ff <= curr_y_ff + 1;
+                in_vsync_ff <= (curr_y_ff >= 7'd95) ? 1'b1 : 1'b0;
+            end
         end
     end
 end
@@ -155,6 +167,8 @@ end
 
 assign x_o = curr_x_ff;
 assign y_o = curr_y_ff;
+assign in_hsync_o = in_hsync_ff;
+assign in_vsync_o = in_vsync_ff;
 assign pop_o = send_req;
 
 reg [5:0] lcd_r_pending_ff;
