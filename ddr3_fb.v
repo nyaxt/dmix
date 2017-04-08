@@ -1,6 +1,6 @@
 `default_nettype none
 module ddr3_fb(
-    input wire clk, // clk491520
+   input wire clk, // clk491520
     input wire rst,
 
     // MIG interface

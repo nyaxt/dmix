@@ -70,12 +70,12 @@ module csr_spi #(
     output wire prom_ack_o,
 
     // dram peek/poke 
-    output wire [29:0] dram_addr_o,
-    output wire [31:0] dram_data_o,
-    output wire dram_we_o,
-    output wire dram_pop_o,
-    input wire [31:0] dram_data_i,
-    input wire ack_i);
+    output wire [27:0] dram0_addr_o,
+    output wire [31:0] dram0_data_o,
+    output wire dram0_we_o,
+    output wire dram0_pop_o,
+    input wire [31:0] dram0_data_i,
+    input wire dram0_ack_i);
 
 wire spi_rst;
 wire [7:0] spi_data_rx;
@@ -91,6 +91,7 @@ spi_trx spi_trx(
     .data_i(spi_data_tx), .ack_i(spi_ack_i));
 
 wire dec_nop;
+wire dec_special;
 wire dec_we;
 wire dec_target_nkmdprom;
 wire dec_target_csr;
@@ -99,6 +100,7 @@ wire [3:0] dec_addr_high;
 csr_cmd_decoder csr_cmd_decoder(
     .cmd(spi_data_rx),
     .nop(dec_nop),
+    .special(dec_special),
     .we(dec_we),
     .nrep(dec_nrep),
     .target_nkmdprom(dec_target_nkmdprom), .target_csr(dec_target_csr),
@@ -107,6 +109,8 @@ csr_cmd_decoder csr_cmd_decoder(
 reg cmd_we_ff;
 reg [7:0] nrep_ff;
 reg [19:0] addr_ff;
+reg [31:0] sp_addr_ff;
+reg [31:0] rdata_ff;
 reg [31:0] wdata_ff;
 
 wire [11:0] csr_addr;
@@ -115,13 +119,20 @@ wire [7:0] csr_data_o;
 
 reg [15:0] state_ff;
 parameter ST_INIT = 0;
-parameter ST_PENDING_CSR_ADDR = 1;
-parameter ST_PENDING_CSR_DATA = 2;
-parameter ST_RESPOND_CSR_DATA = 3;
-parameter ST_PENDING_NKMDPROM_ADDR_MID = 4;
-parameter ST_PENDING_NKMDPROM_ADDR_LOW = 5;
-parameter ST_PENDING_NKMDPROM_DATA = 6;
-parameter ST_WRITING_NKMDPROM_DATA = 7;
+parameter ST_SPECIAL = 1;
+parameter ST_PENDING_CSR_ADDR = 2;
+parameter ST_PENDING_CSR_DATA = 3;
+parameter ST_RESPOND_CSR_DATA = 4;
+parameter ST_PENDING_NKMDPROM_ADDR_MID = 5;
+parameter ST_PENDING_NKMDPROM_ADDR_LOW = 6;
+parameter ST_PENDING_NKMDPROM_DATA = 7;
+parameter ST_WRITING_NKMDPROM_DATA = 8;
+parameter ST_SP_PENDING_ADDR = 9;
+parameter ST_SP_READ_DATA = 10;
+parameter ST_SP_READ_WAIT_ACK = 11;
+parameter ST_SP_PENDING_DATA = 12;
+parameter ST_SP_WRITE_DATA = 13;
+reg [1:0] addr_offset_ff; // For 32bit addrs, this reg will keep which sp_addr_ff octet needs to be filled in next
 reg [1:0] data_offset_ff; // For 32bit targets, this reg will keep which wdata_ff octet needs to be filled in next
 
 reg [7:0] data_tx_ff;
@@ -137,6 +148,7 @@ always @(posedge clk) begin
 
         cmd_we_ff <= 1'b0;
         addr_ff <= 20'b0;
+        sp_addr_ff <= 32'b0;
         wdata_ff <= 32'b0;
         data_offset_ff <= 2'h0;
     end else begin
@@ -152,6 +164,9 @@ always @(posedge clk) begin
                     if (dec_nop) begin
                         data_tx_ff <= 8'h90;
                         state_ff <= ST_INIT;
+                    end else if (dec_special) begin
+                        data_tx_ff <= 8'h91;
+                        state_ff <= ST_SPECIAL;
                     end else if (dec_target_csr) begin
                         data_tx_ff <= 8'hcc;
                         state_ff <= ST_PENDING_CSR_ADDR;
@@ -166,6 +181,18 @@ always @(posedge clk) begin
                 end else begin
                     data_ready_ff <= 0;
                     state_ff <= ST_INIT;
+                end
+            end
+            ST_SPECIAL: begin
+                if (spi_ack_pop_o) begin
+                    cmd_we_ff <= dec_we;
+                    nrep_ff <= dec_nrep;
+
+                    addr_offset_ff <= 2'h3;
+                    state_ff <= ST_SP_PENDING_ADDR;
+
+                    data_tx_ff <= 8'hc0;
+                    data_ready_ff <= 1;
                 end
             end
             ST_PENDING_CSR_ADDR: begin
@@ -231,27 +258,89 @@ always @(posedge clk) begin
             ST_PENDING_NKMDPROM_DATA: begin
                 if (spi_ack_pop_o) begin
                     data_tx_ff <= {4'hd, 2'b00, data_offset_ff};
-                    data_ready_ff <= 1;
+                    data_ready_ff <= 1'b1;
 
                     wdata_ff <= {wdata_ff[23:0], spi_data_rx[7:0]};
-                    if (cmd_we_ff == 1'b1 && data_offset_ff == 4'h3)
+                    if (data_offset_ff == 2'h3)
                         state_ff <= ST_WRITING_NKMDPROM_DATA;
                     else
                         state_ff <= ST_PENDING_NKMDPROM_DATA;
 
                     data_offset_ff <= data_offset_ff + 1;
                 end else begin
-                    data_ready_ff <= 0;
+                    data_ready_ff <= 1'b0;
                     state_ff <= ST_PENDING_NKMDPROM_DATA;
                 end
             end
             ST_WRITING_NKMDPROM_DATA: begin
-                data_ready_ff <= 0;
+                data_ready_ff <= 1'b0;
 
                 addr_ff <= addr_ff + 1;
                 if (nrep_ff != 8'h01) begin
                     nrep_ff <= nrep_ff - 1;
                     state_ff <= ST_PENDING_NKMDPROM_DATA;
+                end else begin
+                    state_ff <= ST_INIT;
+                end
+            end
+            ST_SP_PENDING_ADDR: begin
+                if (spi_ack_pop_o) begin
+                    data_tx_ff <= {4'ha, 2'b00, addr_offset_ff};
+                    data_ready_ff <= 1;
+
+                    sp_addr_ff <= {sp_addr_ff[23:0], spi_data_rx[7:0]};
+                    addr_offset_ff <= addr_offset_ff - 1; 
+
+                    if (addr_offset_ff != 4'h0) begin
+                        state_ff <= ST_SP_PENDING_ADDR;
+                    end else begin
+                        state_ff <= ST_SP_READ_DATA;
+                    end
+                end else begin
+                    data_ready_ff <= 1'b0
+                    state_ff <= ST_SP_PENDING_ADDR;
+                end
+            end
+            ST_SP_READ_DATA: begin
+                state_ff <= ST_SP_READ_WAIT_ACK;
+            end
+            ST_SP_READ_WAIT_ACK: begin
+                if (dram0_ack_i) begin
+                    rdata_ff <= dram0_data_i;
+                    state_ff <= ST_SP_PENDING_DATA;
+                end else begin
+                    state_ff <= ST_SP_READ_WAIT_ACK;
+                end
+            end
+            ST_SP_PENDING_DATA: begin
+                if (spi_ack_pop_o) begin
+                    wdata_ff <= {wdata_ff[23:0], spi_data_rx[7:0]};
+                    if (data_offset_ff == 4'h3)
+                        state_ff <= ST_SP_WRITE_DATA;
+                    else
+                        state_ff <= ST_SP_PENDING_DATA;
+
+                    case (data_offset_ff)
+                        2'h0: data_tx_ff <= rdata_ff[7:0];
+                        2'h1: data_tx_ff <= rdata_ff[15:8];
+                        2'h2: data_tx_ff <= rdata_ff[23:16];
+                        2'h3: data_tx_ff <= rdata_ff[31:24];
+                    endcase
+                    data_ready_ff <= 1;
+
+                    data_offset_ff <= data_offset_ff + 1;
+                end else begin
+                    data_ready_ff <= 0;
+                    state_ff <= ST_SP_PENDING_DATA;
+                end
+            end
+            ST_WRITE_DATA: begin
+                data_ready_ff <= 1'b0;
+
+                addr_ff <= addr_ff + 1;
+                if (nrep_ff != 8'h01) begin
+                    nrep_ff <= nrep_ff - 1;
+                    state_ff <= ST_SP_READ_DATA;
                 end else begin
                     state_ff <= ST_INIT;
                 end
@@ -276,6 +365,11 @@ assign csr_ack_i = state_ff == ST_PENDING_CSR_DATA && spi_ack_pop_o == 1'b1 && c
 assign prom_addr_o = {12'b0, addr_ff[19:0]};
 assign prom_data_o = wdata_ff;
 assign prom_ack_o = (state_ff == ST_WRITING_NKMDPROM_DATA);
+
+assign dram0_addr_o = sp_addr_ff[27:0];
+assign dram0_data_o = wdata_ff;
+assign dram0_we_o = (cmd_we_ff == 1'b1 && state_ff == ST_SP_WRITE_DATA) ? 1'b1 : 1'b0;
+assign dram0_pop_o = (state_ff == ST_SP_READ_DATA) ? 1'b1 : 1'b0;
 
 endmodule
 
