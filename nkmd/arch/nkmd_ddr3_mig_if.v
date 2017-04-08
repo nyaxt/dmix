@@ -1,5 +1,5 @@
 `default_nettype none
-module nkmd_ddr3(
+module nkmd_ddr3_mig_if(
     input wire clk,
     input wire rst,
 
@@ -143,7 +143,7 @@ assign dma_complete = dma_state_ff == ST_INIT;
 
 assign mig_cmd_clk = clk;
 assign mig_cmd_en = (dma_state_ff == ST_EMIT_RD_CMD || dma_state_ff == ST_EMIT_WR_CMD) ? 1'b1 : 1'b0;
-assign mig_cmd_instr = dma_state_ff == ST_EMIT_RD_CMD ? 3'b011 : 3'b010;
+assign mig_cmd_instr = (dma_state_ff == ST_EMIT_RD_CMD) ? 3'b011 : 3'b010;
 assign mig_cmd_bl = dma_burst_len_ff;
 assign mig_cmd_byte_addr[29:0] = {3'b000, dma_dram_word_addr_ff, 2'b00};
 // FIXME: wait until mig_cmd_empty or !mig_cmd_full?
@@ -158,7 +158,7 @@ assign mig_wr_data = mig_wr_data_ff;
 // mig_wr_full, mig_wr_empty, mig_wr_count, mig_wr_underrun, mig_wr_error
 
 assign mig_rd_clk = clk;
-assign mig_rd_en = dma_state_ff == ST_WAIT_RD_DATA ? 1'b1 : 1'b0;
+assign mig_rd_en = (dma_state_ff == ST_WAIT_RD_DATA) ? 1'b1 : 1'b0;
 // mig_rd_full, mig_rd_empty, mig_rd_overflow, mig_rd_error
 
 endmodule

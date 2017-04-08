@@ -27,3 +27,5 @@ ise/nkmm_arch/output.txt
 Debug/
 core
 debug.dump
+avr/main.hex
+avr/main.bin

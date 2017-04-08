@@ -1,4 +1,4 @@
-TARGET:=nkmd_ddr3
+TARGET:=nkmd_ddr3_mig_if
 
 dump: $(TARGET)_t.lxt
 	gtkwave $(TARGET)_t.lxt &

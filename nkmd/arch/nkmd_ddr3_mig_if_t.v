@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module nkmd_ddr3_t;
+module nkmd_ddr3_mig_if_t;
 
 // ins
 reg clk;
@@ -18,7 +18,7 @@ reg nkmd_we;
 reg [31:0] mig_rd_data;
 reg [6:0] mig_rd_count;
 
-nkmd_ddr3 uut(
+nkmd_ddr3_mig_if uut(
     .clk(clk),
     .rst(rst),
 
@@ -64,8 +64,8 @@ endtask
 
 reg [31:0] i;
 initial begin
-    $dumpfile("nkmd_ddr3_t.lxt");
-    $dumpvars(0, nkmd_ddr3_t);
+    $dumpfile("nkmd_ddr3_mig_if_t.lxt");
+    $dumpvars(0, nkmd_ddr3_mig_if_t);
 
     nkmd_data_i = 32'h0;
     nkmd_addr = 16'h0;
