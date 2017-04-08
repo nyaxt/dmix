@@ -48,9 +48,9 @@ localparam ST_WAIT_DATA = 4;
 wire [5:0] mig_rd_data_r;
 wire [5:0] mig_rd_data_g;
 wire [5:0] mig_rd_data_b;
-assign mig_rd_data_r = mig_rd_data[21:16];
-assign mig_rd_data_g = mig_rd_data[13:8];
-assign mig_rd_data_b = mig_rd_data[5:0];
+assign mig_rd_data_r = mig_rd_data[24:18];
+assign mig_rd_data_g = mig_rd_data[15:10];
+assign mig_rd_data_b = mig_rd_data[7:2];
 
 reg [8:0] prefetch_x_ff;
 reg [6:0] prefetch_y_ff;

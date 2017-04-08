@@ -3,13 +3,12 @@
 module csr_cmd_decoder(
     input wire [7:0] cmd,
     output wire nop,
+    output wire special,
     output wire we,
     output wire [7:0] nrep,
     output wire target_nkmdprom,
     output wire target_csr,
     output wire [3:0] addr_high);
-
-assign nop = cmd[6:5] == 2'b00;
 
 assign we = cmd[7];
 
@@ -26,8 +25,11 @@ end
 endfunction
 
 assign nrep = decode_nrep(cmd[6:5]);
+
+assign nop = cmd[6:5] == 2'b00 && cmd[3:0] != 4'hf;
 assign target_nkmdprom = cmd[4] == 1'b1;
 assign target_csr = cmd[4] == 1'b0;
+assign special = cmd[6:5] == 2'b00 && cmd[3:0] == 4'hf;
 
 assign addr_high = cmd[3:0];
 
@@ -65,7 +67,15 @@ module csr_spi #(
     // nkmd prom
     output wire [31:0] prom_addr_o,
     output wire [31:0] prom_data_o,
-    output wire prom_ack_o);
+    output wire prom_ack_o,
+
+    // dram peek/poke 
+    output wire [29:0] dram_addr_o,
+    output wire [31:0] dram_data_o,
+    output wire dram_we_o,
+    output wire dram_pop_o,
+    input wire [31:0] dram_data_i,
+    input wire ack_i);
 
 wire spi_rst;
 wire [7:0] spi_data_rx;

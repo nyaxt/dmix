@@ -151,6 +151,19 @@ initial begin
     #(TCLK*3);
     $display("--- end");
     #(TCLK*3);
+
+    spi_cycle(8'h0f); // special
+    spi_cycle({4'b1_10_0}, 4'h0); // we, burst 4, special 0 -> dram 1
+    spi_cycle(8'h12); // addr ms byte
+    spi_cycle(8'h34);
+    spi_cycle(8'h56);
+    spi_cycle(8'h78); // addr ls byte
+    spi_cycle(8'hef); // data ls byte
+    spi_cycle(8'hbe);
+    spi_cycle(8'had);
+    spi_cycle(8'hde); // data ms byte
+
+    // write dram[0x12345678] => 32'hdeadbeef
     $finish(2);
 end
 
