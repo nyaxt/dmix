@@ -193,6 +193,9 @@ always @(posedge clk) begin
 
                     data_tx_ff <= 8'hc0;
                     data_ready_ff <= 1;
+                end else begin
+                    state_ff <= ST_SPECIAL;
+                    data_ready_ff <= 0;
                 end
             end
             ST_PENDING_CSR_ADDR: begin
@@ -297,14 +300,16 @@ always @(posedge clk) begin
                         state_ff <= ST_SP_READ_DATA;
                     end
                 end else begin
-                    data_ready_ff <= 1'b0
+                    data_ready_ff <= 1'b0;
                     state_ff <= ST_SP_PENDING_ADDR;
                 end
             end
             ST_SP_READ_DATA: begin
+                data_ready_ff <= 1'b0;
                 state_ff <= ST_SP_READ_WAIT_ACK;
             end
             ST_SP_READ_WAIT_ACK: begin
+                data_ready_ff <= 1'b0;
                 if (dram0_ack_i) begin
                     rdata_ff <= dram0_data_i;
                     state_ff <= ST_SP_PENDING_DATA;
@@ -334,7 +339,7 @@ always @(posedge clk) begin
                     state_ff <= ST_SP_PENDING_DATA;
                 end
             end
-            ST_WRITE_DATA: begin
+            ST_SP_WRITE_DATA: begin
                 data_ready_ff <= 1'b0;
 
                 addr_ff <= addr_ff + 1;

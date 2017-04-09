@@ -6,7 +6,7 @@ runsim: csr_spi_t.lxt
 .vvp.lxt:
 	vvp $< -lxt2
 
-csr_spi_t.vvp: csr_spi.v csr.v spi_trx.v csr_spi_t.v
+csr_spi_t.vvp: csr_spi.v csr.v spi_trx.v csr_spi_t.v simple_ddr3.v
 	iverilog -o $@ $^
 
 clean:

@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+`default_nettype none
 
 module csr_spi_t;
 
@@ -22,6 +23,51 @@ wire [(NUM_RATE*NUM_SPDIF_IN-1):0] rate_i = {5'b00001, 5'b00100, 5'b10000};
 wire [(192*NUM_SPDIF_IN-1):0] udata_i = {NUM_SPDIF_IN{192'h0102030405060708090a0b0c0d0e0f1011121314151617}};
 wire [(192*NUM_SPDIF_IN-1):0] cdata_i = {NUM_SPDIF_IN{192'h0102030405060708090a0b0c0d0e0f1011121314151617}};
 
+wire [27:0] csr_dram_addr;
+wire [31:0] csr_dram_data;
+wire csr_dram_we;
+wire csr_dram_pop;
+wire [31:0] dram_csr_data;
+wire dram_csr_ack;
+
+wire [31:0] mig_rd_data = 32'h12345678;
+reg [6:0] mig_rd_count;
+
+simple_ddr3 dram(
+    .clk(clk),
+    .rst(rst),
+
+    .addr_i(csr_dram_addr),
+    .data_i(csr_dram_data),
+    .we_i(csr_dram_we),
+    .pop_i(csr_dram_pop),
+    .data_o(dram_csr_data),
+    .ack_o(dram_csr_ack),
+    // .busy_o,
+
+    .mig_cmd_empty(1'b1),
+    .mig_cmd_full(1'b0),
+    .mig_wr_full(1'b1),
+    .mig_wr_empty(1'b0),
+    // .mig_wr_count,
+    // .mig_wr_underrun,
+    // .mig_wr_error,
+    .mig_rd_data(mig_rd_data),
+    // .mig_rd_full,
+    // .mig_rd_empty,
+    .mig_rd_count(mig_rd_count)
+    // .mig_rd_overflow,
+    // .mig_rd_error,
+    );
+always @(posedge clk) begin
+    if (dram.mig_cmd_en == 1'b1 && dram.mig_cmd_instr[0] == 1'b1) begin
+        #(TCLK*5)
+        mig_rd_count = 'd1;
+        #(TCLK)
+        mig_rd_count = 'd0;
+    end
+end
+
 csr_spi uut(
     .clk(clk), .rst(rst),
 
@@ -29,7 +75,15 @@ csr_spi uut(
     .mosi(mosi),
     .ss(ss),
 
-    .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i));
+    .rate_i(rate_i), .udata_i(udata_i), .cdata_i(cdata_i),
+    
+    .dram0_addr_o(csr_dram_addr),
+    .dram0_data_o(csr_dram_data),
+    .dram0_we_o(csr_dram_we),
+    .dram0_pop_o(csr_dram_pop),
+    .dram0_data_i(dram_csr_data),
+    .dram0_ack_i(dram_csr_ack)
+    );
 
 task spi_cycle;
     input [7:0] data;
@@ -153,7 +207,7 @@ initial begin
     #(TCLK*3);
 
     spi_cycle(8'h0f); // special
-    spi_cycle({4'b1_10_0}, 4'h0); // we, burst 4, special 0 -> dram 1
+    spi_cycle({4'b1_10_0, 4'h0}); // we, burst 4, special 0 -> dram 1
     spi_cycle(8'h12); // addr ms byte
     spi_cycle(8'h34);
     spi_cycle(8'h56);
@@ -162,6 +216,9 @@ initial begin
     spi_cycle(8'hbe);
     spi_cycle(8'had);
     spi_cycle(8'hde); // data ms byte
+    #(TCLK*3);
+    $display("--- end");
+    #(TCLK*3);
 
     // write dram[0x12345678] => 32'hdeadbeef
     $finish(2);
@@ -184,3 +241,4 @@ always @(posedge uut.csr.clk)
         $display("csr write addr: %x data: %x", uut.csr.addr_i, uut.csr.data_i);
 
 endmodule
+`default_nettype wire
