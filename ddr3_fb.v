@@ -1,6 +1,6 @@
 `default_nettype none
 module ddr3_fb(
-   input wire clk, // clk491520
+    input wire clk, // clk491520
     input wire rst,
 
     // MIG interface
@@ -148,8 +148,8 @@ always @(posedge clk) begin
     end else begin
         if (pop_i) begin
             r_ff <= r_cache_mem[cache_mem_rd_addr];
-            g_ff <= g_cache_mem[cache_mem_rd_addr];
-            b_ff <= b_cache_mem[cache_mem_rd_addr];
+            g_ff <= lcdout_side_ff ? 6'h3f : 6'h00; //g_cache_mem[cache_mem_rd_addr];
+            b_ff <= 6'b0; //b_cache_mem[cache_mem_rd_addr];
             ack_ff <= 1'b1;
         end else begin
             ack_ff <= 1'b0;

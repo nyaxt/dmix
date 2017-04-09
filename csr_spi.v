@@ -75,7 +75,8 @@ module csr_spi #(
     output wire dram0_we_o,
     output wire dram0_pop_o,
     input wire [31:0] dram0_data_i,
-    input wire dram0_ack_i);
+    input wire dram0_ack_i,
+    input wire dram0_busy_i);
 
 wire spi_rst;
 wire [7:0] spi_data_rx;
@@ -128,10 +129,11 @@ localparam ST_PENDING_NKMDPROM_ADDR_LOW = 6;
 localparam ST_PENDING_NKMDPROM_DATA = 7;
 localparam ST_WRITING_NKMDPROM_DATA = 8;
 localparam ST_SP_PENDING_ADDR = 9;
-localparam ST_SP_READ_DATA = 10;
-localparam ST_SP_READ_WAIT_ACK = 11;
-localparam ST_SP_PENDING_DATA = 12;
-localparam ST_SP_WRITE_DATA = 13;
+localparam ST_SP_WAIT_READY_TO_READ_DATA = 10;
+localparam ST_SP_READ_DATA = 11;
+localparam ST_SP_READ_WAIT_ACK = 12;
+localparam ST_SP_PENDING_DATA = 13;
+localparam ST_SP_WRITE_DATA = 14;
 reg [1:0] addr_offset_ff; // For 32bit addrs, this reg will keep which sp_addr_ff octet needs to be filled in next
 reg [1:0] data_offset_ff; // For 32bit targets, this reg will keep which wdata_ff octet needs to be filled in next
 
@@ -158,6 +160,7 @@ always @(posedge clk) begin
                     cmd_we_ff <= dec_we;
                     nrep_ff <= dec_nrep;
                     addr_ff <= {dec_addr_high, 16'h0};
+                    data_offset_ff <= 2'h0;
 
                     data_ready_ff <= 1;
 
@@ -297,12 +300,19 @@ always @(posedge clk) begin
                     if (addr_offset_ff != 4'h0) begin
                         state_ff <= ST_SP_PENDING_ADDR;
                     end else begin
-                        state_ff <= ST_SP_READ_DATA;
+                        state_ff <= ST_SP_WAIT_READY_TO_READ_DATA;
                     end
                 end else begin
                     data_ready_ff <= 1'b0;
                     state_ff <= ST_SP_PENDING_ADDR;
                 end
+            end
+            ST_SP_WAIT_READY_TO_READ_DATA: begin
+                data_ready_ff <= 1'b0;
+                if (dram0_busy_i)
+                    state_ff <= ST_SP_WAIT_READY_TO_READ_DATA;
+                else
+                    state_ff <= ST_SP_READ_DATA;
             end
             ST_SP_READ_DATA: begin
                 data_ready_ff <= 1'b0;
@@ -320,20 +330,19 @@ always @(posedge clk) begin
             ST_SP_PENDING_DATA: begin
                 if (spi_ack_pop_o) begin
                     wdata_ff <= {wdata_ff[23:0], spi_data_rx[7:0]};
+                    data_offset_ff <= data_offset_ff + 1;
                     if (data_offset_ff == 4'h3)
                         state_ff <= ST_SP_WRITE_DATA;
                     else
                         state_ff <= ST_SP_PENDING_DATA;
 
                     case (data_offset_ff)
-                        2'h0: data_tx_ff <= rdata_ff[7:0];
-                        2'h1: data_tx_ff <= rdata_ff[15:8];
-                        2'h2: data_tx_ff <= rdata_ff[23:16];
-                        2'h3: data_tx_ff <= rdata_ff[31:24];
+                        2'h3: data_tx_ff <= rdata_ff[7:0];
+                        2'h2: data_tx_ff <= rdata_ff[15:8];
+                        2'h1: data_tx_ff <= rdata_ff[23:16];
+                        2'h0: data_tx_ff <= rdata_ff[31:24];
                     endcase
                     data_ready_ff <= 1;
-
-                    data_offset_ff <= data_offset_ff + 1;
                 end else begin
                     data_ready_ff <= 0;
                     state_ff <= ST_SP_PENDING_DATA;
@@ -345,7 +354,7 @@ always @(posedge clk) begin
                 addr_ff <= addr_ff + 1;
                 if (nrep_ff != 8'h01) begin
                     nrep_ff <= nrep_ff - 1;
-                    state_ff <= ST_SP_READ_DATA;
+                    state_ff <= ST_SP_WAIT_READY_TO_READ_DATA;
                 end else begin
                     state_ff <= ST_INIT;
                 end

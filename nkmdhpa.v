@@ -173,7 +173,7 @@ wire csr_sd3_we;
 wire csr_sd3_pop;
 wire [31:0] sd3_csr_data;
 wire sd3_csr_ack;
-// wire sd3_csr_busy;
+wire sd3_csr_busy;
 
 csr_spi #(
     .NUM_CH(NUM_CH),
@@ -207,7 +207,8 @@ csr_spi #(
     .dram0_we_o(csr_sd3_we),
     .dram0_pop_o(csr_sd3_pop),
     .dram0_data_i(sd3_csr_data),
-    .dram0_ack_i(sd3_csr_ack));
+    .dram0_ack_i(sd3_csr_ack),
+    .dram0_busy_i(sd3_csr_busy));
 
 assign led[0] = rst_ip;
 assign led[1] = csr_miso;
@@ -319,25 +320,25 @@ nkmd_arch nkmd_arch(
     .dbgin_i(csr_nkmd_dbgin));
 `endif
 
-wire [8:0] x_lcdc_ptn;
-wire [6:0] y_lcdc_ptn;
-wire pop_lcdc_ptn;
-wire [5:0] r_ptn_lcdc;
-wire [5:0] g_ptn_lcdc;
-wire [5:0] b_ptn_lcdc;
-wire ack_ptn_lcdc;
+wire [8:0] x_lcdc_fb;
+wire [6:0] y_lcdc_fb;
+wire pop_lcdc_fb;
+wire [5:0] r_fb_lcdc;
+wire [5:0] g_fb_lcdc;
+wire [5:0] b_fb_lcdc;
+wire ack_fb_lcdc;
 
 lcdc lcdc(
     .clk(clk491520),
     .rst(rst_ip),
 
-    .x_o(x_lcdc_ptn),
-    .y_o(y_lcdc_ptn),
-    .pop_o(pop_lcdc_ptn),
-    .r_i(r_ptn_lcdc),
-    .g_i(g_ptn_lcdc),
-    .b_i(b_ptn_lcdc),
-    .ack_i(ack_ptn_lcdc),
+    .x_o(x_lcdc_fb),
+    .y_o(y_lcdc_fb),
+    .pop_o(pop_lcdc_fb),
+    .r_i(r_fb_lcdc),
+    .g_i(g_fb_lcdc),
+    .b_i(b_fb_lcdc),
+    .ack_i(ack_fb_lcdc),
 
     .lcd_r(lcd_r),
     .lcd_g(lcd_g),
@@ -347,17 +348,83 @@ lcdc lcdc(
     .lcd_nclk(lcd_nclk),
     .lcd_de(lcd_de));
 
+`ifdef NO_DRAM
 patterngen patterngen(
     .clk(clk491520),
     .rst(rst_ip),
 
-    .x_i(x_lcdc_ptn),
-    .y_i(y_lcdc_ptn),
-    .pop_i(pop_lcdc_ptn),
-    .r_o(r_ptn_lcdc),
-    .g_o(g_ptn_lcdc),
-    .b_o(b_ptn_lcdc),
-    .ack_o(ack_ptn_lcdc));
+    .x_i(x_lcdc_fb),
+    .y_i(y_lcdc_fb),
+    .pop_i(pop_lcdc_fb),
+    .r_o(r_fb_lcdc),
+    .g_o(g_fb_lcdc),
+    .b_o(b_fb_lcdc),
+    .ack_o(ack_fb_lcdc));
+`else
+wire fb_mig_cmd_clk;
+wire fb_mig_cmd_en;
+wire [2:0] fb_mig_cmd_instr;
+wire [5:0] fb_mig_cmd_bl;
+wire [29:0] fb_mig_cmd_byte_addr;
+wire mig_fb_cmd_empty;
+wire mig_fb_cmd_full;
+wire fb_mig_wr_clk;
+wire fb_mig_wr_en;
+wire [3:0] fb_mig_wr_mask;
+wire [31:0] fb_mig_wr_data;
+wire mig_fb_wr_full;
+wire mig_fb_wr_empty;
+wire [6:0] mig_fb_wr_count;
+wire mig_fb_wr_underrun;
+wire mig_fb_wr_error;
+wire fb_mig_rd_clk;
+wire fb_mig_rd_en;
+wire [31:0] mig_fb_rd_data;
+wire mig_fb_rd_full;
+wire mig_fb_rd_empty;
+wire [6:0] mig_fb_rd_count;
+wire mig_fb_rd_overflow;
+wire mig_fb_rd_error;
+
+ddr3_fb ddr3_fb(
+    .clk(clk491520),
+    .rst(rst_ip),
+
+    // MIG interface
+    .mig_cmd_clk(fb_mig_cmd_clk),
+    .mig_cmd_en(fb_mig_cmd_en),
+    .mig_cmd_instr(fb_mig_cmd_instr),
+    .mig_cmd_bl(fb_mig_cmd_bl),
+    .mig_cmd_byte_addr(fb_mig_cmd_byte_addr),
+    .mig_cmd_empty(mig_fb_cmd_empty),
+    .mig_cmd_full(mig_fb_cmd_full),
+    .mig_wr_clk(fb_mig_wr_clk),
+    .mig_wr_en(fb_mig_wr_en),
+    .mig_wr_mask(fb_mig_wr_mask),
+    .mig_wr_data(fb_mig_wr_data),
+    .mig_wr_full(mig_fb_wr_full),
+    .mig_wr_empty(mig_fb_wr_empty),
+    .mig_wr_count(mig_fb_wr_count),
+    .mig_wr_underrun(mig_fb_wr_underrun),
+    .mig_wr_error(mig_fb_wr_error),
+    .mig_rd_clk(fb_mig_rd_clk),
+    .mig_rd_en(fb_mig_rd_en),
+    .mig_rd_data(mig_fb_rd_data),
+    .mig_rd_full(mig_fb_rd_full),
+    .mig_rd_empty(mig_fb_rd_empty),
+    .mig_rd_count(mig_fb_rd_count),
+    .mig_rd_overflow(mig_fb_rd_overflow),
+    .mig_rd_error(mig_fb_rd_error),
+
+    // To LCDC
+    .x_i(x_lcdc_fb),
+    .y_i(y_lcdc_fb),
+    .pop_i(pop_lcdc_fb),
+    .r_o(r_fb_lcdc),
+    .g_o(g_fb_lcdc),
+    .b_o(b_fb_lcdc),
+    .ack_o(ack_fb_lcdc));
+`endif
 
 wire sd3_mig_cmd_clk;
 wire sd3_mig_cmd_en;
@@ -394,7 +461,7 @@ simple_ddr3 sd3(
     .pop_i(csr_sd3_pop),
     .data_o(sd3_csr_data),
     .ack_o(sd3_csr_ack),
-    //.busy_o(sd3_csr_busy),
+    .busy_o(sd3_csr_busy),
 
     // MIG interface
     .mig_cmd_clk(sd3_mig_cmd_clk),
@@ -514,30 +581,30 @@ ddr3 (
     .c1_p0_rd_overflow(mig_sd3_rd_overflow),
     .c1_p0_rd_error(mig_sd3_rd_error),
 
-    .c1_p1_cmd_clk(1'b0),
-    .c1_p1_cmd_en(1'b0),
-    .c1_p1_cmd_instr(3'b0),
-    .c1_p1_cmd_bl(6'b0),
-    .c1_p1_cmd_byte_addr(30'b0),
-    // .c1_p1_cmd_empty(c1_p1_cmd_empty),
-    // .c1_p1_cmd_full(c1_p1_cmd_full),
-    .c1_p1_wr_clk(1'b0),
-    .c1_p1_wr_en(1'b0),
-    .c1_p1_wr_mask(4'b0),
-    .c1_p1_wr_data(32'b0),
-    // .c1_p1_wr_full(c1_p1_wr_full),
-    // .c1_p1_wr_empty(c1_p1_wr_empty),
-    // .c1_p1_wr_count(c1_p1_wr_count),
-    // .c1_p1_wr_underrun(c1_p1_wr_underrun),
-    // .c1_p1_wr_error(c1_p1_wr_error),
-    .c1_p1_rd_clk(1'b0),
-    .c1_p1_rd_en(1'b0),
-    // .c1_p1_rd_data(c1_p1_rd_data),
-    // .c1_p1_rd_full(c1_p1_rd_full),
-    // .c1_p1_rd_empty(c1_p1_rd_empty),
-    // .c1_p1_rd_count(c1_p1_rd_count),
-    // .c1_p1_rd_overflow(c1_p1_rd_overflow),
-    // .c1_p1_rd_error(c1_p1_rd_error),
+    .c1_p1_cmd_clk(fb_mig_cmd_clk),
+    .c1_p1_cmd_en(fb_mig_cmd_en),
+    .c1_p1_cmd_instr(fb_mig_cmd_instr),
+    .c1_p1_cmd_bl(fb_mig_cmd_bl),
+    .c1_p1_cmd_byte_addr(fb_mig_cmd_byte_addr),
+    .c1_p1_cmd_empty(mig_fb_cmd_empty),
+    .c1_p1_cmd_full(mig_fb_cmd_full),
+    .c1_p1_wr_clk(fb_mig_wr_clk),
+    .c1_p1_wr_en(fb_mig_wr_en),
+    .c1_p1_wr_mask(fb_mig_wr_mask),
+    .c1_p1_wr_data(fb_mig_wr_data),
+    .c1_p1_wr_full(mig_fb_wr_full),
+    .c1_p1_wr_empty(mig_fb_wr_empty),
+    .c1_p1_wr_count(mig_fb_wr_count),
+    .c1_p1_wr_underrun(mig_fb_wr_underrun),
+    .c1_p1_wr_error(mig_fb_wr_error),
+    .c1_p1_rd_clk(fb_mig_rd_clk),
+    .c1_p1_rd_en(fb_mig_rd_en),
+    .c1_p1_rd_data(mig_fb_rd_data),
+    .c1_p1_rd_full(mig_fb_rd_full),
+    .c1_p1_rd_empty(mig_fb_rd_empty),
+    .c1_p1_rd_count(mig_fb_rd_count),
+    .c1_p1_rd_overflow(mig_fb_rd_overflow),
+    .c1_p1_rd_error(mig_fb_rd_error),
 
     .c1_p2_cmd_clk(1'b0),
     .c1_p2_cmd_en(1'b0),

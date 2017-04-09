@@ -29,6 +29,7 @@ wire csr_dram_we;
 wire csr_dram_pop;
 wire [31:0] dram_csr_data;
 wire dram_csr_ack;
+wire dram_csr_busy;
 
 wire [31:0] mig_rd_data = 32'h12345678;
 reg [6:0] mig_rd_count;
@@ -43,7 +44,7 @@ simple_ddr3 dram(
     .pop_i(csr_dram_pop),
     .data_o(dram_csr_data),
     .ack_o(dram_csr_ack),
-    // .busy_o,
+    .busy_o(dram_csr_busy),
 
     .mig_cmd_empty(1'b1),
     .mig_cmd_full(1'b0),
@@ -82,8 +83,8 @@ csr_spi uut(
     .dram0_we_o(csr_dram_we),
     .dram0_pop_o(csr_dram_pop),
     .dram0_data_i(dram_csr_data),
-    .dram0_ack_i(dram_csr_ack)
-    );
+    .dram0_ack_i(dram_csr_ack),
+    .dram0_busy_i(dram_csr_busy));
 
 task spi_cycle;
     input [7:0] data;
@@ -212,10 +213,23 @@ initial begin
     spi_cycle(8'h34);
     spi_cycle(8'h56);
     spi_cycle(8'h78); // addr ls byte
-    spi_cycle(8'hef); // data ls byte
+    spi_cycle(8'hef); // data ms byte
     spi_cycle(8'hbe);
     spi_cycle(8'had);
-    spi_cycle(8'hde); // data ms byte
+    spi_cycle(8'hde); // data ls byte
+    spi_cycle(8'hef); // data ms byte
+    spi_cycle(8'hbe);
+    spi_cycle(8'had);
+    spi_cycle(8'hde); // data ls byte
+    spi_cycle(8'hef); // data ms byte
+    spi_cycle(8'hbe);
+    spi_cycle(8'had);
+    spi_cycle(8'hde); // data ls byte
+    spi_cycle(8'hef); // data ms byte
+    spi_cycle(8'hbe);
+    spi_cycle(8'had);
+    spi_cycle(8'hde); // data ls byte
+    spi_cycle(8'h00);
     #(TCLK*3);
     $display("--- end");
     #(TCLK*3);

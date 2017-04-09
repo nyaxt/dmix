@@ -49,7 +49,8 @@ NET lcd_nclk LOC=AB4	| IOSTANDARD = LVCMOS33; # DESC=IO_L57N_2
 NET lcd_de LOC=AB11	| IOSTANDARD = LVCMOS33; # DESC=IO_L32N_GCLK28_2
 
 # ddr3 mem
-NET "clk100m_pad"  LOC=Y13 | IOSTANDARD = LVCMOS33;
+NET "clk100m_pad" LOC=Y13 | TNM_NET = "clk100m" | IOSTANDARD = LVCMOS33;
+TIMESPEC "TS_clk100m" = PERIOD "clk100m" 100.0Mhz HIGH 50%;
 
 CONFIG MCB_PERFORMANCE= EXTENDED;
 NET "ddr3/memc?_wrapper_inst/mcb_ui_top_inst/mcb_raw_wrapper_inst/selfrefresh_mcb_mode" TIG;
