@@ -16,7 +16,7 @@ DEFINE_string(prefix, "", "prefix to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hex, "", "data to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hexfile, "", "intel HEX file to send.");
 DEFINE_string(csrcmd, "",
-              "nkmd csr_spi cmd. \"[read|write] [csr|progrom] [offset]");
+              "nkmd csr_spi cmd. \"[read|write] [csr|progrom|dram0] [offset]");
 DEFINE_string(memh, "", "output SPI cmd to memh file");
 bool g_verbose;
 
@@ -264,6 +264,7 @@ void cmdDefault(DeviceHandle* devhandle) {
 enum class CSRTarget {
   CSR,
   Progrom,
+  Dram0
 };
 
 void cmdCSRCmd(DeviceHandle* devhandle) {
@@ -294,7 +295,9 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
   else MATCH_PREFIX("progrom ") {
     target = CSRTarget::Progrom;
   }
-  else {
+  else MATCH_PREFIX("dram0 ") {
+    target = CSRTarget::Dram0;
+  } else {
     throw std::runtime_error(stringPrintF(
         "Failed to find valid target in cmd: \"%s\"", cmdstr.c_str()));
   }
@@ -308,11 +311,14 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     if (!isalnum(cmdstr[j])) break;
   std::string addrStr = cmdstr.substr(i, j - i);
   int addr = ::strtol(addrStr.c_str(), nullptr, 16);
-  if (addr < 0 || addr >= 0xfffff)
+  if (addr < 0 || addr >= 0xfffffff)
     throw std::runtime_error(stringPrintF("addr %05x out of range", addr));
   if (target == CSRTarget::CSR && addr >= 0xfff)
     throw std::runtime_error(
         stringPrintF("addr %05x out of range (csr)", addr));
+  if (target == CSRTarget::Progrom && addr >= 0xfffff)
+    throw std::runtime_error(
+        stringPrintF("addr %05x out of range (progrom)", addr));
 
   std::vector<uint8_t> body;
   int len;
@@ -333,11 +339,12 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
   }
 
   if (g_verbose)
-    printf("parsed cmd: isWrite %d target %d addr %05x len %03x\n", isWrite,
+    printf("parsed cmd: isWrite %d target %d addr %07x len %03x\n", isWrite,
            target, addr, len);
 
   int wordSize;
   uint8_t targetByte = 0;
+  bool specialPrefix = false;
   switch (target) {
     case CSRTarget::CSR:
       targetByte = 0x00;
@@ -348,9 +355,15 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
       targetByte = 0x10;
       wordSize = 4;
       break;
+    case CSRTarget::Dram0:
+      targetByte = 0x00;
+      wordSize = 4;
+      specialPrefix = true;
+      break;
   }
   if (len % wordSize != 0)
     throw std::runtime_error("body len not multiple of wordSize");
+  constexpr uint8_t cmdSpecial = 0x0f;
   uint8_t cmdByteBase =
       (isWrite ? 0x80 : 0x00) | targetByte | ((addr >> 16) & 0xf);
 
@@ -374,9 +387,18 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     }
     int chunkLen = wordSize * nWord;
 
-    txdata.push_back(cmdByteBase | encodedChunkLen);
-    txdata.push_back((addr >> 8) & 0xff);
-    if (target == CSRTarget::Progrom) txdata.push_back(addr & 0xff);
+    if (specialPrefix) {
+      txdata.push_back(cmdSpecial);
+      txdata.push_back(cmdByteBase | encodedChunkLen);
+      txdata.push_back((addr >> 24) & 0xff);
+      txdata.push_back((addr >> 16) & 0xff);
+      txdata.push_back((addr >> 8) & 0xff);
+      txdata.push_back((addr >> 0) & 0xff);
+    } else {
+      txdata.push_back(cmdByteBase | encodedChunkLen);
+      txdata.push_back((addr >> 8) & 0xff);
+      if (target == CSRTarget::Progrom) txdata.push_back(addr & 0xff);
+    }
     if (isWrite) {
       for (int j = 0; j < chunkLen; ++j) {
         txdata.push_back(body[i + j]);
@@ -398,10 +420,12 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
   sleep(1);  // FIXME: remove
   std::vector<uint8_t> rxdata = devhandle->recvBulk(txdata.size());
   if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxdata).c_str());
+  size_t replyOffset = specialPrefix ? 7 : 3;
   if (!isWrite) {
+    const uint8_t* start = &rxdata[replyOffset];
     printf(
         "result: %s\n",
-        formatHex(std::vector<uint8_t>(&rxdata[3], &rxdata[3] + len)).c_str());
+        formatHex(std::vector<uint8_t>(start, start + len)).c_str());
   }
 }
 

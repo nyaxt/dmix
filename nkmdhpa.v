@@ -12,9 +12,17 @@ module nkmdhpa#(
     parameter NKMDDBG_WIDTH = 16*8,
     parameter RATE_WIDTH = NUM_SPDIF_IN*NUM_RATE,
     parameter UDATA_WIDTH = NUM_SPDIF_IN*192,
-    parameter CDATA_WIDTH = UDATA_WIDTH
+    parameter CDATA_WIDTH = UDATA_WIDTH,
+
+    parameter C1_NUM_DQ_PINS = 16, // External memory data width
+    parameter C1_MEM_ADDR_WIDTH = 13,  // External memory address width
+    parameter C1_MEM_BANKADDR_WIDTH = 3, // External memory bank address width
+    parameter C3_NUM_DQ_PINS = 16, // External memory data width
+    parameter C3_MEM_ADDR_WIDTH = 13, // External memory address width
+    parameter C3_MEM_BANKADDR_WIDTH = 3 // External memory bank address width
 )(
     input wire clk245760_pad,
+    input wire clk100m_pad,
     input wire rst,
 
     input wire spdif_i,
@@ -41,7 +49,46 @@ module nkmdhpa#(
     output wire lcd_vsync,
     output wire lcd_hsync,
     output wire lcd_nclk,
-    output wire lcd_de);
+    output wire lcd_de,
+
+    inout wire [C1_NUM_DQ_PINS-1:0] mcb1_dram_dq,
+    output wire [C1_MEM_ADDR_WIDTH-1:0] mcb1_dram_a,
+    output wire [C1_MEM_BANKADDR_WIDTH-1:0] mcb1_dram_ba,
+    output wire mcb1_dram_ras_n,
+    output wire mcb1_dram_cas_n,
+    output wire mcb1_dram_we_n,
+    output wire mcb1_dram_odt,
+    output wire mcb1_dram_reset_n,
+    output wire mcb1_dram_cke,
+    output wire mcb1_dram_dm,
+    inout wire mcb1_dram_udqs,
+    inout wire mcb1_dram_udqs_n,
+    inout wire mcb1_rzq,
+    inout wire mcb1_zio,
+    output wire mcb1_dram_udm,
+    inout wire mcb1_dram_dqs,
+    inout wire mcb1_dram_dqs_n,
+    output wire mcb1_dram_ck,
+    output wire mcb1_dram_ck_n,
+    inout wire [C3_NUM_DQ_PINS-1:0] mcb3_dram_dq,
+    output wire [C3_MEM_ADDR_WIDTH-1:0] mcb3_dram_a,
+    output wire [C3_MEM_BANKADDR_WIDTH-1:0] mcb3_dram_ba,
+    output wire mcb3_dram_ras_n,
+    output wire mcb3_dram_cas_n,
+    output wire mcb3_dram_we_n,
+    output wire mcb3_dram_odt,
+    output wire mcb3_dram_reset_n,
+    output wire mcb3_dram_cke,
+    output wire mcb3_dram_dm,
+    inout wire mcb3_dram_udqs,
+    inout wire mcb3_dram_udqs_n,
+    inout wire mcb3_rzq,
+    inout wire mcb3_zio,
+    output wire mcb3_dram_udm,
+    inout wire mcb3_dram_dqs,
+    inout wire mcb3_dram_dqs_n,
+    output wire mcb3_dram_ck,
+    output wire mcb3_dram_ck_n);
 
 wire clk245760;
 wire clk491520;
@@ -87,20 +134,23 @@ ODDR2 #(
         .S(1'b0));
 `endif
 
-reg [4:0] rst_delay_counter;
+reg [5:0] rst_delay_counter;
 always @(posedge clk245760) begin
     if (rst) begin
         rst_delay_counter <= 0;
-    end else if(rst_delay_counter != 5'h1f) begin
+    end else if(rst_delay_counter != 6'h3f) begin
         rst_delay_counter <= rst_delay_counter + 1;
     end
 end
 
 reg rst_delayed_ff;
+reg rst_delayed2_ff;
 always @(posedge clk245760) begin
-    rst_delayed_ff <= rst_delay_counter == 5'h1e;
+    rst_delayed_ff <= rst_delay_counter == 6'h1f;
+    rst_delayed2_ff <= rst_delay_counter == 6'h3e;
 end
-wire rst_ip = rst_delayed_ff;
+wire rst_dram = rst_delayed_ff;
+wire rst_ip = rst_delayed2_ff;
 
 // csr wires
 // - csr <-> mixer
@@ -116,6 +166,14 @@ wire [(NKMDDBG_WIDTH-1):0] csr_nkmd_dbgin;
 wire [31:0] csr_nkmd_prog_addr;
 wire [31:0] csr_nkmd_prog_data;
 wire csr_nkmd_prog_ack;
+// - csr <-> sd3
+wire [27:0] csr_sd3_addr;
+wire [31:0] csr_sd3_data;
+wire csr_sd3_we;
+wire csr_sd3_pop;
+wire [31:0] sd3_csr_data;
+wire sd3_csr_ack;
+// wire sd3_csr_busy;
 
 csr_spi #(
     .NUM_CH(NUM_CH),
@@ -141,7 +199,15 @@ csr_spi #(
     // nkmd prom
     .prom_addr_o(csr_nkmd_prog_addr),
     .prom_data_o(csr_nkmd_prog_data),
-    .prom_ack_o(csr_nkmd_prog_ack));
+    .prom_ack_o(csr_nkmd_prog_ack),
+
+    // sd3
+    .dram0_addr_o(csr_sd3_addr),
+    .dram0_data_o(csr_sd3_data),
+    .dram0_we_o(csr_sd3_we),
+    .dram0_pop_o(csr_sd3_pop),
+    .dram0_data_i(sd3_csr_data),
+    .dram0_ack_i(sd3_csr_ack));
 
 assign led[0] = rst_ip;
 assign led[1] = csr_miso;
@@ -187,7 +253,7 @@ async_fifo #(.DATA_WIDTH(24 + 1)) fifo(
     .rclk(clk491520),
     .rrst(rst_ip),
     .data_o({dai_data_o_491520, dai_lrck_o_491520}),
-    .pop_i(fifo_pop_ff), 
+    .pop_i(fifo_pop_ff),
     .empty_o(fifo_empty_o));
 
 always @(posedge clk491520) begin
@@ -293,7 +359,367 @@ patterngen patterngen(
     .b_o(b_ptn_lcdc),
     .ack_o(ack_ptn_lcdc));
 
-// assign lcd_de = 1'b1;
+wire sd3_mig_cmd_clk;
+wire sd3_mig_cmd_en;
+wire [2:0] sd3_mig_cmd_instr;
+wire [5:0] sd3_mig_cmd_bl;
+wire [29:0] sd3_mig_cmd_byte_addr;
+wire mig_sd3_cmd_empty;
+wire mig_sd3_cmd_full;
+wire sd3_mig_wr_clk;
+wire sd3_mig_wr_en;
+wire [3:0] sd3_mig_wr_mask;
+wire [31:0] sd3_mig_wr_data;
+wire mig_sd3_wr_full;
+wire mig_sd3_wr_empty;
+wire [6:0] mig_sd3_wr_count;
+wire mig_sd3_wr_underrun;
+wire mig_sd3_wr_error;
+wire sd3_mig_rd_clk;
+wire sd3_mig_rd_en;
+wire [31:0] mig_sd3_rd_data;
+wire mig_sd3_rd_full;
+wire mig_sd3_rd_empty;
+wire [6:0] mig_sd3_rd_count;
+wire mig_sd3_rd_overflow;
+wire mig_sd3_rd_error;
+
+simple_ddr3 sd3(
+    .clk(clk491520),
+    .rst(rst_ip),
+
+    .addr_i(csr_sd3_addr),
+    .data_i(csr_sd3_data),
+    .we_i(csr_sd3_we),
+    .pop_i(csr_sd3_pop),
+    .data_o(sd3_csr_data),
+    .ack_o(sd3_csr_ack),
+    //.busy_o(sd3_csr_busy),
+
+    // MIG interface
+    .mig_cmd_clk(sd3_mig_cmd_clk),
+    .mig_cmd_en(sd3_mig_cmd_en),
+    .mig_cmd_instr(sd3_mig_cmd_instr),
+    .mig_cmd_bl(sd3_mig_cmd_bl),
+    .mig_cmd_byte_addr(sd3_mig_cmd_byte_addr),
+    .mig_cmd_empty(mig_sd3_cmd_empty),
+    .mig_cmd_full(mig_sd3_cmd_full),
+    .mig_wr_clk(sd3_mig_wr_clk),
+    .mig_wr_en(sd3_mig_wr_en),
+    .mig_wr_mask(sd3_mig_wr_mask),
+    .mig_wr_data(sd3_mig_wr_data),
+    .mig_wr_full(mig_sd3_wr_full),
+    .mig_wr_empty(mig_sd3_wr_empty),
+    .mig_wr_count(mig_sd3_wr_count),
+    .mig_wr_underrun(mig_sd3_wr_underrun),
+    .mig_wr_error(mig_sd3_wr_error),
+    .mig_rd_clk(sd3_mig_rd_clk),
+    .mig_rd_en(sd3_mig_rd_en),
+    .mig_rd_data(mig_sd3_rd_data),
+    .mig_rd_full(mig_sd3_rd_full),
+    .mig_rd_empty(mig_sd3_rd_empty),
+    .mig_rd_count(mig_sd3_rd_count),
+    .mig_rd_overflow(mig_sd3_rd_overflow),
+    .mig_rd_error(mig_sd3_rd_error));
+
+wire dram_sys_clk;
+
+`ifndef NO_DRAM
+dcm_dram dcm_dram(
+    .clk100m(clk100m_pad),
+	 .clk_dram(dram_sys_clk));
+
+nkmd_ddr3 #(
+    .C1_P0_MASK_SIZE(4),
+    .C1_P0_DATA_PORT_SIZE(32),
+    .C1_P1_MASK_SIZE(4),
+    .C1_P1_DATA_PORT_SIZE(32),
+    .DEBUG_EN(0),
+    .C1_MEMCLK_PERIOD(3000),
+    .C1_CALIB_SOFT_IP("TRUE"),
+    .C1_SIMULATION("FALSE"),
+    .C1_RST_ACT_LOW(0),
+    .C1_INPUT_CLK_TYPE("SINGLE_ENDED"),
+    .C1_MEM_ADDR_ORDER("ROW_BANK_COLUMN"),
+    .C1_NUM_DQ_PINS(16),
+    .C1_MEM_ADDR_WIDTH(13),
+    .C1_MEM_BANKADDR_WIDTH(3),
+    .C3_P0_MASK_SIZE(4),
+    .C3_P0_DATA_PORT_SIZE(32),
+    .C3_P1_MASK_SIZE(4),
+    .C3_P1_DATA_PORT_SIZE(32),
+    .C3_MEMCLK_PERIOD(3000),
+    .C3_CALIB_SOFT_IP("TRUE"),
+    .C3_SIMULATION("FALSE"),
+    .C3_RST_ACT_LOW(0),
+    .C3_INPUT_CLK_TYPE("SINGLE_ENDED"),
+    .C3_MEM_ADDR_ORDER("ROW_BANK_COLUMN"),
+    .C3_NUM_DQ_PINS(16),
+    .C3_MEM_ADDR_WIDTH(13),
+    .C3_MEM_BANKADDR_WIDTH(3)
+)
+ddr3 (
+    .c1_sys_clk(dram_sys_clk),
+    .c1_sys_rst_i(rst_dram),
+
+    .mcb1_dram_dq(mcb1_dram_dq),
+    .mcb1_dram_a(mcb1_dram_a),
+    .mcb1_dram_ba(mcb1_dram_ba),
+    .mcb1_dram_ras_n(mcb1_dram_ras_n),
+    .mcb1_dram_cas_n(mcb1_dram_cas_n),
+    .mcb1_dram_we_n(mcb1_dram_we_n),
+    .mcb1_dram_odt(mcb1_dram_odt),
+    .mcb1_dram_cke(mcb1_dram_cke),
+    .mcb1_dram_ck(mcb1_dram_ck),
+    .mcb1_dram_ck_n(mcb1_dram_ck_n),
+    .mcb1_dram_dqs(mcb1_dram_dqs),
+    .mcb1_dram_dqs_n(mcb1_dram_dqs_n),
+    .mcb1_dram_udqs(mcb1_dram_udqs), // for X16 parts
+    .mcb1_dram_udqs_n(mcb1_dram_udqs_n), // for X16 parts
+    .mcb1_dram_udm(mcb1_dram_udm), // for X16 parts
+    .mcb1_dram_dm(mcb1_dram_dm),
+    .mcb1_dram_reset_n(mcb1_dram_reset_n),
+
+    /*
+    .c1_clk0(c1_clk0),
+    .c1_rst0(c1_rst0),
+    .c1_calib_done(c1_calib_done),
+    */
+
+    .mcb1_rzq(mcb1_rzq),
+    .mcb1_zio(mcb1_zio),
+
+    .c1_p0_cmd_clk(sd3_mig_cmd_clk),
+    .c1_p0_cmd_en(sd3_mig_cmd_en),
+    .c1_p0_cmd_instr(sd3_mig_cmd_instr),
+    .c1_p0_cmd_bl(sd3_mig_cmd_bl),
+    .c1_p0_cmd_byte_addr(sd3_mig_cmd_byte_addr),
+    .c1_p0_cmd_empty(mig_sd3_cmd_empty),
+    .c1_p0_cmd_full(mig_sd3_cmd_full),
+    .c1_p0_wr_clk(sd3_mig_wr_clk),
+    .c1_p0_wr_en(sd3_mig_wr_en),
+    .c1_p0_wr_mask(sd3_mig_wr_mask),
+    .c1_p0_wr_data(sd3_mig_wr_data),
+    .c1_p0_wr_full(mig_sd3_wr_full),
+    .c1_p0_wr_empty(mig_sd3_wr_empty),
+    .c1_p0_wr_count(mig_sd3_wr_count),
+    .c1_p0_wr_underrun(mig_sd3_wr_underrun),
+    .c1_p0_wr_error(mig_sd3_wr_error),
+    .c1_p0_rd_clk(sd3_mig_rd_clk),
+    .c1_p0_rd_en(sd3_mig_rd_en),
+    .c1_p0_rd_data(mig_sd3_rd_data),
+    .c1_p0_rd_full(mig_sd3_rd_full),
+    .c1_p0_rd_empty(mig_sd3_rd_empty),
+    .c1_p0_rd_count(mig_sd3_rd_count),
+    .c1_p0_rd_overflow(mig_sd3_rd_overflow),
+    .c1_p0_rd_error(mig_sd3_rd_error),
+
+    .c1_p1_cmd_clk(1'b0),
+    .c1_p1_cmd_en(1'b0),
+    .c1_p1_cmd_instr(3'b0),
+    .c1_p1_cmd_bl(6'b0),
+    .c1_p1_cmd_byte_addr(30'b0),
+    // .c1_p1_cmd_empty(c1_p1_cmd_empty),
+    // .c1_p1_cmd_full(c1_p1_cmd_full),
+    .c1_p1_wr_clk(1'b0),
+    .c1_p1_wr_en(1'b0),
+    .c1_p1_wr_mask(4'b0),
+    .c1_p1_wr_data(32'b0),
+    // .c1_p1_wr_full(c1_p1_wr_full),
+    // .c1_p1_wr_empty(c1_p1_wr_empty),
+    // .c1_p1_wr_count(c1_p1_wr_count),
+    // .c1_p1_wr_underrun(c1_p1_wr_underrun),
+    // .c1_p1_wr_error(c1_p1_wr_error),
+    .c1_p1_rd_clk(1'b0),
+    .c1_p1_rd_en(1'b0),
+    // .c1_p1_rd_data(c1_p1_rd_data),
+    // .c1_p1_rd_full(c1_p1_rd_full),
+    // .c1_p1_rd_empty(c1_p1_rd_empty),
+    // .c1_p1_rd_count(c1_p1_rd_count),
+    // .c1_p1_rd_overflow(c1_p1_rd_overflow),
+    // .c1_p1_rd_error(c1_p1_rd_error),
+
+    .c1_p2_cmd_clk(1'b0),
+    .c1_p2_cmd_en(1'b0),
+    .c1_p2_cmd_instr(3'b0),
+    .c1_p2_cmd_bl(6'b0),
+    .c1_p2_cmd_byte_addr(30'b0),
+    // .c1_p2_cmd_empty(c1_p2_cmd_empty),
+    // .c1_p2_cmd_full(c1_p2_cmd_full),
+    .c1_p2_wr_clk(1'b0),
+    .c1_p2_wr_en(1'b0),
+    .c1_p2_wr_mask(4'b0),
+    .c1_p2_wr_data(32'b0),
+    // .c1_p2_wr_full(c1_p2_wr_full),
+    // .c1_p2_wr_empty(c1_p2_wr_empty),
+    // .c1_p2_wr_count(c1_p2_wr_count),
+    // .c1_p2_wr_underrun(c1_p2_wr_underrun),
+    // .c1_p2_wr_error(c1_p2_wr_error),
+    .c1_p2_rd_clk(1'b0),
+    .c1_p2_rd_en(1'b0),
+    // .c1_p2_rd_data(c1_p2_rd_data),
+    // .c1_p2_rd_full(c1_p2_rd_full),
+    // .c1_p2_rd_empty(c1_p2_rd_empty),
+    // .c1_p2_rd_count(c1_p2_rd_count),
+    // .c1_p2_rd_overflow(c1_p2_rd_overflow),
+    // .c1_p2_rd_error(c1_p2_rd_error),
+
+    .c1_p3_cmd_clk(1'b0),
+    .c1_p3_cmd_en(1'b0),
+    .c1_p3_cmd_instr(3'b0),
+    .c1_p3_cmd_bl(6'b0),
+    .c1_p3_cmd_byte_addr(30'b0),
+    // .c1_p3_cmd_empty(c1_p3_cmd_empty),
+    // .c1_p3_cmd_full(c1_p3_cmd_full),
+    .c1_p3_wr_clk(1'b0),
+    .c1_p3_wr_en(1'b0),
+    .c1_p3_wr_mask(4'b0),
+    .c1_p3_wr_data(32'b0),
+    // .c1_p3_wr_full(c1_p3_wr_full),
+    // .c1_p3_wr_empty(c1_p3_wr_empty),
+    // .c1_p3_wr_count(c1_p3_wr_count),
+    // .c1_p3_wr_underrun(c1_p3_wr_underrun),
+    // .c1_p3_wr_error(c1_p3_wr_error),
+    .c1_p3_rd_clk(1'b0),
+    .c1_p3_rd_en(1'b0),
+    // .c1_p3_rd_data(c1_p3_rd_data),
+    // .c1_p3_rd_full(c1_p3_rd_full),
+    // .c1_p3_rd_empty(c1_p3_rd_empty),
+    // .c1_p3_rd_count(c1_p3_rd_count),
+    // .c1_p3_rd_overflow(c1_p3_rd_overflow),
+    // .c1_p3_rd_error(c1_p3_rd_error),
+
+    .c3_sys_clk(dram_sys_clk),
+    .c3_sys_rst_i(rst_dram),
+
+    .mcb3_dram_dq(mcb3_dram_dq),
+    .mcb3_dram_a(mcb3_dram_a),
+    .mcb3_dram_ba(mcb3_dram_ba),
+    .mcb3_dram_ras_n(mcb3_dram_ras_n),
+    .mcb3_dram_cas_n(mcb3_dram_cas_n),
+    .mcb3_dram_we_n(mcb3_dram_we_n),
+    .mcb3_dram_odt(mcb3_dram_odt),
+    .mcb3_dram_cke(mcb3_dram_cke),
+    .mcb3_dram_ck(mcb3_dram_ck),
+    .mcb3_dram_ck_n(mcb3_dram_ck_n),
+    .mcb3_dram_dqs(mcb3_dram_dqs),
+    .mcb3_dram_dqs_n(mcb3_dram_dqs_n),
+    .mcb3_dram_udqs(mcb3_dram_udqs),    // for X16 parts
+    .mcb3_dram_udqs_n(mcb3_dram_udqs_n),  // for X16 parts
+    .mcb3_dram_udm(mcb3_dram_udm),     // for X16 parts
+    .mcb3_dram_dm(mcb3_dram_dm),
+    .mcb3_dram_reset_n(mcb3_dram_reset_n),
+
+    /*
+    .c3_clk0(c3_clk0),
+    .c3_rst0(c3_rst0),
+    .c3_calib_done(c3_calib_done),
+    */
+    .mcb3_rzq(mcb3_rzq),
+    .mcb3_zio(mcb3_zio),
+
+    .c3_p0_cmd_clk(1'b0),
+    .c3_p0_cmd_en(1'b0),
+    .c3_p0_cmd_instr(3'b0),
+    .c3_p0_cmd_bl(6'b0),
+    .c3_p0_cmd_byte_addr(30'b0),
+    // .c3_p0_cmd_empty(c3_p0_cmd_empty),
+    // .c3_p0_cmd_full(c3_p0_cmd_full),
+    .c3_p0_wr_clk(1'b0),
+    .c3_p0_wr_en(1'b0),
+    .c3_p0_wr_mask(4'b0),
+    .c3_p0_wr_data(32'b0),
+    // .c3_p0_wr_full(c3_p0_wr_full),
+    // .c3_p0_wr_empty(c3_p0_wr_empty),
+    // .c3_p0_wr_count(c3_p0_wr_count),
+    // .c3_p0_wr_underrun(c3_p0_wr_underrun),
+    // .c3_p0_wr_error(c3_p0_wr_error),
+    .c3_p0_rd_clk(1'b0),
+    .c3_p0_rd_en(1'b0),
+    // .c3_p0_rd_data(c3_p0_rd_data),
+    // .c3_p0_rd_full(c3_p0_rd_full),
+    // .c3_p0_rd_empty(c3_p0_rd_empty),
+    // .c3_p0_rd_count(c3_p0_rd_count),
+    // .c3_p0_rd_overflow(c3_p0_rd_overflow),
+    // .c3_p0_rd_error(c3_p0_rd_error),
+
+    .c3_p1_cmd_clk(1'b0),
+    .c3_p1_cmd_en(1'b0),
+    .c3_p1_cmd_instr(3'b0),
+    .c3_p1_cmd_bl(6'b0),
+    .c3_p1_cmd_byte_addr(30'b0),
+    // .c3_p1_cmd_empty(c3_p1_cmd_empty),
+    // .c3_p1_cmd_full(c3_p1_cmd_full),
+    .c3_p1_wr_clk(1'b0),
+    .c3_p1_wr_en(1'b0),
+    .c3_p1_wr_mask(4'b0),
+    .c3_p1_wr_data(32'b0),
+    // .c3_p1_wr_full(c3_p1_wr_full),
+    // .c3_p1_wr_empty(c3_p1_wr_empty),
+    // .c3_p1_wr_count(c3_p1_wr_count),
+    // .c3_p1_wr_underrun(c3_p1_wr_underrun),
+    // .c3_p1_wr_error(c3_p1_wr_error),
+    .c3_p1_rd_clk(1'b0),
+    .c3_p1_rd_en(1'b0),
+    // .c3_p1_rd_data(c3_p1_rd_data),
+    // .c3_p1_rd_full(c3_p1_rd_full),
+    // .c3_p1_rd_empty(c3_p1_rd_empty),
+    // .c3_p1_rd_count(c3_p1_rd_count),
+    // .c3_p1_rd_overflow(c3_p1_rd_overflow),
+    // .c3_p1_rd_error(c3_p1_rd_error),
+
+    .c3_p2_cmd_clk(1'b0),
+    .c3_p2_cmd_en(1'b0),
+    .c3_p2_cmd_instr(3'b0),
+    .c3_p2_cmd_bl(6'b0),
+    .c3_p2_cmd_byte_addr(30'b0),
+    // .c3_p2_cmd_empty(c3_p2_cmd_empty),
+    // .c3_p2_cmd_full(c3_p2_cmd_full),
+    .c3_p2_wr_clk(1'b0),
+    .c3_p2_wr_en(1'b0),
+    .c3_p2_wr_mask(4'b0),
+    .c3_p2_wr_data(32'b0),
+    // .c3_p2_wr_full(c3_p2_wr_full),
+    // .c3_p2_wr_empty(c3_p2_wr_empty),
+    // .c3_p2_wr_count(c3_p2_wr_count),
+    // .c3_p2_wr_underrun(c3_p2_wr_underrun),
+    // .c3_p2_wr_error(c3_p2_wr_error),
+    .c3_p2_rd_clk(1'b0),
+    .c3_p2_rd_en(1'b0),
+    // .c3_p2_rd_data(c3_p2_rd_data),
+    // .c3_p2_rd_full(c3_p2_rd_full),
+    // .c3_p2_rd_empty(c3_p2_rd_empty),
+    // .c3_p2_rd_count(c3_p2_rd_count),
+    // .c3_p2_rd_overflow(c3_p2_rd_overflow),
+    // .c3_p2_rd_error(c3_p2_rd_error),
+
+    .c3_p3_cmd_clk(1'b0),
+    .c3_p3_cmd_en(1'b0),
+    .c3_p3_cmd_instr(3'b0),
+    .c3_p3_cmd_bl(6'b0),
+    .c3_p3_cmd_byte_addr(30'b0),
+    // .c3_p3_cmd_empty(c3_p3_cmd_empty),
+    // .c3_p3_cmd_full(c3_p3_cmd_full),
+    .c3_p3_wr_clk(1'b0),
+    .c3_p3_wr_en(1'b0),
+    .c3_p3_wr_mask(4'b0),
+    .c3_p3_wr_data(32'b0),
+    // .c3_p3_wr_full(c3_p3_wr_full),
+    // .c3_p3_wr_empty(c3_p3_wr_empty),
+    // .c3_p3_wr_count(c3_p3_wr_count),
+    // .c3_p3_wr_underrun(c3_p3_wr_underrun),
+    // .c3_p3_wr_error(c3_p3_wr_error),
+    .c3_p3_rd_clk(1'b0),
+    .c3_p3_rd_en(1'b0)//,
+    // .c3_p3_rd_data(c3_p3_rd_data),
+    // .c3_p3_rd_full(c3_p3_rd_full),
+    // .c3_p3_rd_empty(c3_p3_rd_empty),
+    // .c3_p3_rd_count(c3_p3_rd_count),
+    // .c3_p3_rd_overflow(c3_p3_rd_overflow),
+    // .c3_p3_rd_error(c3_p3_rd_error),
+    );
+`endif
+// NO_DRAM
 
 endmodule
 `default_nettype wire

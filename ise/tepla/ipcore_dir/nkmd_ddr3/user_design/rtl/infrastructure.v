@@ -129,6 +129,8 @@ module infrastructure #
   assign clk0        = clk0_bufg;
   assign pll_lock    = bufpll_mcb_locked;
 
+  assign sys_clk_ibufg = sys_clk;
+/*
   generate
     if (C_INPUT_CLK_TYPE == "DIFFERENTIAL") begin: diff_input_clk
 
@@ -160,6 +162,7 @@ module infrastructure #
            );
    end
   endgenerate
+  */
 
   //***************************************************************************
   // Global clock generation and distribution

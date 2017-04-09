@@ -118,20 +118,20 @@ wire csr_ack_i;
 wire [7:0] csr_data_o;
 
 reg [15:0] state_ff;
-parameter ST_INIT = 0;
-parameter ST_SPECIAL = 1;
-parameter ST_PENDING_CSR_ADDR = 2;
-parameter ST_PENDING_CSR_DATA = 3;
-parameter ST_RESPOND_CSR_DATA = 4;
-parameter ST_PENDING_NKMDPROM_ADDR_MID = 5;
-parameter ST_PENDING_NKMDPROM_ADDR_LOW = 6;
-parameter ST_PENDING_NKMDPROM_DATA = 7;
-parameter ST_WRITING_NKMDPROM_DATA = 8;
-parameter ST_SP_PENDING_ADDR = 9;
-parameter ST_SP_READ_DATA = 10;
-parameter ST_SP_READ_WAIT_ACK = 11;
-parameter ST_SP_PENDING_DATA = 12;
-parameter ST_SP_WRITE_DATA = 13;
+localparam ST_INIT = 0;
+localparam ST_SPECIAL = 1;
+localparam ST_PENDING_CSR_ADDR = 2;
+localparam ST_PENDING_CSR_DATA = 3;
+localparam ST_RESPOND_CSR_DATA = 4;
+localparam ST_PENDING_NKMDPROM_ADDR_MID = 5;
+localparam ST_PENDING_NKMDPROM_ADDR_LOW = 6;
+localparam ST_PENDING_NKMDPROM_DATA = 7;
+localparam ST_WRITING_NKMDPROM_DATA = 8;
+localparam ST_SP_PENDING_ADDR = 9;
+localparam ST_SP_READ_DATA = 10;
+localparam ST_SP_READ_WAIT_ACK = 11;
+localparam ST_SP_PENDING_DATA = 12;
+localparam ST_SP_WRITE_DATA = 13;
 reg [1:0] addr_offset_ff; // For 32bit addrs, this reg will keep which sp_addr_ff octet needs to be filled in next
 reg [1:0] data_offset_ff; // For 32bit targets, this reg will keep which wdata_ff octet needs to be filled in next
 

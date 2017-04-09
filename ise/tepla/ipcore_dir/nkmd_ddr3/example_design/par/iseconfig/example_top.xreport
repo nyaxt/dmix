@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <report-views version="2.0" >
  <header>
-  <DateModified>2016-12-10T14:28:30</DateModified>
+  <DateModified>2017-04-09T19:46:19</DateModified>
   <ModuleName>example_top</ModuleName>
   <SummaryTimeStamp>2016-12-08T17:07:39</SummaryTimeStamp>
   <SavedFilePath>/home/kouhei/dmix/ise/tepla/ipcore_dir/nkmd_ddr3/example_design/par/iseconfig/example_top.xreport</SavedFilePath>
