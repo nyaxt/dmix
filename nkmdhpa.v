@@ -151,6 +151,7 @@ always @(posedge clk245760) begin
 end
 wire rst_dram = rst_delayed_ff;
 wire rst_ip = rst_delayed2_ff;
+wire mig_ready; // FIXME: c3?
 
 // csr wires
 // - csr <-> mixer
@@ -391,6 +392,7 @@ ddr3_fb ddr3_fb(
     .rst(rst_ip),
 
     // MIG interface
+    .mig_ready_i(mig_ready),
     .mig_cmd_clk(fb_mig_cmd_clk),
     .mig_cmd_en(fb_mig_cmd_en),
     .mig_cmd_instr(fb_mig_cmd_instr),
@@ -550,8 +552,8 @@ ddr3 (
     /*
     .c1_clk0(c1_clk0),
     .c1_rst0(c1_rst0),
-    .c1_calib_done(c1_calib_done),
     */
+    .c1_calib_done(mig_ready),
 
     .mcb1_rzq(mcb1_rzq),
     .mcb1_zio(mcb1_zio),

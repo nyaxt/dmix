@@ -10,6 +10,7 @@ always #(TCLK/2) clk = ~clk;
 
 reg rst;
 
+wire mig_ready = 1'b1;
 wire [31:0] mig_rd_data = 32'h12345678;
 reg [6:0] mig_rd_count;
 
@@ -41,6 +42,7 @@ ddr3_fb uut(
     .clk(clk),
     .rst(rst),
 
+    .mig_ready_i(mig_ready),
     .mig_cmd_empty(1'b1),
     .mig_cmd_full(1'b0),
     .mig_wr_full(1'b1),

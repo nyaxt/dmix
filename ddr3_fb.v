@@ -4,6 +4,7 @@ module ddr3_fb(
     input wire rst,
 
     // MIG interface
+    input wire mig_ready_i,
     output wire mig_cmd_clk,
     output wire mig_cmd_en,
     output wire [2:0] mig_cmd_instr,
@@ -74,7 +75,7 @@ always @(posedge clk) begin
     end else begin
         case (state_ff)
             ST_INIT: begin
-                if (pop_i == 1'b1 && x_i[2:0] == 3'h0) begin
+                if (mig_ready_i && pop_i == 1'b1 && x_i[2:0] == 3'h0) begin
                     if (in_hsync_i == 1'b1) begin
                         prefetch_x_ff <= 9'h000;
                         prefetch_xzero_done_ff <= 1'b1;
@@ -117,7 +118,7 @@ end
 assign mig_cmd_clk = clk;
 assign mig_cmd_en = (state_ff == ST_EMIT_CMD) ? 1'b1 : 1'b0;
 assign mig_cmd_instr = 3'b001;
-assign mig_cmd_bl = 6'h08;
+assign mig_cmd_bl = 6'h07; // 7 means burst len 8
 assign mig_cmd_byte_addr[29:0] = {12'h000, prefetch_y_ff, prefetch_x_ff, 2'b00};
 // FIXME: wait until mig_cmd_empty or !mig_cmd_full?
 
@@ -148,8 +149,8 @@ always @(posedge clk) begin
     end else begin
         if (pop_i) begin
             r_ff <= r_cache_mem[cache_mem_rd_addr];
-            g_ff <= lcdout_side_ff ? 6'h3f : 6'h00; //g_cache_mem[cache_mem_rd_addr];
-            b_ff <= 6'b0; //b_cache_mem[cache_mem_rd_addr];
+            g_ff <= g_cache_mem[cache_mem_rd_addr];
+            b_ff <= b_cache_mem[cache_mem_rd_addr];
             ack_ff <= 1'b1;
         end else begin
             ack_ff <= 1'b0;
