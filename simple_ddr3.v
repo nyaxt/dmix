@@ -101,7 +101,7 @@ assign mig_cmd_clk = clk;
 assign mig_cmd_en = (state_ff == ST_EMIT_RD_CMD || state_ff == ST_EMIT_WR_CMD) ? 1'b1 : 1'b0;
 assign mig_cmd_instr = (state_ff == ST_EMIT_RD_CMD) ? 3'b001 : 3'b010;
 assign mig_cmd_bl = 6'b0;
-assign mig_cmd_byte_addr[27:0] = {addr_ff, 2'b00};
+assign mig_cmd_byte_addr[29:0] = {addr_ff, 2'b00};
 // FIXME: wait until mig_cmd_empty or !mig_cmd_full?
 
 assign mig_wr_clk = clk;
