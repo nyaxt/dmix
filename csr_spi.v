@@ -351,7 +351,7 @@ always @(posedge clk) begin
             ST_SP_WRITE_DATA: begin
                 data_ready_ff <= 1'b0;
 
-                addr_ff <= addr_ff + 1;
+                sp_addr_ff <= sp_addr_ff + 1;
                 if (nrep_ff != 8'h01) begin
                     nrep_ff <= nrep_ff - 1;
                     state_ff <= ST_SP_WAIT_READY_TO_READ_DATA;

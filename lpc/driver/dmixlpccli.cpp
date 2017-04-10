@@ -154,7 +154,7 @@ class USBDeviceHandle : public DeviceHandle, noncopyable {
   bool claimed_ = false;
   bool fetched_descriptor_ = false;
   libusb_device_descriptor descriptor_;
-  int timeout_ = 100;
+  int timeout_ = 1000;
 };
 
 void USBDeviceHandle::sendBulk(const uint8_t* data, size_t len) {
@@ -266,6 +266,14 @@ enum class CSRTarget { CSR, Progrom, Dram0 };
 
 class CSRCommand {
  public:
+  CSRCommand() = default;
+  CSRCommand(CSRTarget target, int addr, const std::vector<uint8_t>& body)
+    : is_write_(true)
+    , target_(target)
+    , addr_(addr)
+    , body_(body)
+    , len_(body.size()) {}
+
   static CSRCommand parseFlags();
 
   const bool is_write() const { return is_write_; }
@@ -387,9 +395,7 @@ CSRCommand CSRCommand::parseFlags() {
   return ret;
 }
 
-void cmdCSRCmd(DeviceHandle* devhandle) {
-  auto csrcmd = CSRCommand::parseFlags();
-
+void cmdCSRCmd(DeviceHandle* devhandle, const CSRCommand& csrcmd) {
   int wordSize = csrcmd.wordSize();
   constexpr uint8_t cmdSpecial = 0x0f;
   uint8_t cmdByteBase = (csrcmd.is_write() ? 0x80 : 0x00) | csrcmd.targetByte();
@@ -492,12 +498,11 @@ int main(int argc, char* argv[]) {
 
     if (FLAGS_fbimg != "")
       submitImage(FLAGS_fbimg,
-                  [](int offset, const std::vector<uint8_t>& data) {
-                    printf("addr %7x", offset);
-                    puts(formatHex(data).c_str());
+                  [&devhandle](int offset, const std::vector<uint8_t>& data) {
+                    cmdCSRCmd(devhandle.get(), CSRCommand(CSRTarget::Dram0, offset, data));
                   });
     else if (FLAGS_csrcmd != "")
-      cmdCSRCmd(devhandle.get());
+      cmdCSRCmd(devhandle.get(), CSRCommand::parseFlags());
     else
       cmdDefault(devhandle.get());
   } catch (std::exception& e) {
