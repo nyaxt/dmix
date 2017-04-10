@@ -254,21 +254,58 @@ void cmdDefault(DeviceHandle* devhandle) {
          formatHex(txdata).c_str());
 
   devhandle->sendBulk(txdata);
-  sleep(1);
   auto rxdata = devhandle->recvBulk(4096);
-  ;
+
   printf("rx hex len: %zu data: %s\n", rxdata.size(),
          formatHex(rxdata).c_str());
 }
 
-enum class CSRTarget {
-  CSR,
-  Progrom,
-  Dram0
+enum class CSRTarget { CSR, Progrom, Dram0 };
+
+class CSRCommand {
+ public:
+  static CSRCommand parseFlags();
+
+  const bool is_write() const { return is_write_; }
+  CSRTarget target() const { return target_; }
+  int addr() const { return addr_; }
+  const std::vector<uint8_t>& body() const { return body_; }
+  int len() const { return len_; }
+
+  uint8_t targetByte() const {
+    switch (target()) {
+      case CSRTarget::CSR:
+        return 0x00;
+      case CSRTarget::Progrom:
+        return 0x10;
+      case CSRTarget::Dram0:
+        return 0x00;
+    }
+  }
+
+  int wordSize() const {
+    switch (target()) {
+      case CSRTarget::CSR:
+        return 1;
+      case CSRTarget::Progrom:
+        return 4;
+      case CSRTarget::Dram0:
+        return 4;
+    }
+  }
+
+ private:
+  bool is_write_ = false;
+  CSRTarget target_;
+  int addr_;
+  std::vector<uint8_t> body_;
+  int len_;
 };
 
-void cmdCSRCmd(DeviceHandle* devhandle) {
-  std::string cmdstr = FLAGS_csrcmd;
+CSRCommand CSRCommand::parseFlags() {
+  const auto& cmdstr = FLAGS_csrcmd;
+  CSRCommand ret;
+
   int i = 0;
   for (; i < cmdstr.size(); ++i)
     if (!isspace(cmdstr[i])) break;
@@ -280,24 +317,24 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
         true;                                              \
       }))
 
-  bool isWrite = false;
+  ret.is_write_ = false;
   MATCH_PREFIX("read ") {}
   else MATCH_PREFIX("write ") {
-    isWrite = true;
+    ret.is_write_ = true;
   }
   else {
     throw std::runtime_error(stringPrintF(
         "Failed to find read/write in cmd: \"%s\"", cmdstr.c_str()));
   }
 
-  CSRTarget target;
-  MATCH_PREFIX("csr ") { target = CSRTarget::CSR; }
+  MATCH_PREFIX("csr ") { ret.target_ = CSRTarget::CSR; }
   else MATCH_PREFIX("progrom ") {
-    target = CSRTarget::Progrom;
+    ret.target_ = CSRTarget::Progrom;
   }
   else MATCH_PREFIX("dram0 ") {
-    target = CSRTarget::Dram0;
-  } else {
+    ret.target_ = CSRTarget::Dram0;
+  }
+  else {
     throw std::runtime_error(stringPrintF(
         "Failed to find valid target in cmd: \"%s\"", cmdstr.c_str()));
   }
@@ -313,18 +350,17 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
   int addr = ::strtol(addrStr.c_str(), nullptr, 16);
   if (addr < 0 || addr >= 0xfffffff)
     throw std::runtime_error(stringPrintF("addr %05x out of range", addr));
-  if (target == CSRTarget::CSR && addr >= 0xfff)
+  if (ret.target() == CSRTarget::CSR && addr >= 0xfff)
     throw std::runtime_error(
         stringPrintF("addr %05x out of range (csr)", addr));
-  if (target == CSRTarget::Progrom && addr >= 0xfffff)
+  if (ret.target() == CSRTarget::Progrom && addr >= 0xfffff)
     throw std::runtime_error(
         stringPrintF("addr %05x out of range (progrom)", addr));
+  ret.addr_ = addr;
 
-  std::vector<uint8_t> body;
-  int len;
-  if (isWrite) {
-    body = getTxBodyFromFlags();
-    len = body.size();
+  if (ret.is_write()) {
+    ret.body_ = getTxBodyFromFlags();
+    ret.len_ = ret.body().size();
   } else {
     i = j;
     for (; i < cmdstr.size(); ++i)
@@ -333,43 +369,32 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     for (; j < cmdstr.size(); ++j)
       if (!isalnum(cmdstr[j])) break;
     std::string lenStr = cmdstr.substr(i, j - i);
-    len = ::strtol(lenStr.c_str(), nullptr, 16);
-    if (len < 0 || len >= 0xfff)
-      throw std::runtime_error(stringPrintF("len %05x out of range", addr));
+    ret.len_ = ::strtol(lenStr.c_str(), nullptr, 16);
+    if (ret.len() < 0 || ret.len() >= 0xfff)
+      throw std::runtime_error(stringPrintF("len %03x out of range", ret.len()));
   }
 
   if (g_verbose)
-    printf("parsed cmd: isWrite %d target %d addr %07x len %03x\n", isWrite,
-           target, addr, len);
+    printf("parsed cmd: isWrite %d target %d addr %07x len %03x\n",
+           ret.is_write_, ret.target_, ret.addr_, ret.len_);
 
-  int wordSize;
-  uint8_t targetByte = 0;
-  bool specialPrefix = false;
-  switch (target) {
-    case CSRTarget::CSR:
-      targetByte = 0x00;
-      wordSize = 1;
-      addr <<= 8;
-      break;
-    case CSRTarget::Progrom:
-      targetByte = 0x10;
-      wordSize = 4;
-      break;
-    case CSRTarget::Dram0:
-      targetByte = 0x00;
-      wordSize = 4;
-      specialPrefix = true;
-      break;
-  }
-  if (len % wordSize != 0)
+  if (ret.len() % ret.wordSize() != 0)
     throw std::runtime_error("body len not multiple of wordSize");
-  constexpr uint8_t cmdSpecial = 0x0f;
-  uint8_t cmdByteBase =
-      (isWrite ? 0x80 : 0x00) | targetByte | ((addr >> 16) & 0xf);
 
-  std::vector<uint8_t> txdata;
-  for (int i = 0; i < len;) {
-    int left = len - i;
+  return ret;
+}
+
+void cmdCSRCmd(DeviceHandle* devhandle) {
+  auto csrcmd = CSRCommand::parseFlags();
+
+  int wordSize = csrcmd.wordSize();
+  constexpr uint8_t cmdSpecial = 0x0f;
+  uint8_t cmdByteBase = (csrcmd.is_write() ? 0x80 : 0x00) | csrcmd.targetByte();
+
+  std::vector<uint8_t> rxdata;
+  auto addrC = csrcmd.addr();
+  for (int i = 0; i < csrcmd.len();) {
+    int left = csrcmd.len() - i;
 
     int nWord;
     uint8_t encodedChunkLen;
@@ -387,46 +412,56 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     }
     int chunkLen = wordSize * nWord;
 
-    if (specialPrefix) {
-      txdata.push_back(cmdSpecial);
-      txdata.push_back(cmdByteBase | encodedChunkLen);
-      txdata.push_back((addr >> 24) & 0xff);
-      txdata.push_back((addr >> 16) & 0xff);
-      txdata.push_back((addr >> 8) & 0xff);
-      txdata.push_back((addr >> 0) & 0xff);
-    } else {
-      txdata.push_back(cmdByteBase | encodedChunkLen);
-      txdata.push_back((addr >> 8) & 0xff);
-      if (target == CSRTarget::Progrom) txdata.push_back(addr & 0xff);
+    size_t replyOffset;
+    std::vector<uint8_t> txpacket;
+    switch (csrcmd.target()) {
+      case CSRTarget::CSR:
+        txpacket.push_back(cmdByteBase | encodedChunkLen | ((addrC >> 8) & 0xf));
+        txpacket.push_back((addrC >> 0) & 0xff);
+        replyOffset = 3;
+        break;
+      case CSRTarget::Progrom:
+        txpacket.push_back(cmdByteBase | encodedChunkLen | ((addrC >> 16) & 0xf));
+        txpacket.push_back((addrC >> 8) & 0xff);
+        txpacket.push_back((addrC >> 0) & 0xff);
+        replyOffset = 4;
+        break;
+      case CSRTarget::Dram0:
+        txpacket.push_back(cmdSpecial);
+        txpacket.push_back(cmdByteBase | encodedChunkLen);
+        txpacket.push_back((addrC >> 24) & 0xff);
+        txpacket.push_back((addrC >> 16) & 0xff);
+        txpacket.push_back((addrC >> 8) & 0xff);
+        txpacket.push_back((addrC >> 0) & 0xff);
+        replyOffset = 7;
+        break;
     }
-    if (isWrite) {
+    if (csrcmd.is_write()) {
       for (int j = 0; j < chunkLen; ++j) {
-        txdata.push_back(body[i + j]);
+        txpacket.push_back(csrcmd.body()[i + j]);
       }
     } else {
       for (int j = 0; j < chunkLen; ++j) {
-        txdata.push_back(0xdd);
+        txpacket.push_back(0xdd);
       }
+    }
+    // NOP padding
+    txpacket.push_back(0x00);
+
+    devhandle->sendBulk(txpacket);
+    if (FLAGS_memh != "") throw std::runtime_error("FIXME"); //writeMemh(FLAGS_memh, txpacket);
+    std::vector<uint8_t> rxpacket = devhandle->recvBulk(txpacket.size());
+    if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
+    if (!csrcmd.is_write() || csrcmd.target() == CSRTarget::Dram0) {
+      const uint8_t* start = &rxpacket[replyOffset];
+      rxdata.insert(rxdata.end(), start, start + chunkLen);
     }
 
     i += chunkLen;
-    addr += nWord;
+    addrC += nWord;
   }
-  // NOP padding
-  txdata.push_back(0x00);
 
-  devhandle->sendBulk(txdata);
-  if (FLAGS_memh != "") writeMemh(FLAGS_memh, txdata);
-  sleep(1);  // FIXME: remove
-  std::vector<uint8_t> rxdata = devhandle->recvBulk(txdata.size());
-  if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxdata).c_str());
-  size_t replyOffset = specialPrefix ? 7 : 3;
-  if (!isWrite) {
-    const uint8_t* start = &rxdata[replyOffset];
-    printf(
-        "result: %s\n",
-        formatHex(std::vector<uint8_t>(start, start + len)).c_str());
-  }
+  printf("result: %s\n", formatHex(rxdata).c_str());
 }
 
 int main(int argc, char* argv[]) {
@@ -435,30 +470,29 @@ int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   g_verbose = FLAGS_verbose;
 
-  if (libusb_init(&g_usbctx) != 0)
-    throw std::runtime_error("libusb init failed");
-
-  std::unique_ptr<DeviceHandle> devhandle;
-  if (FLAGS_dryrun) {
-    devhandle.reset(new DummyDeviceHandle());
-  } else {
-    std::unique_ptr<USBDeviceHandle> usbdevhandle = findDevice();
-    usbdevhandle->claim();
-    devhandle = std::move(usbdevhandle);
-  }
-
   int ret = 0;
   try {
+    if (libusb_init(&g_usbctx) != 0)
+      throw std::runtime_error("libusb init failed");
+
+    std::unique_ptr<DeviceHandle> devhandle;
+    if (FLAGS_dryrun) {
+      devhandle.reset(new DummyDeviceHandle());
+    } else {
+      std::unique_ptr<USBDeviceHandle> usbdevhandle = findDevice();
+      usbdevhandle->claim();
+      devhandle = std::move(usbdevhandle);
+    }
+
     if (FLAGS_csrcmd != "")
       cmdCSRCmd(devhandle.get());
     else
       cmdDefault(devhandle.get());
-
-    return 0;
   } catch (std::exception& e) {
-    fprintf(stderr, "Error: %s\n", e.what());
     ret = 1;
+    fprintf(stderr, "Error: %s\n", e.what());
   }
   libusb_exit(nullptr);
   gflags::ShutDownCommandLineFlags();
+  return ret;
 }
