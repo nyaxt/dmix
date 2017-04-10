@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "image.h"
 #include "readhex.h"
 #include "util.h"
 
@@ -15,6 +16,7 @@ DEFINE_bool(dryrun, false, "test adaptor hardware");
 DEFINE_string(prefix, "", "prefix to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hex, "", "data to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hexfile, "", "intel HEX file to send.");
+DEFINE_string(fbimg, "", "img file to submit to the frame buffer.");
 DEFINE_string(csrcmd, "",
               "nkmd csr_spi cmd. \"[read|write] [csr|progrom|dram0] [offset]");
 DEFINE_string(memh, "", "output SPI cmd to memh file");
@@ -371,7 +373,8 @@ CSRCommand CSRCommand::parseFlags() {
     std::string lenStr = cmdstr.substr(i, j - i);
     ret.len_ = ::strtol(lenStr.c_str(), nullptr, 16);
     if (ret.len() < 0 || ret.len() >= 0xfff)
-      throw std::runtime_error(stringPrintF("len %03x out of range", ret.len()));
+      throw std::runtime_error(
+          stringPrintF("len %03x out of range", ret.len()));
   }
 
   if (g_verbose)
@@ -416,12 +419,14 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     std::vector<uint8_t> txpacket;
     switch (csrcmd.target()) {
       case CSRTarget::CSR:
-        txpacket.push_back(cmdByteBase | encodedChunkLen | ((addrC >> 8) & 0xf));
+        txpacket.push_back(cmdByteBase | encodedChunkLen |
+                           ((addrC >> 8) & 0xf));
         txpacket.push_back((addrC >> 0) & 0xff);
         replyOffset = 3;
         break;
       case CSRTarget::Progrom:
-        txpacket.push_back(cmdByteBase | encodedChunkLen | ((addrC >> 16) & 0xf));
+        txpacket.push_back(cmdByteBase | encodedChunkLen |
+                           ((addrC >> 16) & 0xf));
         txpacket.push_back((addrC >> 8) & 0xff);
         txpacket.push_back((addrC >> 0) & 0xff);
         replyOffset = 4;
@@ -449,7 +454,8 @@ void cmdCSRCmd(DeviceHandle* devhandle) {
     txpacket.push_back(0x00);
 
     devhandle->sendBulk(txpacket);
-    if (FLAGS_memh != "") throw std::runtime_error("FIXME"); //writeMemh(FLAGS_memh, txpacket);
+    if (FLAGS_memh != "")
+      throw std::runtime_error("FIXME");  // writeMemh(FLAGS_memh, txpacket);
     std::vector<uint8_t> rxpacket = devhandle->recvBulk(txpacket.size());
     if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
     if (!csrcmd.is_write() || csrcmd.target() == CSRTarget::Dram0) {
@@ -484,7 +490,13 @@ int main(int argc, char* argv[]) {
       devhandle = std::move(usbdevhandle);
     }
 
-    if (FLAGS_csrcmd != "")
+    if (FLAGS_fbimg != "")
+      submitImage(FLAGS_fbimg,
+                  [](int offset, const std::vector<uint8_t>& data) {
+                    printf("addr %7x", offset);
+                    puts(formatHex(data).c_str());
+                  });
+    else if (FLAGS_csrcmd != "")
       cmdCSRCmd(devhandle.get());
     else
       cmdDefault(devhandle.get());

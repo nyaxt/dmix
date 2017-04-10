@@ -5,7 +5,7 @@ CFLAGS:=-O0 -g -std=c++1y -I$(LIBUSB_PREFIX)/include -I$(GFLAGS_PREFIX)/include
 CXX:=clang++
 CLANG_FORMAT:=clang-format
 
-dmixlpccli: dmixlpccli.o readhex.o util.o
+dmixlpccli: dmixlpccli.o readhex.o util.o image.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 -include Makefile.deps
