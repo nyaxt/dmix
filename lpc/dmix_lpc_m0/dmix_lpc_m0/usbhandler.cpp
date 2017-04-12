@@ -69,19 +69,26 @@ ErrorCode_t USBHandler::onControl(uint32_t event) {
 }
 
 ErrorCode_t USBHandler::onBulkIn(uint32_t event) {
-	if (event == USB_EVT_IN)
+	switch (event) {
+	case USB_EVT_IN:
 		m_pendingBulkIn = true;
+		break;
+	}
 
 	return LPC_OK;
 }
 
 ErrorCode_t USBHandler::onBulkOut(uint32_t event) {
-	if (event != USB_EVT_OUT) return LPC_OK;
-
     // OUT: Host sends data to device.
 	// USB controller has already finished receiving last read request.
 	// Record that we have unhandled read result by setting m_sizeReceived.
-	m_sizeReceived = m_api->hw->ReadEP(m_handle, LUSB_OUT_EP, m_bufRx);
+	switch (event) {
+	case USB_EVT_OUT:
+		m_sizeReceived = m_api->hw->ReadEP(m_handle, LUSB_OUT_EP, m_bufRx);
+		return LPC_OK;
+
+	default:
+	}
 
 	return LPC_OK;
 }
