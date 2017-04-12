@@ -71,11 +71,12 @@ ErrorCode_t USBHandler::onControl(uint32_t event) { return ERR_USBD_UNHANDLED; }
 ErrorCode_t USBHandler::onBulkIn(uint32_t event) {
   switch (event) {
   case USB_EVT_IN:
-    m_pendingBulkIn = true;
+    m_pendingBulkIn = false;
     break;
-  }
 
-  return LPC_OK;
+  default:
+    return LPC_OK;
+  }
 }
 
 ErrorCode_t USBHandler::onBulkOut(uint32_t event) {
@@ -88,9 +89,8 @@ ErrorCode_t USBHandler::onBulkOut(uint32_t event) {
     return LPC_OK;
 
   default:
+    return LPC_OK;
   }
-
-  return LPC_OK;
 }
 
 static uint32_t hoge;
@@ -178,29 +178,43 @@ bool USBHandler::isConnected() {
 }
 
 inline bool USBHandler::hasUnhandledRxData() { return m_sizeReceived != -1; }
-inline void USBHandler::setHandledRxData() { m_sizeReceived = -1; }
 
 void USBHandler::enqueueNextRx() {
+  NVIC_DisableIRQ(LPC_USB_IRQ);
   m_api->hw->ReadReqEP(m_handle, LUSB_OUT_EP, m_bufRx, sizeof(m_bufRx));
+  m_sizeReceived = -1;
+  NVIC_EnableIRQ(LPC_USB_IRQ);
 }
 
 bool USBHandler::process() {
   if (!isConnected())
     return false;
 
-  if (!hasUnhandledRxData())
-    return false;
+  bool handledAtLeastOnce = false;
+  for (;;) {
+    // FIXME: not very clean to have the logic here.
+    if (SPI::getInstance()->isTransactionActive())
+      break;
 
-  processRxData();
+    if (!hasUnhandledRxData())
+      break;
 
-  setHandledRxData();
-  enqueueNextRx();
+    processRxData();
+    enqueueNextRx();
 
-  return true;
+    handledAtLeastOnce = true;
+  }
+
+  return handledAtLeastOnce;
 }
 
 void USBHandler::enqueueResponse(size_t len) {
+  NVIC_DisableIRQ(LPC_USB_IRQ);
+
   m_api->hw->WriteEP(m_handle, LUSB_IN_EP, m_bufTx, len);
+  m_pendingBulkIn = true;
+
+  NVIC_EnableIRQ(LPC_USB_IRQ);
 }
 
 void USBHandler::processRxData() {
@@ -226,4 +240,5 @@ inline void USBHandler::onIRQ() { m_api->hw->ISR(m_handle); }
 extern "C" {
 
 void USB_IRQHandler(void) { USBHandler::getInstance()->onIRQ(); }
+
 }

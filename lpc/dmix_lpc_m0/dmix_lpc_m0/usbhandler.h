@@ -24,9 +24,7 @@ private:
   ~USBHandler();
 
   bool hasUnhandledRxData();
-  void setHandledRxData();
   void processRxData();
-
   void enqueueNextRx();
 
   static ErrorCode_t dispatchReset(USBD_HANDLE_T);

@@ -464,6 +464,7 @@ void cmdCSRCmd(DeviceHandle* devhandle, const CSRCommand& csrcmd) {
       throw std::runtime_error("FIXME");  // writeMemh(FLAGS_memh, txpacket);
     std::vector<uint8_t> rxpacket = devhandle->recvBulk(txpacket.size());
     if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
+    fprintf(stderr, "r");
     if (!csrcmd.is_write() || csrcmd.target() == CSRTarget::Dram0) {
       const uint8_t* start = &rxpacket[replyOffset];
       rxdata.insert(rxdata.end(), start, start + chunkLen);
@@ -473,7 +474,7 @@ void cmdCSRCmd(DeviceHandle* devhandle, const CSRCommand& csrcmd) {
     addrC += nWord;
   }
 
-  printf("result: %s\n", formatHex(rxdata).c_str());
+  //printf("result: %s\n", formatHex(rxdata).c_str());
 }
 
 int main(int argc, char* argv[]) {

@@ -70,11 +70,10 @@ bool SPI::callCallbackIfDone() {
   if (!isTransactionDone())
     return false;
 
-  m_isTransactionActive = false;
   Chip_GPDMA_Stop(LPC_GPDMA, m_dmaTx);
   Chip_GPDMA_Stop(LPC_GPDMA, m_dmaRx);
   Chip_SSP_DMA_Disable(LPC_SSP1);
-
+  m_isTransactionActive = false;
   m_callback();
   if (!m_isTransactionActive)
     m_callback.reset();

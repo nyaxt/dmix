@@ -36,7 +36,7 @@ uint32_t g_ticks = 0;
 void SysTick_Handler(void) {
   ++g_ticks;
 
-  if (g_ticks % 1000 == 0) {
+  if (g_ticks % 10 == 0) {
     M0App_TriggerIPI();
   }
 }
