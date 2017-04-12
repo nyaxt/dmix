@@ -14,8 +14,10 @@
 // all warranties, express or implied, including all implied warranties of
 // merchantability, fitness for a particular purpose and non-infringement of
 // intellectual property rights.  NXP Semiconductors assumes no responsibility
-// or liability for the use of the software, conveys no license or rights under any
-// patent, copyright, mask work right, or any other intellectual property rights in
+// or liability for the use of the software, conveys no license or rights under
+// any
+// patent, copyright, mask work right, or any other intellectual property rights
+// in
 // or to any products. NXP Semiconductors reserves the right to make changes
 // in the software without notification. NXP Semiconductors also makes no
 // representation or warranty that such application will be suitable for the
@@ -29,10 +31,10 @@
 // this code.
 //*****************************************************************************
 
-#if defined (__CODE_RED)
+#if defined(__CODE_RED)
 #include <NXP/crp.h>
 // Variable to store CRP value in. Will be placed automatically
 // by the linker when "Enable Code Read Protect" selected.
 // See crp.h header for more information
-__CRP const unsigned int CRP_WORD = CRP_NO_CRP ;
+__CRP const unsigned int CRP_WORD = CRP_NO_CRP;
 #endif

@@ -5,38 +5,38 @@
 
 class SPI {
 public:
-	static void init();
-	static inline SPI* getInstance() { return s_spi; }
+  static void init();
+  static inline SPI *getInstance() { return s_spi; }
 
-	template<typename Functor>
-	void doSendRecv(const uint8_t* txBuf, uint8_t* rxBuf, size_t len, const Functor& f)
-	{
-		doSendRecvImpl(txBuf, rxBuf, len);
-		m_callback = f;
-	}
+  template <typename Functor>
+  void doSendRecv(const uint8_t *txBuf, uint8_t *rxBuf, size_t len,
+                  const Functor &f) {
+    doSendRecvImpl(txBuf, rxBuf, len);
+    m_callback = f;
+  }
 
-	void onDMAIRQ();
+  void onDMAIRQ();
 
-	bool callCallbackIfDone();
+  bool callCallbackIfDone();
 
-	inline bool isTransactionActive() const { return m_isTransactionActive; }
+  inline bool isTransactionActive() const { return m_isTransactionActive; }
 
 private:
-	void doSendRecvImpl(const uint8_t* txBuf, uint8_t* rxBuf, size_t len);
+  void doSendRecvImpl(const uint8_t *txBuf, uint8_t *rxBuf, size_t len);
 
-	SPI();
+  SPI();
 
-	bool isTransactionDone();
+  bool isTransactionDone();
 
-	static SPI* s_spi;
+  static SPI *s_spi;
 
-	uint8_t m_dmaTx;
-	uint8_t m_dmaRx;
+  uint8_t m_dmaTx;
+  uint8_t m_dmaRx;
 
-	bool m_isTransactionActive = false;
-	bool m_txComplete = false;
-	bool m_rxComplete = false;
-	Callback m_callback;
+  bool m_isTransactionActive = false;
+  bool m_txComplete = false;
+  bool m_rxComplete = false;
+  Callback m_callback;
 };
 
 #endif // spi_h
