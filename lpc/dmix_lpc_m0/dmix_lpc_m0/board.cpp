@@ -9,14 +9,15 @@ struct CLK_BASE_STATES {
   CHIP_CGU_BASE_CLK_T clk; /* Base clock */
   CHIP_CGU_CLKIN_T clkin;  /* Base clock source, see UM for allowable souorces
                               per base clock */
-  bool
-      autoblock_enab; /* Set to true to enable autoblocking on frequency change
+  bool autoblock_enab; /* Set to true to enable autoblocking on frequency change
                          */
   bool powerdn; /* Set to true if the base clock is initially powered down */
 };
 
 /* Initial base clock states are mostly on */
 STATIC const struct CLK_BASE_STATES InitClkStates[] = {
+    {CLK_BASE_SSP0, CLKIN_MAINPLL, true, false},
+    {CLK_BASE_SSP1, CLKIN_MAINPLL, true, false},
     {CLK_BASE_PHY_TX, CLKIN_ENET_TX, true, false},
 #if defined(USE_RMII)
     {CLK_BASE_PHY_RX, CLKIN_ENET_TX, true, false},

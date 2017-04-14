@@ -3,7 +3,7 @@
 	<name>dmix_lpc_m4</name>
 	<comment></comment>
 	<projects>
-		<project>CMSIS_DSPLIB_CM4</project>
+		<project>dmix_lpc_m0</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

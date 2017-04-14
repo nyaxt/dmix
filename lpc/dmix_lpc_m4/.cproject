@@ -248,7 +248,7 @@
 	<storageModule moduleId="com.crt.config">
 		<projectStorage>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;TargetConfig&gt;
-&lt;Properties property_0="None" property_2="LPC18_43_SPIFI_GENERIC.cfx" property_3="NXP" property_4="LPC4320" property_count="5" version="70200"/&gt;
+&lt;Properties property_0="Master" property_2="LPC18_43_SPIFI_GENERIC.cfx" property_3="NXP" property_4="LPC4320" property_count="5" version="70200"/&gt;
 &lt;infoList vendor="NXP"&gt;&lt;info chip="LPC4320" match_id="0x0" name="LPC4320" resetscript="LPC18LPC43ExternalFLASHBootResetscript.scp" stub="crt_emu_lpc18_43_nxp"&gt;&lt;chip&gt;&lt;name&gt;LPC4320&lt;/name&gt;
 &lt;family&gt;LPC43xx&lt;/family&gt;
 &lt;vendor&gt;NXP (formerly Philips)&lt;/vendor&gt;
