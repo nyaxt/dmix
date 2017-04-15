@@ -304,6 +304,14 @@ class CSRCommand {
     }
   }
 
+  size_t replyOffset() const {
+    switch (target()) {
+      case CSRTarget::CSR: return 3;
+      case CSRTarget::Progrom: return 4;
+      case CSRTarget::Dram0: return 7;
+    }
+  }
+
  private:
   bool is_write_ = false;
   CSRTarget target_;
@@ -402,12 +410,15 @@ void cmdCSRCmd(DeviceHandle* devhandle, const CSRCommand& csrcmd) {
 
   std::vector<uint8_t> rxdata;
   auto addrC = csrcmd.addr();
+  size_t replyOffset = csrcmd.replyOffset();
   for (int i = 0; i < csrcmd.len();) {
     int left = csrcmd.len() - i;
 
+    int nFrame = 1;
     int nWord;
     uint8_t encodedChunkLen;
     if (left >= wordSize * 16) {
+      nFrame = left / (wordSize * 16);
       nWord = 16;
       encodedChunkLen = 0x3 << 5;
     } else if (left >= wordSize * 4) {
@@ -421,57 +432,57 @@ void cmdCSRCmd(DeviceHandle* devhandle, const CSRCommand& csrcmd) {
     }
     int chunkLen = wordSize * nWord;
 
-    size_t replyOffset;
     std::vector<uint8_t> txpacket;
-    switch (csrcmd.target()) {
-      case CSRTarget::CSR:
-        txpacket.push_back(cmdByteBase | encodedChunkLen |
-                           ((addrC >> 8) & 0xf));
-        txpacket.push_back((addrC >> 0) & 0xff);
-        replyOffset = 3;
-        break;
-      case CSRTarget::Progrom:
-        txpacket.push_back(cmdByteBase | encodedChunkLen |
-                           ((addrC >> 16) & 0xf));
-        txpacket.push_back((addrC >> 8) & 0xff);
-        txpacket.push_back((addrC >> 0) & 0xff);
-        replyOffset = 4;
-        break;
-      case CSRTarget::Dram0:
-        txpacket.push_back(cmdSpecial);
-        txpacket.push_back(cmdByteBase | encodedChunkLen);
-        txpacket.push_back((addrC >> 24) & 0xff);
-        txpacket.push_back((addrC >> 16) & 0xff);
-        txpacket.push_back((addrC >> 8) & 0xff);
-        txpacket.push_back((addrC >> 0) & 0xff);
-        replyOffset = 7;
-        break;
-    }
-    if (csrcmd.is_write()) {
-      for (int j = 0; j < chunkLen; ++j) {
-        txpacket.push_back(csrcmd.body()[i + j]);
+    for (int f = 0; f < nFrame; ++ f) {
+      switch (csrcmd.target()) {
+        case CSRTarget::CSR:
+          txpacket.push_back(cmdByteBase | encodedChunkLen |
+                             ((addrC >> 8) & 0xf));
+          txpacket.push_back((addrC >> 0) & 0xff);
+          break;
+        case CSRTarget::Progrom:
+          txpacket.push_back(cmdByteBase | encodedChunkLen |
+                             ((addrC >> 16) & 0xf));
+          txpacket.push_back((addrC >> 8) & 0xff);
+          txpacket.push_back((addrC >> 0) & 0xff);
+          break;
+        case CSRTarget::Dram0:
+          txpacket.push_back(cmdSpecial);
+          txpacket.push_back(cmdByteBase | encodedChunkLen);
+          txpacket.push_back((addrC >> 24) & 0xff);
+          txpacket.push_back((addrC >> 16) & 0xff);
+          txpacket.push_back((addrC >> 8) & 0xff);
+          txpacket.push_back((addrC >> 0) & 0xff);
+          break;
       }
-    } else {
-      for (int j = 0; j < chunkLen; ++j) {
-        txpacket.push_back(0xdd);
+      if (csrcmd.is_write()) {
+        for (int j = 0; j < chunkLen; ++j) {
+          txpacket.push_back(csrcmd.body()[i + j]);
+        }
+      } else {
+        for (int j = 0; j < chunkLen; ++j) {
+          txpacket.push_back(0xdd);
+        }
       }
+
+      i += chunkLen;
+      addrC += nWord;
     }
+
     // NOP padding
     txpacket.push_back(0x00);
-
     devhandle->sendBulk(txpacket);
     if (FLAGS_memh != "")
       throw std::runtime_error("FIXME");  // writeMemh(FLAGS_memh, txpacket);
     std::vector<uint8_t> rxpacket = devhandle->recvBulk(txpacket.size());
     if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
-    fprintf(stderr, "r");
     if (!csrcmd.is_write() || csrcmd.target() == CSRTarget::Dram0) {
-      const uint8_t* start = &rxpacket[replyOffset];
-      rxdata.insert(rxdata.end(), start, start + chunkLen);
+      size_t frameSize = replyOffset + chunkLen - 1;
+      for (int f = 0; f < nFrame; ++ f) {
+        const uint8_t* start = &rxpacket[frameSize * f + replyOffset];
+        rxdata.insert(rxdata.end(), start, start + chunkLen);
+      }
     }
-
-    i += chunkLen;
-    addrC += nWord;
   }
 
   //printf("result: %s\n", formatHex(rxdata).c_str());
