@@ -14,6 +14,9 @@
 #include <string.h>
 
 #include "board.h"
+#include "spi.h"
+#include "usbhandler.h"
+#include "util.h"
 
 static const uint32_t M0APP_BASEADDR = 0x14080000;
 
@@ -30,26 +33,59 @@ void M0App_TriggerIPI() {
   LPC_CREG->M4TXEVENT = 0x1;
 }
 
-void MX_CORE_IRQHandler(void) { Chip_CREG_ClearM0AppEvent(); }
+int g_tickSinceLastDidSomething = 0;
+
+void Config_NVIC() {
+  NVIC_DisableIRQ(DMA_IRQn);
+  NVIC_DisableIRQ(USB0_IRQn);
+  // High prio
+  NVIC_SetPriority(DMA_IRQn, 0x01);
+  // Low prio
+  NVIC_SetPriority(USB0_IRQn, 0x02);
+}
 
 uint32_t g_ticks = 0;
+
+extern "C" {
+
+void MX_CORE_IRQHandler(void) { Chip_CREG_ClearM0AppEvent(); }
+
 void SysTick_Handler(void) {
   ++g_ticks;
 
   if (g_ticks % 10 == 0) {
     M0App_TriggerIPI();
   }
+
+  if (g_tickSinceLastDidSomething < 1000)
+    g_tickSinceLastDidSomething ++;
 }
+
+void DMA_IRQHandler(void) { SPI::getInstance()->onDMAIRQ(); }
+
+} // extern "C"
 
 int main(void) {
   M0App_Boot(M0APP_BASEADDR);
 
   SystemCoreClockUpdate();
-  // Board_Init();
-
   SysTick_Config(SystemCoreClock / 1000); /* set tick to 1ms */
 
-  while (1) {
-    __WFI();
+  SPI::init();
+  USBHandler::init();
+
+  for (;;) {
+    bool didSomething = false;
+
+    if (USBHandler::getInstance()->process())
+      didSomething = true;
+
+    if (SPI::getInstance()->callCallbackIfDone())
+      didSomething = true;
+
+    if (didSomething)
+      g_tickSinceLastDidSomething = 0;
+    else if (g_tickSinceLastDidSomething > 300)
+      __WFI();
   }
 }

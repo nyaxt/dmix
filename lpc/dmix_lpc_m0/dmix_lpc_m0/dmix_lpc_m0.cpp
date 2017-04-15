@@ -53,17 +53,21 @@ int main(void) {
   Chip_GPIO_ClearValue(LPC_GPIO_PORT, 0, 1 << 8);
 #endif
 
+#if 0
   SPI::init();
   USBHandler::init();
+#endif
 
   for (;;) {
     bool didSomething = false;
 
+#if 0
     if (USBHandler::getInstance()->process())
       didSomething = true;
 
     if (SPI::getInstance()->callCallbackIfDone())
       didSomething = true;
+#endif
 
     if (didSomething)
       g_tickSinceLastDidSomething = 0;

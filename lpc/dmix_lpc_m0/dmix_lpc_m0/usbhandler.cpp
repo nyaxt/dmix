@@ -72,7 +72,7 @@ ErrorCode_t USBHandler::onBulkIn(uint32_t event) {
   switch (event) {
   case USB_EVT_IN:
     m_pendingBulkIn = false;
-    break;
+    return LPC_OK;
 
   default:
     return LPC_OK;

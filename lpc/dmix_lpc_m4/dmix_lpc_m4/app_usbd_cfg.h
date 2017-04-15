@@ -1,0 +1,1 @@
+../../dmix_lpc_m0/dmix_lpc_m0/app_usbd_cfg.h
