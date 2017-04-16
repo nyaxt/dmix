@@ -23,7 +23,8 @@ void submitImage(const std::string& path, WriteToAddrFunc write_to_addr) {
         }
       }
     }
-    int addr = (fb_height - y-1) << 9;
+    // int addr = (fb_height - y-1) << 9;
+    int addr = y << 9;
     write_to_addr(addr, line_data);
     printf("wrote y %d\n", y);
   }
