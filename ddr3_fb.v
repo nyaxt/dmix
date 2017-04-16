@@ -49,21 +49,21 @@ localparam ST_WAIT_DATA = 4;
 wire [5:0] mig_rd_data_r;
 wire [5:0] mig_rd_data_g;
 wire [5:0] mig_rd_data_b;
-assign mig_rd_data_r = mig_rd_data[24:18];
+assign mig_rd_data_r = mig_rd_data[23:18];
 assign mig_rd_data_g = mig_rd_data[15:10];
 assign mig_rd_data_b = mig_rd_data[7:2];
 
 reg [8:0] prefetch_x_ff;
 reg [6:0] prefetch_y_ff;
 reg [8:0] prefetch_xzero_done_ff;
-reg lcdout_side_ff;
+reg prefetch_side_ff;
 
 reg [5:0] r_cache_mem [15:0];
 reg [5:0] g_cache_mem [15:0];
 reg [5:0] b_cache_mem [15:0];
 
 wire [3:0] cache_mem_wr_addr;
-assign cache_mem_wr_addr = {~lcdout_side_ff, prefetch_x_ff[2:0]};
+assign cache_mem_wr_addr = {prefetch_side_ff, prefetch_x_ff[2:0]};
 
 always @(posedge clk) begin
     if (rst) begin
@@ -71,7 +71,7 @@ always @(posedge clk) begin
         prefetch_x_ff <= 'b0;
         prefetch_y_ff <= 'b0;
         prefetch_xzero_done_ff <= 1'b0;
-        lcdout_side_ff <= 1'b0;
+        prefetch_side_ff <= 1'b0;
     end else begin
         case (state_ff)
             ST_INIT: begin
@@ -79,14 +79,16 @@ always @(posedge clk) begin
                     if (in_hsync_i == 1'b1) begin
                         prefetch_x_ff <= 9'h000;
                         prefetch_xzero_done_ff <= 1'b1;
+                        prefetch_side_ff <= 1'b0;
                     end else begin
                         prefetch_x_ff <= x_i + 9'h008;
                         prefetch_xzero_done_ff <= 1'b0;
+                        prefetch_side_ff <= ~prefetch_side_ff;
                     end
 
                     prefetch_y_ff <= y_i;
                     
-                    if (in_vsync_i == 1'b0 && prefetch_xzero_done_ff == 1'b0) begin
+                    if (in_vsync_i == 1'b0 && (in_hsync_i == 1'b0 || prefetch_xzero_done_ff == 1'b0)) begin
                         state_ff <= ST_EMIT_CMD;
                     end
                 end
@@ -106,7 +108,6 @@ always @(posedge clk) begin
                     if (prefetch_x_ff[2:0] != 3'h7) begin
                         state_ff <= ST_WAIT_DATA;
                     end else begin
-                        lcdout_side_ff <= ~lcdout_side_ff;
                         state_ff <= ST_INIT;
                     end
                 end
@@ -119,6 +120,9 @@ assign mig_cmd_clk = clk;
 assign mig_cmd_en = (state_ff == ST_EMIT_CMD) ? 1'b1 : 1'b0;
 assign mig_cmd_instr = 3'b001;
 assign mig_cmd_bl = 6'h07; // 7 means burst len 8
+
+// [17:11] -> y
+// [10:2] -> x
 assign mig_cmd_byte_addr[29:0] = {12'h000, prefetch_y_ff, prefetch_x_ff, 2'b00};
 // FIXME: wait until mig_cmd_empty or !mig_cmd_full?
 
@@ -136,9 +140,8 @@ reg [5:0] r_ff;
 reg [5:0] g_ff;
 reg [5:0] b_ff;
 reg ack_ff;
-
 wire [3:0] cache_mem_rd_addr;
-assign cache_mem_rd_addr = {lcdout_side_ff, x_i[2:0]};
+assign cache_mem_rd_addr = x_i[3:0];
 
 always @(posedge clk) begin
     if (rst) begin
