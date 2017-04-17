@@ -349,7 +349,8 @@ lcdc lcdc(
     .lcd_nclk(lcd_nclk),
     .lcd_de(lcd_de));
 
-`ifdef NO_DRAM
+`define PATTERNGEN
+`ifdef PATTERNGEN
 patterngen patterngen(
     .clk(clk491520),
     .rst(rst_ip),
@@ -583,6 +584,32 @@ ddr3 (
     .c1_p0_rd_overflow(mig_sd3_rd_overflow),
     .c1_p0_rd_error(mig_sd3_rd_error),
 
+`ifdef PATTERNGEN
+    .c1_p1_cmd_clk(1'b0),
+    .c1_p1_cmd_en(1'b0),
+    .c1_p1_cmd_instr(3'b0),
+    .c1_p1_cmd_bl(6'b0),
+    .c1_p1_cmd_byte_addr(30'b0),
+    // .c1_p1_cmd_empty(c1_p1_cmd_empty),
+    // .c1_p1_cmd_full(c1_p1_cmd_full),
+    .c1_p1_wr_clk(1'b0),
+    .c1_p1_wr_en(1'b0),
+    .c1_p1_wr_mask(4'b0),
+    .c1_p1_wr_data(32'b0),
+    // .c1_p1_wr_full(c1_p1_wr_full),
+    // .c1_p1_wr_empty(c1_p1_wr_empty),
+    // .c1_p1_wr_count(c1_p1_wr_count),
+    // .c1_p1_wr_underrun(c1_p1_wr_underrun),
+    // .c1_p1_wr_error(c1_p1_wr_error),
+    .c1_p1_rd_clk(1'b0),
+    .c1_p1_rd_en(1'b0),
+    // .c1_p1_rd_data(c1_p1_rd_data),
+    // .c1_p1_rd_full(c1_p1_rd_full),
+    // .c1_p1_rd_empty(c1_p1_rd_empty),
+    // .c1_p1_rd_count(c1_p1_rd_count),
+    // .c1_p1_rd_overflow(c1_p1_rd_overflow),
+    // .c1_p1_rd_error(c1_p1_rd_error),
+`else
     .c1_p1_cmd_clk(fb_mig_cmd_clk),
     .c1_p1_cmd_en(fb_mig_cmd_en),
     .c1_p1_cmd_instr(fb_mig_cmd_instr),
@@ -607,6 +634,7 @@ ddr3 (
     .c1_p1_rd_count(mig_fb_rd_count),
     .c1_p1_rd_overflow(mig_fb_rd_overflow),
     .c1_p1_rd_error(mig_fb_rd_error),
+`endif
 
     .c1_p2_cmd_clk(1'b0),
     .c1_p2_cmd_en(1'b0),
