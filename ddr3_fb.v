@@ -55,7 +55,7 @@ assign mig_rd_data_b = mig_rd_data[7:2];
 
 reg [8:0] prefetch_x_ff;
 reg [6:0] prefetch_y_ff;
-reg [8:0] prefetch_xzero_done_ff;
+reg prefetch_xzero_done_ff;
 reg prefetch_side_ff;
 
 reg [5:0] r_cache_mem [15:0];

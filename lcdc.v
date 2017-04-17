@@ -112,7 +112,7 @@ always @(posedge clk) begin
                 in_hsync_ff <= 0;
             end else begin
                 curr_x_ff <= curr_x_ff + 1;
-                in_hsync_ff <= (curr_x_ff >= 9'd399) ? 1'b1 : 1'b0;
+                in_hsync_ff <= (curr_x_ff >= 9'd400) ? 1'b1 : 1'b0;
             end
         end
     end
@@ -145,7 +145,7 @@ always @(posedge clk) begin
                 in_vsync_ff <= 1'b0;
             end else begin
                 curr_y_ff <= curr_y_ff + 1;
-                in_vsync_ff <= (curr_y_ff >= 7'd95) ? 1'b1 : 1'b0;
+                in_vsync_ff <= (curr_y_ff >= 7'd96) ? 1'b1 : 1'b0;
             end
         end
     end
