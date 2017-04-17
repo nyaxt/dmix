@@ -157,7 +157,7 @@ always @(posedge clk) begin
         lcd_vsync_ff <= 1'b1;
     else begin
         if (update_data) begin
-            if (curr_y_ff == 7'd96)
+            if (curr_y_ff == 7'd97)
                 lcd_vsync_ff <= 1'b0;
             else
                 lcd_vsync_ff <= 1'b1;
@@ -235,7 +235,7 @@ always @(posedge clk) begin
         b_ff <= 6'h00;
         ack_ff <= 1'b0;
     end else if (pop_i) begin
-        if (x_i == 9'd0)
+        if (y_i == 7'd1)
             r_ff <= 6'h3f;
         else
             r_ff <= 6'h00;
@@ -245,10 +245,10 @@ always @(posedge clk) begin
         else
             g_ff <= 6'h00;
 
-        if (x_i == 9'd399)
-            g_ff <= 6'h3f;
+        if (y_i == 7'd95)
+            b_ff <= 6'h3f;
         else
-            g_ff <= 6'h00;
+            b_ff <= 6'h00;
 
         ack_ff <= 1'b1;
     end else
