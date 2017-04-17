@@ -349,7 +349,7 @@ lcdc lcdc(
     .lcd_nclk(lcd_nclk),
     .lcd_de(lcd_de));
 
-`define PATTERNGEN
+//`define PATTERNGEN
 `ifdef PATTERNGEN
 patterngen patterngen(
     .clk(clk491520),
