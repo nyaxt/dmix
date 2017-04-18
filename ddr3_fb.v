@@ -97,7 +97,7 @@ always @(posedge clk) begin
                 state_ff <= ST_WAIT_DATA;
             end
             ST_WAIT_DATA: begin
-                if (mig_rd_count == 6'h00) begin // FIXME: mig_rd_empty?
+                if (mig_rd_empty == 1'b1) begin
                     state_ff <= ST_WAIT_DATA;
                 end else begin
                     r_cache_mem[cache_mem_wr_addr] <= mig_rd_data_r;
