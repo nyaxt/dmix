@@ -1,0 +1,159 @@
+<!doctype HTML>
+<html>
+<head>
+<style>
+  @font-face {
+    font-family: 'bmp';
+    src: url('./JF-Dot-k12x10.ttf') format('truetype');
+  }
+  body {
+    background: #888;
+  }
+  p {
+    font-family: 'bmp'; 
+    font-size: 10px;
+  }
+  #panel {
+    background: #ddd;
+    width: 1200px;
+    padding: 10px;
+  }
+  #c {
+    background: #000;
+    border: 10px solid #fff;
+    width: 800px;
+    height: 192px;
+    image-rendering: pixelated;
+  }
+</style>
+<body>
+<p>あいうえおかきくけ 焼肉定食 abcdef {}</p>
+<div id='panel'>
+  <canvas id='c' width=400 height=96></canvas>
+</div>
+<script>
+"use strict";
+document.fonts.ready.then(() => {
+
+let ce = document.getElementById('c');
+let c = ce.getContext('2d');
+c.translate(0.5, 0.5);
+c.imageSmoothingEnabled = false;
+c.fillStyle = 'rgb(255, 255, 255)';
+c.strokeStyle = 'rgb(255, 255, 255)';
+c.font = '10px "bmp"';
+let th = 10;
+
+let st_h = 15;
+let st_top = 96 - st_h;
+let st_tb = Math.floor(96 - st_h/2 + (st_h - th) / 2);
+
+let nch = 4;
+
+let st_padl = 60;
+let st_padr = 1;
+let st_padm = 3;
+
+let sa_top = 1;
+let sa_bottom = st_top - 10;
+
+let nband = 48;
+let sa_bwidth = Math.ceil(300 / nband);
+let sa_left = 400 - sa_bwidth*nband - 5;
+let sa_maxh = sa_bottom - sa_top;
+
+let vu_nred = 2;
+let vu_nyellow = 3;
+let vu_ngreen = 5;
+let vu_nbar = vu_nred + vu_nyellow + vu_ngreen;
+let vu_barh = Math.floor(sa_maxh / vu_nbar);
+
+let vu_bwidth = 10;
+let vu_bspace = 10;
+let vu_left = 10;
+
+let sadata = [];
+for (var i = 0; i < nband; ++ i) {
+  sadata.push(Math.random());
+}
+
+let voldata = [];
+for (var i = 0; i < 4; ++ i) {
+  voldata.push(Math.random());
+}
+// c.fillRect(0, sa_bottom, 400, 1);
+
+function drawBars(s, x, w) {
+  let n = Math.ceil(s * vu_nbar);
+
+  for (var j = 0; j < n; ++ j) {
+    let y = sa_bottom - (j+1) * vu_barh;
+    let h = vu_barh - 1;
+    
+    if (j < vu_ngreen) {
+      c.fillStyle = 'rgb(0, 255, 0)';
+    } else if (j < (vu_ngreen + vu_nyellow)) {
+      c.fillStyle = 'rgb(255, 255, 0)';
+    } else {
+      c.fillStyle = 'rgb(255, 0, 0)';
+    }
+    c.fillRect(x, y, w, h);
+    //console.log(`fillRect x:${x}, y:${y}, w:${w}, h:${h}`);
+  }
+}
+
+drawBars(Math.random(), 5, 16);
+drawBars(Math.random(), 30, 16);
+c.fillStyle = 'rgb(255, 255, 255)';
+c.fillText("L", 5 + 16/2 - 1.5, sa_bottom + 8);
+c.fillText("R", 30 + 16/2 - 1.5, sa_bottom + 8);
+
+if (false) {
+
+  c.fillText("src: optical 1, 24b / 192kHz. nkmd: reverb 134", 5.5, st_tb);
+
+  for (var i = 0; i < nband; ++ i) {
+    let s = sadata[i];
+
+    let x = sa_left + sa_bwidth * i;
+    let w = sa_bwidth - 1;
+
+    drawBars(s, x, w);
+  }
+
+  c.fillStyle = 'rgb(255, 255, 255)';
+  c.font = '8px "monospace"';
+  c.fillText("10dB", 4, 6);
+  c.fillText("-43dB", 25, 6);
+  //c.fillText("10dB", 23, sa_bottom);
+  let sa_labely = sa_bottom + 7
+  c.fillText("8", sa_left+1, sa_labely);
+  c.fillText("1k", 250, sa_labely);
+  c.fillText("4k", 370, sa_labely);
+  c.fillText("20k", 385, sa_labely);
+} else {
+
+  let ch_w = Math.floor((400 - st_padl - st_padr) / nch);
+  for (var i = 0; i < nch; ++ i) {
+    let x = st_padl + ch_w * i;
+
+    c.beginPath();
+    c.moveTo(x, st_top);
+    c.lineTo(x + ch_w - st_padm, st_top);
+    c.stroke();
+
+    c.fillText(`ch${i*2+1}-${i*2+2} coax`, x+2.5, st_tb);
+
+    drawBars(Math.random(), x + 5, 16);
+    drawBars(Math.random(), x + 30, 16);
+    c.fillStyle = 'rgb(255, 255, 255)';
+    c.fillText("L", x + 5 + 16/2 - 1.5, sa_bottom + 8);
+    c.fillText("R", x + 30 + 16/2 - 1.5, sa_bottom + 8);
+
+    c.fillText("gain", x + 50.5, 10);
+  }
+}
+
+
+});
+</script>
