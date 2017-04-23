@@ -109,7 +109,6 @@ c.fillText("L", 5 + 16/2 - 1.5, sa_bottom + 8);
 c.fillText("R", 30 + 16/2 - 1.5, sa_bottom + 8);
 
 if (false) {
-
   c.fillText("src: optical 1, 24b / 192kHz. nkmd: reverb 134", 5.5, st_tb);
 
   for (var i = 0; i < nband; ++ i) {
@@ -132,6 +131,8 @@ if (false) {
   c.fillText("4k", 370, sa_labely);
   c.fillText("20k", 385, sa_labely);
 } else {
+  let knob_r = 8;
+  let knob_x = 63;
 
   let ch_w = Math.floor((400 - st_padl - st_padr) / nch);
   for (var i = 0; i < nch; ++ i) {
@@ -142,6 +143,7 @@ if (false) {
     c.lineTo(x + ch_w - st_padm, st_top);
     c.stroke();
 
+    c.font = '10px "bmp"';
     c.fillText(`ch${i*2+1}-${i*2+2} coax`, x+2.5, st_tb);
 
     drawBars(Math.random(), x + 5, 16);
@@ -150,7 +152,23 @@ if (false) {
     c.fillText("L", x + 5 + 16/2 - 1.5, sa_bottom + 8);
     c.fillText("R", x + 30 + 16/2 - 1.5, sa_bottom + 8);
 
-    c.fillText("gain", x + 50.5, 10);
+    c.font = '8px "monospace"';
+    c.fillText("Gain", x + 48.5, 10);
+    let knob_y = 20;
+    let t = 3.14 * 3 / 4;
+    c.beginPath();
+    c.arc(x + knob_x, knob_y, knob_r, 0, 2 * 3.14159, false);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(x + knob_x, knob_y);
+    c.lineTo(x + knob_x + knob_r * Math.cos(t), knob_y + knob_r * -Math.sin(t));
+    c.stroke();
+    c.fillText("-80dB", x + 55, 38);
+    c.fillText("Pan", x + 48.5, 48);
+    c.beginPath();
+    c.arc(x + knob_x, 59, knob_r, 0, 2 * 3.14159, false);
+    c.stroke();
+    c.fillText("L-80dB", x + 50, 59+18);
   }
 }
 
