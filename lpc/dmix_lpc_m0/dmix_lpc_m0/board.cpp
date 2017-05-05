@@ -40,11 +40,19 @@ STATIC const PINMUX_GRP_T spifipinmuxing[] = {
 };
 
 STATIC const PINMUX_GRP_T pinmuxing[] = {
-    // SSP0
+// SSP0
+#define WM8741SPI
+#ifdef WM8741SPI
+    /* P1.0: GPIO0[4] */
+    {0x1, 0, (SCU_PINIO_FAST | SCU_MODE_FUNC0)},
+    /* P1.1: GPIO0[8] */
+    {0x1, 1, (SCU_PINIO_FAST | SCU_MODE_FUNC0)},
+#else
     /* SSEL: P1.0: [Serial Expansion Interface] */
     {0x1, 0, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
     /* MISO: P1.1: [Serial Expansion Interface] */
     {0x1, 1, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
+#endif
     /* MOSI: P1.2: [Serial Expansion Interface] */
     {0x1, 2, (SCU_PINIO_FAST | SCU_MODE_FUNC5)},
     /* SCLK: P3.0: [Serial Expansion Interface] */

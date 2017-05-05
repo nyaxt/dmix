@@ -1,6 +1,5 @@
 #include "board.h"
 #include "spi.h"
-#include "usbhandler.h"
 #include "util.h"
 
 #include <cr_section_macros.h>
@@ -36,7 +35,7 @@ void MX_CORE_IRQHandler(void) {
   ++*g_i;
 #endif
   if (g_tickSinceLastDidSomething < 1000)
-    g_tickSinceLastDidSomething ++;
+    g_tickSinceLastDidSomething++;
 }
 
 void DMA_IRQHandler(void) { SPI::getInstance()->onDMAIRQ(); }

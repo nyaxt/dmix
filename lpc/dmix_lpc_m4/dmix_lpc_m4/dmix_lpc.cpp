@@ -58,12 +58,24 @@ void SysTick_Handler(void) {
   }
 
   if (g_tickSinceLastDidSomething < 1000)
-    g_tickSinceLastDidSomething ++;
+    g_tickSinceLastDidSomething++;
 }
 
 void DMA_IRQHandler(void) { SPI::getInstance()->onDMAIRQ(); }
 
 } // extern "C"
+
+class USBHandlerImpl : public USBHandler {
+  bool isBusy() override { return SPI::getInstance()->isTransactionActive(); }
+
+  void notifyDataRecieved(uint8_t *data, size_t len) override {
+    if (!SPI::getInstance()->isTransactionActive()) {
+      SPI::getInstance()->doSendRecv(
+          data, USB::getInstance()->getTxBuf(), len,
+          [len]() { USB::getInstance()->enqueueResponse(len); });
+    }
+  }
+};
 
 int main(void) {
   M0App_Boot(M0APP_BASEADDR);
@@ -71,13 +83,14 @@ int main(void) {
   SystemCoreClockUpdate();
   SysTick_Config(SystemCoreClock / 1000); /* set tick to 1ms */
 
+  USBHandlerImpl handler;
   SPI::init();
-  USBHandler::init();
+  USB::init(&handler);
 
   for (;;) {
     bool didSomething = false;
 
-    if (USBHandler::getInstance()->process())
+    if (USB::getInstance()->process())
       didSomething = true;
 
     if (SPI::getInstance()->callCallbackIfDone())
