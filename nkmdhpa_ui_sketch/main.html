@@ -19,7 +19,7 @@
     padding: 10px;
   }
   #c {
-    background: #000;
+    background-color: #000;
     border: 10px solid #fff;
     width: 800px;
     height: 192px;
@@ -54,7 +54,7 @@ let st_padl = 60;
 let st_padr = 1;
 let st_padm = 3;
 
-let sa_top = 1;
+let sa_top = 10;
 let sa_bottom = st_top - 10;
 
 let nband = 48;
@@ -122,8 +122,8 @@ if (false) {
 
   c.fillStyle = 'rgb(255, 255, 255)';
   c.font = '8px "monospace"';
-  c.fillText("10dB", 4, 6);
-  c.fillText("-43dB", 25, 6);
+  c.fillText("10dB", 4, 7);
+  c.fillText("-43dB", 25, 7);
   //c.fillText("10dB", 23, sa_bottom);
   let sa_labely = sa_bottom + 7
   c.fillText("8", sa_left+1, sa_labely);
@@ -163,12 +163,12 @@ if (false) {
     c.moveTo(x + knob_x, knob_y);
     c.lineTo(x + knob_x + knob_r * Math.cos(t), knob_y + knob_r * -Math.sin(t));
     c.stroke();
-    c.fillText("-80dB", x + 55, 38);
+    c.fillText("-80dB", x + 55.5, 38);
     c.fillText("Pan", x + 48.5, 48);
     c.beginPath();
     c.arc(x + knob_x, 59, knob_r, 0, 2 * 3.14159, false);
     c.stroke();
-    c.fillText("L-80dB", x + 50, 59+18);
+    c.fillText("L-80dB", x + 50.5, 59+18);
   }
 }
 
