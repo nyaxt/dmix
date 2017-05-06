@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "../proto.h"
 #include "image.h"
 #include "readhex.h"
 #include "util.h"
@@ -433,6 +434,10 @@ void cmdCSRCmd(DeviceHandle* devhandle, const CSRCommand& csrcmd) {
     int chunkLen = wordSize * nWord;
 
     std::vector<uint8_t> txpacket;
+    txpacket.push_back(static_cast<uint8_t>(CommandType::SPI1));
+    txpacket.push_back(0xc1);
+    txpacket.push_back(0xc2);
+    txpacket.push_back(0xc3);
     for (int f = 0; f < nFrame; ++ f) {
       switch (csrcmd.target()) {
         case CSRTarget::CSR:
@@ -474,7 +479,7 @@ void cmdCSRCmd(DeviceHandle* devhandle, const CSRCommand& csrcmd) {
     devhandle->sendBulk(txpacket);
     if (FLAGS_memh != "")
       throw std::runtime_error("FIXME");  // writeMemh(FLAGS_memh, txpacket);
-    std::vector<uint8_t> rxpacket = devhandle->recvBulk(txpacket.size());
+    std::vector<uint8_t> rxpacket = devhandle->recvBulk(txpacket.size() - 4);
     if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
     if (!csrcmd.is_write() || csrcmd.target() == CSRTarget::Dram0) {
       size_t frameSize = replyOffset + chunkLen - 1;

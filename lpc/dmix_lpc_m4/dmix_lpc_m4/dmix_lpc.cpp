@@ -16,6 +16,7 @@
 #include "board.h"
 #include "spi.h"
 #include "usbhandler.h"
+#include "../../proto.h"
 #include "util.h"
 
 static const uint32_t M0APP_BASEADDR = 0x14080000;
@@ -69,10 +70,24 @@ class USBHandlerImpl : public USBHandler {
   bool isBusy() override { return SPI::getInstance()->isTransactionActive(); }
 
   void notifyDataRecieved(uint8_t *data, size_t len) override {
-    if (!SPI::getInstance()->isTransactionActive()) {
-      SPI::getInstance()->doSendRecv(
-          data, USB::getInstance()->getTxBuf(), len,
-          [len]() { USB::getInstance()->enqueueResponse(len); });
+    if (len == 0) return;
+
+    USB* usb = USB::getInstance();
+
+    CommandType cmd = static_cast<CommandType>(*data);
+    data += 4; len -= 4;
+    switch (cmd) {
+      case CommandType::Echo:
+        memcpy(usb->getTxBuf(), data, len);
+        usb->enqueueResponse(len);
+        break;
+      case CommandType::SPI0:
+      case CommandType::SPI1:
+        assert(!SPI::getInstance()->isTransactionActive());
+        SPI::getInstance()->doSendRecv(
+            data, usb->getTxBuf(), len,
+            [len]() { USB::getInstance()->enqueueResponse(len); });
+        break;
     }
   }
 };
