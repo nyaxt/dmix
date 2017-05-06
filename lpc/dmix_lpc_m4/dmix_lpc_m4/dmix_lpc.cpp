@@ -75,18 +75,39 @@ class USBHandlerImpl : public USBHandler {
     USB* usb = USB::getInstance();
 
     CommandType cmd = static_cast<CommandType>(*data);
-    data += 4; len -= 4;
     switch (cmd) {
       case CommandType::Echo:
+        data += 4; len -= 4;
         memcpy(usb->getTxBuf(), data, len);
         usb->enqueueResponse(len);
         break;
       case CommandType::SPI0:
-      case CommandType::SPI1:
+        data += 4; len -= 4;
         assert(!SPI::getInstance()->isTransactionActive());
         SPI::getInstance()->doSendRecv(
-            data, usb->getTxBuf(), len,
+            0, data, usb->getTxBuf(), len,
             [len]() { USB::getInstance()->enqueueResponse(len); });
+        break;
+      case CommandType::SPI1:
+        data += 4; len -= 4;
+        assert(!SPI::getInstance()->isTransactionActive());
+        SPI::getInstance()->doSendRecv(
+            1, data, usb->getTxBuf(), len,
+            [len]() { USB::getInstance()->enqueueResponse(len); });
+        break;
+      case CommandType::SPI_SS:
+        assert(len >= 3);
+        SPIChip chip = static_cast<SPIChip>(data[1]);
+        uint8_t highlow = data[2];
+        
+        switch (chip) {
+          case SPIChip::DAC:
+            Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_DAC_PORT, SS_DAC_PIN, highlow);
+            break;
+          case SPIChip::VOL:
+            Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_VOL_PORT, SS_VOL_PIN, highlow);
+            break;
+        }
         break;
     }
   }

@@ -19,7 +19,9 @@ DEFINE_string(hex, "", "data to send in hex, such as \"de,ad,be,ef\"");
 DEFINE_string(hexfile, "", "intel HEX file to send.");
 DEFINE_string(fbimg, "", "img file to submit to the frame buffer.");
 DEFINE_string(csrcmd, "",
-              "nkmd csr_spi cmd. \"[read|write] [csr|progrom|dram0] [offset]");
+              "nkmd csr_spi cmd. \"[read|write] [csr|progrom|dram0] [offset]\"");
+DEFINE_string(dac, "",
+              "wm8741 dac board cmd. Specify target chip \"[dac|vol]\".");
 DEFINE_string(memh, "", "output SPI cmd to memh file");
 bool g_verbose;
 
@@ -493,6 +495,42 @@ void cmdCSRCmd(DeviceHandle* devhandle, const CSRCommand& csrcmd) {
   //printf("result: %s\n", formatHex(rxdata).c_str());
 }
 
+SPIChip parseDACTarget(const std::string& s) {
+  if (s == "dac") {
+    return SPIChip::DAC; 
+  } else if (s == "vol") {
+    return SPIChip::VOL; 
+  } else
+    throw std::runtime_error(stringPrintF("\"%s\" is not a valid dac target", s.c_str()));
+}
+
+void setSS(DeviceHandle* devhandle, SPIChip chip, bool highlow) {
+  std::vector<uint8_t> txpacket;
+  txpacket.push_back(static_cast<uint8_t>(CommandType::SPI_SS));
+  txpacket.push_back(static_cast<uint8_t>(chip));
+  txpacket.push_back(highlow ? 0xff : 0x00);
+  devhandle->sendBulk(txpacket);
+}
+
+void cmdDACCmd(DeviceHandle* devhandle, SPIChip chip) {
+  setSS(devhandle, chip, false);
+
+  std::vector<uint8_t> txdata;
+  txdata.push_back(static_cast<uint8_t>(CommandType::SPI0));
+  txdata.push_back(0xc1);
+  txdata.push_back(0xc2);
+  txdata.push_back(0xc3);
+  std::vector<uint8_t> body = getTxBodyFromFlags();
+  txdata.insert(txdata.end(), body.begin(), body.end());
+  devhandle->sendBulk(txdata);
+
+  std::vector<uint8_t> rxpacket = devhandle->recvBulk(body.size());
+  if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
+
+  setSS(devhandle, chip, true);
+}
+
+
 int main(int argc, char* argv[]) {
   gflags::SetUsageMessage(std::string("dmixlpc test client.\n Usage: ") +
                           argv[0]);
@@ -520,6 +558,8 @@ int main(int argc, char* argv[]) {
                   });
     else if (FLAGS_csrcmd != "")
       cmdCSRCmd(devhandle.get(), CSRCommand::parseFlags());
+    else if (FLAGS_dac != "")
+      cmdDACCmd(devhandle.get(), parseDACTarget(FLAGS_dac));
     else
       cmdDefault(devhandle.get());
   } catch (std::exception& e) {

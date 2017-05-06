@@ -9,9 +9,9 @@ public:
   static inline SPI *getInstance() { return s_spi; }
 
   template <typename Functor>
-  void doSendRecv(const uint8_t *txBuf, uint8_t *rxBuf, size_t len,
+  void doSendRecv(int ch, const uint8_t *txBuf, uint8_t *rxBuf, size_t len,
                   const Functor &f) {
-    doSendRecvImpl(txBuf, rxBuf, len);
+    doSendRecvImpl(ch, txBuf, rxBuf, len);
     m_callback = f;
   }
 
@@ -22,7 +22,7 @@ public:
   inline bool isTransactionActive() const { return m_isTransactionActive; }
 
 private:
-  void doSendRecvImpl(const uint8_t *txBuf, uint8_t *rxBuf, size_t len);
+  void doSendRecvImpl(int ch, const uint8_t *txBuf, uint8_t *rxBuf, size_t len);
 
   SPI();
 

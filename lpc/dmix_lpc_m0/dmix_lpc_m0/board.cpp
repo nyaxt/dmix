@@ -73,6 +73,11 @@ STATIC const PINMUX_GRP_T pinmuxing[] = {
 static void Board_SetupMuxing(void) {
   /* Setup system level pin muxing */
   Chip_SCU_SetPinMuxing(pinmuxing, sizeof(pinmuxing) / sizeof(PINMUX_GRP_T));
+
+  Chip_GPIO_SetPinDIROutput(LPC_GPIO_PORT, SS_DAC_PORT, SS_DAC_PIN);
+  Chip_GPIO_SetPinDIROutput(LPC_GPIO_PORT, SS_VOL_PORT, SS_VOL_PIN);
+  Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_DAC_PORT, SS_DAC_PIN, true);
+  Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_VOL_PORT, SS_VOL_PIN, true);
 }
 
 /* Set up and initialize clocking prior to call to main */
