@@ -31,22 +31,23 @@ SPI::SPI() {
   Chip_SSP_SetMaster(LPC_SSP1, TRUE);
 }
 
-void SPI::doSendRecvImpl(int ch, const uint8_t *txBuf, uint8_t *rxBuf, size_t len) {
+void SPI::doSendRecvImpl(int ch, const uint8_t *txBuf, uint8_t *rxBuf,
+                         size_t len) {
   if (m_isTransactionActive)
     die();
 
   m_isTransactionActive = true;
   m_txComplete = m_rxComplete = false;
 
-  if (ch == 0) { 
+  if (ch == 0) {
     m_dmaTx = Chip_GPDMA_GetFreeChannel(LPC_GPDMA, GPDMA_CONN_SSP0_Tx);
     m_dmaRx = Chip_GPDMA_GetFreeChannel(LPC_GPDMA, GPDMA_CONN_SSP0_Rx);
 
     Chip_SSP_DMA_Disable(LPC_SSP0);
     checkAlign(txBuf);
     Chip_GPDMA_Transfer(LPC_GPDMA, m_dmaTx, reinterpret_cast<uint32_t>(txBuf),
-                        GPDMA_CONN_SSP0_Tx, GPDMA_TRANSFERTYPE_M2P_CONTROLLER_DMA,
-                        len);
+                        GPDMA_CONN_SSP0_Tx,
+                        GPDMA_TRANSFERTYPE_M2P_CONTROLLER_DMA, len);
     checkAlign(rxBuf);
     Chip_GPDMA_Transfer(LPC_GPDMA, m_dmaRx, GPDMA_CONN_SSP0_Rx,
                         reinterpret_cast<uint32_t>(rxBuf),
@@ -59,8 +60,8 @@ void SPI::doSendRecvImpl(int ch, const uint8_t *txBuf, uint8_t *rxBuf, size_t le
     Chip_SSP_DMA_Disable(LPC_SSP1);
     checkAlign(txBuf);
     Chip_GPDMA_Transfer(LPC_GPDMA, m_dmaTx, reinterpret_cast<uint32_t>(txBuf),
-                        GPDMA_CONN_SSP1_Tx, GPDMA_TRANSFERTYPE_M2P_CONTROLLER_DMA,
-                        len);
+                        GPDMA_CONN_SSP1_Tx,
+                        GPDMA_TRANSFERTYPE_M2P_CONTROLLER_DMA, len);
     checkAlign(rxBuf);
     Chip_GPDMA_Transfer(LPC_GPDMA, m_dmaRx, GPDMA_CONN_SSP1_Rx,
                         reinterpret_cast<uint32_t>(rxBuf),

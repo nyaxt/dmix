@@ -13,10 +13,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../../proto.h"
 #include "board.h"
 #include "spi.h"
 #include "usbhandler.h"
-#include "../../proto.h"
 #include "util.h"
 
 static const uint32_t M0APP_BASEADDR = 0x14080000;
@@ -70,45 +70,49 @@ class USBHandlerImpl : public USBHandler {
   bool isBusy() override { return SPI::getInstance()->isTransactionActive(); }
 
   void notifyDataRecieved(uint8_t *data, size_t len) override {
-    if (len == 0) return;
+    if (len == 0)
+      return;
 
-    USB* usb = USB::getInstance();
+    USB *usb = USB::getInstance();
 
     CommandType cmd = static_cast<CommandType>(*data);
     switch (cmd) {
-      case CommandType::Echo:
-        data += 4; len -= 4;
-        memcpy(usb->getTxBuf(), data, len);
-        usb->enqueueResponse(len);
+    case CommandType::Echo:
+      data += 4;
+      len -= 4;
+      memcpy(usb->getTxBuf(), data, len);
+      usb->enqueueResponse(len);
+      break;
+    case CommandType::SPI0:
+      data += 4;
+      len -= 4;
+      assert(!SPI::getInstance()->isTransactionActive());
+      SPI::getInstance()->doSendRecv(0, data, usb->getTxBuf(), len, [len]() {
+        USB::getInstance()->enqueueResponse(len);
+      });
+      break;
+    case CommandType::SPI1:
+      data += 4;
+      len -= 4;
+      assert(!SPI::getInstance()->isTransactionActive());
+      SPI::getInstance()->doSendRecv(1, data, usb->getTxBuf(), len, [len]() {
+        USB::getInstance()->enqueueResponse(len);
+      });
+      break;
+    case CommandType::SPI_SS:
+      assert(len >= 3);
+      SPIChip chip = static_cast<SPIChip>(data[1]);
+      uint8_t highlow = data[2];
+
+      switch (chip) {
+      case SPIChip::DAC:
+        Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_DAC_PORT, SS_DAC_PIN, highlow);
         break;
-      case CommandType::SPI0:
-        data += 4; len -= 4;
-        assert(!SPI::getInstance()->isTransactionActive());
-        SPI::getInstance()->doSendRecv(
-            0, data, usb->getTxBuf(), len,
-            [len]() { USB::getInstance()->enqueueResponse(len); });
+      case SPIChip::VOL:
+        Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_VOL_PORT, SS_VOL_PIN, highlow);
         break;
-      case CommandType::SPI1:
-        data += 4; len -= 4;
-        assert(!SPI::getInstance()->isTransactionActive());
-        SPI::getInstance()->doSendRecv(
-            1, data, usb->getTxBuf(), len,
-            [len]() { USB::getInstance()->enqueueResponse(len); });
-        break;
-      case CommandType::SPI_SS:
-        assert(len >= 3);
-        SPIChip chip = static_cast<SPIChip>(data[1]);
-        uint8_t highlow = data[2];
-        
-        switch (chip) {
-          case SPIChip::DAC:
-            Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_DAC_PORT, SS_DAC_PIN, highlow);
-            break;
-          case SPIChip::VOL:
-            Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_VOL_PORT, SS_VOL_PIN, highlow);
-            break;
-        }
-        break;
+      }
+      break;
     }
   }
 };
