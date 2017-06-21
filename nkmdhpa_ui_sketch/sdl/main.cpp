@@ -1,4 +1,5 @@
 #include <SDL.h>
+#include "../fontgen/fontdata.h"
 
 SDL_Window* g_sdlwin;
 SDL_Surface* g_screen_surface;
@@ -11,6 +12,7 @@ const uint8_t COLOR_BLACK = 0x00;
 const uint8_t COLOR_BLUE = 0x30;
 const uint8_t COLOR_GREEN = 0x0c;
 const uint8_t COLOR_RED = 0x03;
+const uint8_t COLOR_WHITE = 0x3f;
 
 class SurfaceClient {
  public:
@@ -22,6 +24,8 @@ class Surface {
   Surface();
 
   void FillRect(int x, int y, int w, int h, uint8_t color);
+  void DrawChar(int x, int y, char c, uint8_t color);
+  void DrawString(int x, int y, const char* s, uint8_t color);
   void Sync(SurfaceClient* client);
 
  private:
@@ -29,19 +33,42 @@ class Surface {
   uint8_t linebuf_[LCD_WIDTH * 4];
 };
 
-Surface::Surface() {
-  FillRect(0, 0, LCD_WIDTH, LCD_HEIGHT, COLOR_BLACK);
-  FillRect(20, 30, 50, 40, COLOR_GREEN);
-  FillRect(0, 0, 10, 10, COLOR_RED);
-  FillRect(10, 0, 10, 10, COLOR_GREEN);
-  FillRect(20, 0, 10, 10, COLOR_BLUE);
-}
+Surface::Surface() { FillRect(0, 0, LCD_WIDTH, LCD_HEIGHT, COLOR_BLACK); }
 
 void Surface::FillRect(int x, int y, int w, int h, uint8_t color) {
   for (int j = y; j < y + h; ++j) {
     for (int i = x; i < x + w; ++i) {
       data_[j * LCD_WIDTH + i] = color;
     }
+  }
+}
+
+void Surface::DrawChar(int x, int y, char c, uint8_t color) {
+  if (c < '!' || '~' < c) return;
+
+  uint8_t* p = &FONTDATA[static_cast<int>(c - '!') * 8];
+  uint8_t d = *p;
+
+  int mask = 0x80;
+  for (int yy = 0; yy < 10; ++yy) {
+    for (int xx = 0; xx < 6; ++xx) {
+      if (d & mask) data_[(y + yy) * LCD_WIDTH + x + xx] = color;
+
+      mask = mask >> 1;
+      if (!mask) {
+        mask = 0x80;
+        p++;
+        d = *p;
+      }
+    }
+  }
+}
+
+void Surface::DrawString(int x, int y, const char* s, uint8_t color) {
+  char c;
+  while ((c = *s++)) {
+    DrawChar(x, y, c, color);
+    x += 6;
   }
 }
 
@@ -104,6 +131,40 @@ bool init() {
 }
 
 void update() {
+  nkmd_surface.FillRect(0, 0, LCD_WIDTH, LCD_HEIGHT, COLOR_BLACK);
+  nkmd_surface.DrawString(20, 10, "Hello World!", COLOR_WHITE);
+  {
+    const int th = 10;
+
+    const int st_h = 15;
+    const int st_top = 96 - st_h;
+    const int st_tb = 96 - st_h / 2 + (st_h - th) / 2;
+
+    const int nch = 4;
+
+    const int st_padl = 60;
+    const int st_padr = 1;
+    const int st_padm = 3;
+
+    const int sa_top = 10;
+    const int sa_bottom = st_top - 10;
+
+    const int nband = 48;
+    const int sa_bwidth = 7;  // Math.ceil(300 / nband);
+    const int sa_left = 400 - sa_bwidth * nband - 5;
+    const int sa_maxh = sa_bottom - sa_top;
+
+    const int vu_nred = 2;
+    const int vu_nyellow = 3;
+    const int vu_ngreen = 5;
+    const int vu_nbar = vu_nred + vu_nyellow + vu_ngreen;
+    const int vu_barh = sa_maxh / vu_nbar;
+
+    const int vu_bwidth = 10;
+    const int vu_bspace = 10;
+    const int vu_left = 10;
+  }
+
   SDL_LockSurface(g_lcd_surface);
   {
     SDLClient sdl_client(g_lcd_surface->pixels);
