@@ -1,4 +1,4 @@
-CXXFLAGS:=--std=c++1y -g -O2 $(shell sdl2-config --cflags)
+CXXFLAGS:=--std=c++1y -g -O0 $(shell sdl2-config --cflags)
 LDFLAGS:=$(shell sdl2-config --libs)
 
 OBJS:=main.o
