@@ -1,7 +1,7 @@
 CXXFLAGS:=--std=c++1y -g -O0 $(shell sdl2-config --cflags)
 LDFLAGS:=$(shell sdl2-config --libs)
 
-OBJS:=main.o
+OBJS:=surface.o uiview.o main.o
 
 run: nkmdhpa_ui_sketch
 	./nkmdhpa_ui_sketch
