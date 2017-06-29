@@ -157,7 +157,7 @@ class SDLClient : public SurfaceClient {
 
 Surface nkmd_surface;
 
-const int MAG = 3;
+const int MAG = 1;
 const int WIN_WIDTH = LCD_WIDTH * MAG;
 const int WIN_HEIGHT = LCD_HEIGHT * MAG;
 

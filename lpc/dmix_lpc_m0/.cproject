@@ -95,6 +95,7 @@
 								<option id="gnu.cpp.link.option.libs.1941304855" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs"/>
 								<option id="gnu.cpp.link.option.paths.705339643" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths"/>
 								<option id="com.crt.advproject.link.cpp.multicore.slave.1395695564" name="Multicore configuration" superClass="com.crt.advproject.link.cpp.multicore.slave" value="M0APP" valueType="string"/>
+								<option id="com.crt.advproject.link.memory.heapAndStack.cpp.1031829732" superClass="com.crt.advproject.link.memory.heapAndStack.cpp" value="&amp;Heap:Default;Post Data;Default&amp;Stack:Default;End;Default" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.886424586" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -277,6 +278,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lpc_chip_43xx_m0/Release}&quot;"/>
 								</option>
 								<option id="com.crt.advproject.link.cpp.multicore.slave.1001532473" name="Multicore configuration" superClass="com.crt.advproject.link.cpp.multicore.slave" value="M0APP" valueType="string"/>
+								<option id="com.crt.advproject.link.memory.heapAndStack.cpp.345492786" superClass="com.crt.advproject.link.memory.heapAndStack.cpp" value="&amp;Heap:Default;Post Data;Default&amp;Stack:Default;End;Default" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.124657640" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -436,4 +438,5 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
+	<storageModule moduleId="com.crt.advproject"/>
 </cproject>

@@ -104,6 +104,7 @@
 								<option id="com.crt.advproject.link.cpp.fpu.616221823" name="Floating point" superClass="com.crt.advproject.link.cpp.fpu" value="com.crt.advproject.link.cpp.fpu.fpv4" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.cpp.crpenable.741783578" name="Enable Code Read Protection" superClass="com.crt.advproject.link.cpp.crpenable" value="true" valueType="boolean"/>
 								<option id="com.crt.advproject.link.cpp.multicore.slave.359506221" name="Multicore configuration" superClass="com.crt.advproject.link.cpp.multicore.slave"/>
+								<option id="com.crt.advproject.link.memory.heapAndStack.cpp.1831662191" superClass="com.crt.advproject.link.memory.heapAndStack.cpp" value="&amp;Heap:Default;Post Data;Default&amp;Stack:Default;End;Default" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.769474099" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -225,6 +226,7 @@
 								</option>
 								<option id="com.crt.advproject.link.cpp.fpu.1171123079" name="Floating point" superClass="com.crt.advproject.link.cpp.fpu" value="com.crt.advproject.link.cpp.fpu.fpv4" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.cpp.crpenable.138484451" name="Enable Code Read Protection" superClass="com.crt.advproject.link.cpp.crpenable" value="true" valueType="boolean"/>
+								<option id="com.crt.advproject.link.memory.heapAndStack.cpp.2133996331" superClass="com.crt.advproject.link.memory.heapAndStack.cpp" value="&amp;Heap:Default;Post Data;Default&amp;Stack:Default;End;Default" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1573724458" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -345,4 +347,5 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.crt.advproject.GCCManagedMakePerProjectProfile"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="com.crt.advproject"/>
 </cproject>
