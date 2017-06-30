@@ -1,7 +1,6 @@
 #include "uiview.h"
 
-#include <math.h>
-#include <stdlib.h>
+#include "xorshift.h"
 
 const int th = 10;
 
@@ -51,8 +50,8 @@ void drawBars(Surface* surface, int n, int x, int w) {
 
 void UIView::Update() {
   surface_->FillRect(0, 0, LCD_WIDTH, LCD_HEIGHT, COLOR_BLACK);
-  drawBars(surface_, random() % (vu_nbar + 1), 8, 20);
-  drawBars(surface_, random() % (vu_nbar + 1), 41, 20);
+  drawBars(surface_, xrand() % (vu_nbar + 1), 8, 20);
+  drawBars(surface_, xrand() % (vu_nbar + 1), 41, 20);
   surface_->DrawString(3 + 30 / 2 - 2, sa_bottom, "L", COLOR_WHITE);
   surface_->DrawString(36 + 30 / 2 - 2, sa_bottom, "R", COLOR_WHITE);
 
@@ -63,7 +62,7 @@ void UIView::Update() {
 
     if (false)
       for (int i = 0; i < nband; ++i) {
-        const int n = random() % (vu_nbar + 1);
+        const int n = xrand() % (vu_nbar + 1);
         const int x = sa_left + sa_bwidth * i;
         const int w = sa_bwidth - 1;
 
@@ -89,16 +88,16 @@ void UIView::Update() {
 
       surface_->DrawString(x + 2, st_top, "ch1 coax", COLOR_WHITE);
 
-      drawBars(surface_, random() % (vu_nbar + 1), x + 5, 16);
-      drawBars(surface_, random() % (vu_nbar + 1), x + 30, 16);
+      drawBars(surface_, xrand() % (vu_nbar + 1), x + 5, 16);
+      drawBars(surface_, xrand() % (vu_nbar + 1), x + 30, 16);
       surface_->DrawString(x + 5 + 16 / 2 - 1.5, sa_bottom, "L", COLOR_WHITE);
       surface_->DrawString(x + 30 + 16 / 2 - 1.5, sa_bottom, "R", COLOR_WHITE);
 
       surface_->DrawString5(x + 48.5, 2, "GAIN", COLOR_WHITE);
       const int knob_y = 20;
-      const int t = 3.14 * 3 / 4;
       surface_->DrawCircle(x + knob_x, knob_y, knob_r, COLOR_WHITE);
       /*
+      const int t = 3.14 * 3 / 4;
       c.beginPath();
       c.moveTo(x + knob_x, knob_y);
       c.lineTo(x + knob_x + knob_r * Math.cos(t), knob_y + knob_r *

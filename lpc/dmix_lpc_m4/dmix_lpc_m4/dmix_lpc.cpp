@@ -18,6 +18,7 @@
 #include "spi.h"
 #include "usbhandler.h"
 #include "util.h"
+#include "uiview.h"
 
 static const uint32_t M0APP_BASEADDR = 0x14080000;
 
