@@ -18,7 +18,7 @@ const int sa_top = 11;
 const int sa_bottom = st_top - 10;
 
 const int nband = 64;
-const int sa_bwidth = 5;  // Math.ceil(300 / nband);
+const int sa_bwidth = 5;
 const int sa_left = 400 - sa_bwidth * nband - 5;
 const int sa_maxh = sa_bottom - sa_top;
 
