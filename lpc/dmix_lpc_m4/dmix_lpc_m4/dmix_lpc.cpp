@@ -133,15 +133,6 @@ class Client : public SurfaceClient {
 #include "FreeRTOS.h"
 #include "task.h"
 
-#if 0
-void vSPITask(void* pvParameters) {
-  for (;;) {
-    if (!SPI::getInstance()->callCallbackIfDone())
-      
-  }
-}
-#endif
-
 USBHandlerImpl g_handler;
 
 int main(void) {
@@ -152,26 +143,8 @@ int main(void) {
   SPI::init();
   USB::init(&g_handler);
 
-#if 0
-	xTaskCreate(vSPITask, "vSPITask", 1024,
-			NULL, (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *) NULL);
-#endif
-  xTaskCreate(USB::dispatchvTask, "vUSBTask", 2048, NULL,
-              (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *)NULL);
+	xTaskCreate(SPI::dispatchvTask, "vSPITask", 512, NULL, (tskIDLE_PRIORITY + 2UL), (TaskHandle_t *)nullptr);
+  xTaskCreate(USB::dispatchvTask, "vUSBTask", 1024, NULL, (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *)nullptr);
 
   vTaskStartScheduler();
-
-  for (;;) {
-    bool didSomething = false;
-
-#if 0
-    if (USB::getInstance()->process())
-      didSomething = true;
-#endif
-
-    if (didSomething)
-      g_tickSinceLastDidSomething = 0;
-    else if (g_tickSinceLastDidSomething > 300)
-      __WFI();
-  }
 }

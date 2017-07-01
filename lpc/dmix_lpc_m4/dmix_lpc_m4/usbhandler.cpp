@@ -202,11 +202,10 @@ void USB::vTask() {
     if (m_handler->isBusy())
       continue;
 
-    if (!hasUnhandledRxData())
-      continue;
-
-    processRxData();
-    enqueueNextRx();
+    while (hasUnhandledRxData()) {
+      processRxData();
+      enqueueNextRx();
+    }
   }
 }
 #else

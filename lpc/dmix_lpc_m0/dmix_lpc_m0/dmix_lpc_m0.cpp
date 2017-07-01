@@ -1,5 +1,4 @@
 #include "board.h"
-#include "spi.h"
 #include "util.h"
 
 #include <cr_section_macros.h>
@@ -34,11 +33,10 @@ void MX_CORE_IRQHandler(void) {
   *g_toggle = !*g_toggle;
   ++*g_i;
 #endif
-  if (g_tickSinceLastDidSomething < 1000)
-    g_tickSinceLastDidSomething++;
+  if (g_tickSinceLastDidSomething < 1000) g_tickSinceLastDidSomething++;
 }
 
-void DMA_IRQHandler(void) { SPI::getInstance()->onDMAIRQ(); }
+// void DMA_IRQHandler(void) { SPI::getInstance()->onDMAIRQ(); }
 }
 
 int main(void) {
