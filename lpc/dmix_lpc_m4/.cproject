@@ -114,6 +114,40 @@
 							<tool id="com.crt.advproject.link.exe.debug.1886821141" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug"/>
 						</toolChain>
 					</folderInfo>
+					<folderInfo id="com.crt.advproject.config.exe.debug.1892630716.1183656220" name="/" resourcePath="dmix_lpc_m4">
+						<toolChain id="com.crt.advproject.toolchain.exe.debug.2113137419" name="Code Red MCU Tools" superClass="com.crt.advproject.toolchain.exe.debug" unusedChildren="">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="com.crt.advproject.platform.exe.debug" name="ARM-based MCU (Debug)" superClass="com.crt.advproject.platform.exe.debug"/>
+							<tool id="com.crt.advproject.cpp.exe.debug.425414775" name="MCU C++ Compiler" superClass="com.crt.advproject.cpp.exe.debug.1089906985">
+								<option id="gnu.cpp.compiler.option.include.paths.778914639" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}}/freertos/inc_freertoslpc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}}/freertos/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}}/freertos/inc_arm_cm4f&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}}/nkmdhpa_ui&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}/lpc_chip_43xx/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}/lpc_chip_43xx/inc/usbd}&quot;"/>
+								</option>
+								<inputType id="com.crt.advproject.compiler.cpp.input.2131956545" superClass="com.crt.advproject.compiler.cpp.input"/>
+							</tool>
+							<tool id="com.crt.advproject.gcc.exe.debug.528982254" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.1650725965">
+								<option id="gnu.c.compiler.option.include.paths.204425555" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}}/freertos/inc_arm_cm4f&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}}/freertos/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}}/freertos/inc_freertoslpc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}/lpc_chip_43xx/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/${ProjName}/lpc_chip_43xx/inc/usbd}&quot;"/>
+								</option>
+								<inputType id="com.crt.advproject.compiler.input.1075543056" superClass="com.crt.advproject.compiler.input"/>
+							</tool>
+							<tool id="com.crt.advproject.gas.exe.debug.585190019" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.debug.306781778">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1226834867" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="com.crt.advproject.assembler.input.1650093716" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
+							</tool>
+							<tool id="com.crt.advproject.link.cpp.exe.debug.997691895" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.debug.405470617"/>
+							<tool id="com.crt.advproject.link.exe.debug.1314534774" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug.1886821141"/>
+						</toolChain>
+					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="dmix_lpc_m4"/>
 					</sourceEntries>

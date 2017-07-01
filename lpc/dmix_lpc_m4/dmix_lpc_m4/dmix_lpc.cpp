@@ -16,9 +16,9 @@
 #include "../../proto.h"
 #include "board.h"
 #include "spi.h"
+#include "uiview.h"
 #include "usbhandler.h"
 #include "util.h"
-#include "uiview.h"
 
 static const uint32_t M0APP_BASEADDR = 0x14080000;
 
@@ -52,6 +52,7 @@ extern "C" {
 
 void MX_CORE_IRQHandler(void) { Chip_CREG_ClearM0AppEvent(); }
 
+#if 0
 void SysTick_Handler(void) {
   ++g_ticks;
 
@@ -59,83 +60,114 @@ void SysTick_Handler(void) {
     M0App_TriggerIPI();
   }
 
-  if (g_tickSinceLastDidSomething < 1000)
-    g_tickSinceLastDidSomething++;
+  if (g_tickSinceLastDidSomething < 1000) g_tickSinceLastDidSomething++;
 }
+#endif
 
 void DMA_IRQHandler(void) { SPI::getInstance()->onDMAIRQ(); }
 
-} // extern "C"
+}  // extern "C"
 
 class USBHandlerImpl : public USBHandler {
   bool isBusy() override { return SPI::getInstance()->isTransactionActive(); }
 
   void notifyDataRecieved(uint8_t *data, size_t len) override {
-    if (len == 0)
-      return;
+    if (len == 0) return;
 
     USB *usb = USB::getInstance();
 
     CommandType cmd = static_cast<CommandType>(*data);
     switch (cmd) {
-    case CommandType::Echo:
-      data += 4;
-      len -= 4;
-      memcpy(usb->getTxBuf(), data, len);
-      usb->enqueueResponse(len);
-      break;
-    case CommandType::SPI0:
-      data += 4;
-      len -= 4;
-      assert(!SPI::getInstance()->isTransactionActive());
-      SPI::getInstance()->doSendRecv(0, data, usb->getTxBuf(), len, [len]() {
-        USB::getInstance()->enqueueResponse(len);
-      });
-      break;
-    case CommandType::SPI1:
-      data += 4;
-      len -= 4;
-      assert(!SPI::getInstance()->isTransactionActive());
-      SPI::getInstance()->doSendRecv(1, data, usb->getTxBuf(), len, [len]() {
-        USB::getInstance()->enqueueResponse(len);
-      });
-      break;
-    case CommandType::SPI_SS:
-      assert(len >= 3);
-      SPIChip chip = static_cast<SPIChip>(data[1]);
-      uint8_t highlow = data[2];
+      case CommandType::Echo:
+        data += 4;
+        len -= 4;
+        memcpy(usb->getTxBuf(), data, len);
+        usb->enqueueResponse(len);
+        break;
+      case CommandType::SPI0:
+        data += 4;
+        len -= 4;
+        assert(!SPI::getInstance()->isTransactionActive());
+        SPI::getInstance()->doSendRecv(0, data, usb->getTxBuf(), len, [len]() {
+          USB::getInstance()->enqueueResponse(len);
+        });
+        break;
+      case CommandType::SPI1:
+        data += 4;
+        len -= 4;
+        assert(!SPI::getInstance()->isTransactionActive());
+        SPI::getInstance()->doSendRecv(1, data, usb->getTxBuf(), len, [len]() {
+          USB::getInstance()->enqueueResponse(len);
+        });
+        break;
+      case CommandType::SPI_SS:
+        assert(len >= 3);
+        SPIChip chip = static_cast<SPIChip>(data[1]);
+        uint8_t highlow = data[2];
 
-      switch (chip) {
-      case SPIChip::DAC:
-        Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_DAC_PORT, SS_DAC_PIN, highlow);
+        switch (chip) {
+          case SPIChip::DAC:
+            Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_DAC_PORT, SS_DAC_PIN,
+                                  highlow);
+            break;
+          case SPIChip::VOL:
+            Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_VOL_PORT, SS_VOL_PIN,
+                                  highlow);
+            break;
+        }
         break;
-      case SPIChip::VOL:
-        Chip_GPIO_SetPinState(LPC_GPIO_PORT, SS_VOL_PORT, SS_VOL_PIN, highlow);
-        break;
-      }
-      break;
     }
   }
 };
+
+#if 0
+class Client : public SurfaceClient {
+ public:
+  void SyncLine(uint8_t* linebuf, int x, int y, int w) final {
+    uint8_t* dest = static_cast<uint8_t*>(pixels_) + (y * LCD_WIDTH + x) * 4;
+    memcpy(dest, linebuf, w * 4);
+  }
+};
+#endif
+
+#include "FreeRTOS.h"
+#include "task.h"
+
+#if 0
+void vSPITask(void* pvParameters) {
+  for (;;) {
+    if (!SPI::getInstance()->callCallbackIfDone())
+      
+  }
+}
+#endif
+
+USBHandlerImpl g_handler;
 
 int main(void) {
   M0App_Boot(M0APP_BASEADDR);
 
   SystemCoreClockUpdate();
-  SysTick_Config(SystemCoreClock / 1000); /* set tick to 1ms */
 
-  USBHandlerImpl handler;
   SPI::init();
-  USB::init(&handler);
+  USB::init(&g_handler);
+
+#if 0
+	xTaskCreate(vSPITask, "vSPITask", 1024,
+			NULL, (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *) NULL);
+#endif
+  xTaskCreate(USB::dispatchvTask, "vUSBTask", 2048, NULL,
+              (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *)NULL);
+
+  vTaskStartScheduler();
 
   for (;;) {
     bool didSomething = false;
 
+#if 0
     if (USB::getInstance()->process())
       didSomething = true;
-
-    if (SPI::getInstance()->callCallbackIfDone())
-      didSomething = true;
+#endif
 
     if (didSomething)
       g_tickSinceLastDidSomething = 0;

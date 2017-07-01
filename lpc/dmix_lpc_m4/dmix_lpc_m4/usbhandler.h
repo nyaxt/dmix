@@ -7,6 +7,8 @@
 #include "usbd_rom_api.h"
 #include <sys/types.h>
 
+#define USB_FREERTOS
+
 class USBHandler {
 public:
   virtual bool isBusy() { return false; }
@@ -19,7 +21,13 @@ public:
   static inline USB *getInstance() { return s_usb; }
 
   bool isConnected();
+
+#ifdef USB_FREERTOS
+  static void dispatchvTask(void*);
+  void vTask();
+#else
   bool process();
+#endif
 
   void onIRQ();
 

@@ -3,6 +3,11 @@
 #include "util.h"
 #include <string.h>
 
+#ifdef USB_FREERTOS
+#include "FreeRTOS.h"
+#include "task.h"
+#endif
+
 /* Endpoint 0 patch that prevents nested NAK event processing */
 static uint32_t g_ep0RxBusy =
     0; /* flag indicating whether EP0 OUT/RX buffer is busy. */
@@ -182,6 +187,29 @@ void USB::enqueueNextRx() {
   NVIC_EnableIRQ(LPC_USB_IRQ);
 }
 
+#ifdef USB_FREERTOS
+void USB::dispatchvTask(void*) {
+  return getInstance()->vTask();
+}
+
+void USB::vTask() {
+  for (;;) {
+    vTaskDelay(1);
+
+    if (!isConnected())
+      continue;
+
+    if (m_handler->isBusy())
+      continue;
+
+    if (!hasUnhandledRxData())
+      continue;
+
+    processRxData();
+    enqueueNextRx();
+  }
+}
+#else
 bool USB::process() {
   if (!isConnected())
     return false;
@@ -203,6 +231,7 @@ bool USB::process() {
 
   return handledAtLeastOnce;
 }
+#endif
 
 void USB::enqueueResponse(size_t len) {
   NVIC_DisableIRQ(LPC_USB_IRQ);
