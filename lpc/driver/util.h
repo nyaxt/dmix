@@ -28,4 +28,8 @@ std::string stringPrintF(const char* fmt, ...);
 std::string formatHex(const std::vector<uint8_t>& data);
 void writeMemh(const std::string& path, const std::vector<uint8_t>& data);
 
+inline void assert(bool cond) {
+  if (!cond) throw std::runtime_error("assert failed");
+}
+
 #endif  // _driver_util_h

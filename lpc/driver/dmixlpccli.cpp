@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "../csrcommand.h"
 #include "../proto.h"
 #include "image.h"
 #include "readhex.h"
@@ -254,75 +255,6 @@ void cmdDefault(DeviceHandle *devhandle) {
          formatHex(rxdata).c_str());
 }
 
-enum class CSRTarget { CSR, Progrom, Dram0 };
-
-class CSRCommand {
- public:
-  CSRCommand() = default;
-  CSRCommand(CSRTarget target, int addr, uint8_t *txbody, uint8_t *rxbody,
-             size_t len)
-      : is_write_(true),
-        target_(target),
-        addr_(addr),
-        txbody_(txbody),
-        rxbody_(rxbody),
-        len_(len) {}
-
-  bool isWrite() const { return is_write_; }
-  void setIsWrite(bool b) { is_write_ = b; }
-  CSRTarget target() const { return target_; }
-  void setTarget(CSRTarget t) { target_ = t; }
-  int addr() const { return addr_; }
-  void setAddr(int addr) { addr_ = addr; }
-  const uint8_t *txbody() const { return txbody_; }
-  void setTxbody(const uint8_t *b) { txbody_ = b; }
-  uint8_t *rxbody() const { return rxbody_; }
-  void setRxbody(uint8_t *b) { rxbody_ = b; }
-  int len() const { return len_; }
-  void setLen(int len) { len_ = len; }
-
-  uint8_t targetByte() const {
-    switch (target()) {
-      case CSRTarget::CSR:
-        return 0x00;
-      case CSRTarget::Progrom:
-        return 0x10;
-      case CSRTarget::Dram0:
-        return 0x00;
-    }
-  }
-
-  int wordSize() const {
-    switch (target()) {
-      case CSRTarget::CSR:
-        return 1;
-      case CSRTarget::Progrom:
-        return 4;
-      case CSRTarget::Dram0:
-        return 4;
-    }
-  }
-
-  size_t replyOffset() const {
-    switch (target()) {
-      case CSRTarget::CSR:
-        return 3;
-      case CSRTarget::Progrom:
-        return 4;
-      case CSRTarget::Dram0:
-        return 7;
-    }
-  }
-
- private:
-  bool is_write_ = false;
-  CSRTarget target_;
-  int addr_;
-  const uint8_t *txbody_;
-  uint8_t *rxbody_;
-  int len_;
-};
-
 void flagsToCSRCommand(CSRCommand *cmd) {
   const auto &cmdstr = FLAGS_csrcmd;
 
@@ -400,99 +332,12 @@ void flagsToCSRCommand(CSRCommand *cmd) {
     throw std::runtime_error("body len not multiple of wordSize");
 }
 
-inline void assert(bool cond) {
-  if (!cond) throw std::runtime_error("assert failed");
-}
-
-class PacketDriver {
- public:
-  virtual void executeTransaction(const uint8_t *txbuf, uint8_t *rxbuf,
-                                  size_t len) = 0;
-};
-
-void sendCSRCmd(const CSRCommand &csrcmd, uint8_t *txbuf, uint8_t *rxbuf,
-                PacketDriver *driver) {
-  int wordSize = csrcmd.wordSize();
-  constexpr uint8_t cmdSpecial = 0x0f;
-  uint8_t cmdByteBase = (csrcmd.isWrite() ? 0x80 : 0x00) | csrcmd.targetByte();
-
-  auto addrC = csrcmd.addr();
-  size_t replyOffset = csrcmd.replyOffset();
-  size_t rxoffset = 0;
-  for (int i = 0; i < csrcmd.len();) {
-    int left = csrcmd.len() - i;
-
-    int nFrame = 1;
-    int nWord;
-    uint8_t encodedChunkLen;
-    if (left >= wordSize * 16) {
-      nFrame = left / (wordSize * 16);
-      nWord = 16;
-      encodedChunkLen = 0x3 << 5;
-    } else if (left >= wordSize * 4) {
-      nWord = 4;
-      encodedChunkLen = 0x2 << 5;
-    } else {
-      assert(left >= wordSize);
-      nWord = 1;
-      encodedChunkLen = 0x1 << 5;
-    }
-    int chunkLen = wordSize * nWord;
-
-    uint8_t *ptx = txbuf;
-    for (int f = 0; f < nFrame; ++f) {
-      switch (csrcmd.target()) {
-        case CSRTarget::CSR:
-          *ptx++ = cmdByteBase | encodedChunkLen | ((addrC >> 8) & 0xf);
-          *ptx++ = (addrC >> 0) & 0xff;
-          break;
-        case CSRTarget::Progrom:
-          *ptx++ = cmdByteBase | encodedChunkLen | ((addrC >> 16) & 0xf);
-          *ptx++ = (addrC >> 8) & 0xff;
-          *ptx++ = (addrC >> 0) & 0xff;
-          break;
-        case CSRTarget::Dram0:
-          *ptx++ = cmdSpecial;
-          *ptx++ = cmdByteBase | encodedChunkLen;
-          *ptx++ = (addrC >> 24) & 0xff;
-          *ptx++ = (addrC >> 16) & 0xff;
-          *ptx++ = (addrC >> 8) & 0xff;
-          *ptx++ = (addrC >> 0) & 0xff;
-          break;
-      }
-      if (csrcmd.isWrite()) {
-        memcpy(ptx, csrcmd.txbody() + i, chunkLen);
-        ptx += chunkLen;
-      } else {
-        memset(ptx, 0xdd, chunkLen);
-        ptx += chunkLen;
-      }
-
-      i += chunkLen;
-      addrC += nWord;
-    }
-
-    // NOP padding
-    *ptx++ = 0x00;
-
-    driver->executeTransaction(txbuf, rxbuf, ptx - txbuf);
-    if (!csrcmd.isWrite() || csrcmd.target() == CSRTarget::Dram0) {
-      size_t frameSize = replyOffset + chunkLen - 1;
-      for (int f = 0; f < nFrame; ++f) {
-        const uint8_t *start = rxbuf + frameSize * f + replyOffset;
-        memcpy(csrcmd.rxbody() + rxoffset, start, chunkLen);
-        rxoffset += chunkLen;
-      }
-    }
-  }
-}
-
 class USBBridgePacketDriver : public PacketDriver {
  public:
   USBBridgePacketDriver(DeviceHandle *usb) : usb_(usb) {}
 
   void executeTransaction(const uint8_t *txbuf, uint8_t *rxbuf,
-                          size_t len) override {
+                          int len) override {
     std::vector<uint8_t> txpacket;
     txpacket.push_back(static_cast<uint8_t>(CommandType::SPI1));
     txpacket.push_back(0xc1);

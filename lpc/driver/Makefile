@@ -1,17 +1,20 @@
 LIBUSB_PREFIX:=$(shell brew --prefix libusb)
 GFLAGS_PREFIX:=$(shell brew --prefix gflags)
 LDFLAGS:=-L$(LIBUSB_PREFIX)/lib -lusb-1.0 -L$(GFLAGS_PREFIX)/lib -lgflags
-CFLAGS:=-O0 -g -std=c++1y -I$(LIBUSB_PREFIX)/include -I$(GFLAGS_PREFIX)/include
+CFLAGS:=-O0 -g -std=c++1y -I$(LIBUSB_PREFIX)/include -I$(GFLAGS_PREFIX)/include -I./
 CXX:=clang++
 CLANG_FORMAT:=clang-format
 
-dmixlpccli: dmixlpccli.o readhex.o util.o image.o
+dmixlpccli: csrcommand.o dmixlpccli.o readhex.o util.o image.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 -include Makefile.deps
 
 Makefile.deps:
 	$(CXX) $(CFLAGS) -MM *.cpp > Makefile.deps
+
+csrcommand.o: ../csrcommand.cpp ../csrcommand.h
+	$(CXX) $(CFLAGS) -c ../csrcommand.cpp
 
 .cpp.o:
 	$(CXX) $(CFLAGS) -c $<
