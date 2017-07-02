@@ -102,15 +102,31 @@ class USBHandlerImpl : public USBHandler {
   }
 };
 
-#if 0
+class CSRDriver {
+ public:
+  void execute(const CSRCommand&);
+
+ private:
+  __attribute__((aligned(4))) uint8_t cmdbuf_[1024];
+  __attribute__((aligned(4))) uint8_t spirxbuf_[1024];
+};
+
+void CSRDriver::execute(const CSRCommand& cmd) {
+
+}
+
 class Client : public SurfaceClient {
  public:
+  Client() {
+  }
+
   void SyncLine(uint8_t* linebuf, int x, int y, int w) final {
     uint8_t* dest = static_cast<uint8_t*>(pixels_) + (y * LCD_WIDTH + x) * 4;
-    memcpy(dest, linebuf, w * 4);
+
+    SPI::getInstance()->sendRecv(1, cmdbuf_, spirx_, len);
   }
+
 };
-#endif
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -125,7 +141,8 @@ int main(void) {
   SPI::init();
   USB::init(&g_handler);
 
-  xTaskCreate(USB::dispatchvTask, "vUSBTask", 1024, NULL, (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *)nullptr);
+  xTaskCreate(USB::dispatchvTask, "vUSBTask", 1024, NULL, (tskIDLE_PRIORITY + 2UL), (TaskHandle_t *)nullptr);
+  xTaskCreate(USB::dispatchvTask, "vUITask", 1024, NULL, (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *)nullptr);
 
   vTaskStartScheduler();
 }

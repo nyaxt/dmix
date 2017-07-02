@@ -89,6 +89,7 @@ ErrorCode_t USB::onBulkOut(uint32_t event) {
   switch (event) {
   case USB_EVT_OUT:
     m_sizeReceived = m_api->hw->ReadEP(m_handle, LUSB_OUT_EP, m_bufRx);
+    portYIELD_FROM_ISR(true);
     return LPC_OK;
 
   default:

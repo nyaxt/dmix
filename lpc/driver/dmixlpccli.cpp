@@ -1,10 +1,11 @@
 #include <gflags/gflags.h>
 #include <libusb-1.0/libusb.h>
-#include <memory>
-#include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <memory>
+#include <stdexcept>
 #include <vector>
 
 #include "../proto.h"
@@ -32,21 +33,8 @@ static const size_t MAX_BULK_LEN = 0x5000;
 
 struct libusb_context *g_usbctx;
 
-std::vector<uint8_t> prepareTxData() {
-  std::vector<uint8_t> txdata;
-
-  if (FLAGS_hex != "") {
-    txdata = parseHex(FLAGS_hex);
-  }
-  if (txdata.size() > MAX_BULK_LEN) {
-    throw std::runtime_error("txdata too large!");
-  }
-
-  return txdata;
-}
-
 class LibUSBError : public std::runtime_error {
-public:
+ public:
   LibUSBError(const char *context, int err)
       : std::runtime_error(
             stringPrintF("%s failed: %s", context,
@@ -54,7 +42,7 @@ public:
 };
 
 class DeviceHandle {
-public:
+ public:
   virtual ~DeviceHandle() {}
 
   void sendBulk(const std::vector<uint8_t> &txdata) {
@@ -66,7 +54,7 @@ public:
 };
 
 class DummyDeviceHandle : public DeviceHandle {
-public:
+ public:
   ~DummyDeviceHandle() {}
 
   void sendBulk(const uint8_t *data, size_t len) override {
@@ -86,7 +74,7 @@ public:
 };
 
 class USBDeviceHandle : public DeviceHandle, noncopyable {
-public:
+ public:
   static std::unique_ptr<USBDeviceHandle> from(libusb_device *device) {
     return std::unique_ptr<USBDeviceHandle>(new USBDeviceHandle(device));
   }
@@ -95,8 +83,7 @@ public:
 
   ~USBDeviceHandle() {
     if (devhandle_) {
-      if (claimed_)
-        libusb_release_interface(devhandle_, 0);
+      if (claimed_) libusb_release_interface(devhandle_, 0);
 
       // FIXME: this crashes.
       // libusb_close(devhandle_);
@@ -109,8 +96,7 @@ public:
     unsigned char tmp[32];
     int err =
         libusb_get_string_descriptor_ascii(devhandle_, index, tmp, sizeof(tmp));
-    if (err < 0)
-      throw LibUSBError("libusb_get_string_descriptor_ascii", err);
+    if (err < 0) throw LibUSBError("libusb_get_string_descriptor_ascii", err);
 
     return std::string(reinterpret_cast<char *>(tmp));
   }
@@ -118,8 +104,7 @@ public:
   const libusb_device_descriptor &getDescriptor() {
     if (!fetched_descriptor_) {
       int err = libusb_get_device_descriptor(device_, &descriptor_);
-      if (err < 0)
-        throw LibUSBError("libusb_get_device_descriptor", err);
+      if (err < 0) throw LibUSBError("libusb_get_device_descriptor", err);
       fetched_descriptor_ = true;
     }
 
@@ -137,8 +122,7 @@ public:
 #endif
 
     err = libusb_claim_interface(devhandle_, 0);
-    if (err != 0)
-      throw LibUSBError("libusb_claim_interface", err);
+    if (err != 0) throw LibUSBError("libusb_claim_interface", err);
 
     claimed_ = true;
   }
@@ -151,11 +135,10 @@ public:
   void sendBulk(const uint8_t *data, size_t len) override;
   std::vector<uint8_t> recvBulk(size_t len) override;
 
-private:
+ private:
   USBDeviceHandle(libusb_device *device) : device_(device) {
     int err = libusb_open(device, &devhandle_);
-    if (err != 0)
-      throw LibUSBError("libusb_open", err);
+    if (err != 0) throw LibUSBError("libusb_open", err);
   }
 
   libusb_device *device_ = nullptr;
@@ -167,8 +150,7 @@ private:
 };
 
 void USBDeviceHandle::sendBulk(const uint8_t *data, size_t len) {
-  if (len == 0)
-    throw std::runtime_error("test txdata not specified.");
+  if (len == 0) throw std::runtime_error("test txdata not specified.");
 
   if (len > MAX_BULK_LEN)
     throw std::runtime_error("txdata too long for a bulk tx");
@@ -183,12 +165,9 @@ void USBDeviceHandle::sendBulk(const uint8_t *data, size_t len) {
   int success =
       libusb_bulk_transfer(devhandle_, 0x01, const_cast<uint8_t *>(data),
                            static_cast<uint16_t>(len), &txlen, timeout_);
-  if (success < 0)
-    throw LibUSBError("libusb_bulk_transfer Tx", success);
-  if (txlen < len)
-    throw std::runtime_error("sent data shorter than expected");
-  if (FLAGS_verbose)
-    printf("success!\n");
+  if (success < 0) throw LibUSBError("libusb_bulk_transfer Tx", success);
+  if (txlen < len) throw std::runtime_error("sent data shorter than expected");
+  if (FLAGS_verbose) printf("success!\n");
 }
 
 std::vector<uint8_t> USBDeviceHandle::recvBulk(size_t len) {
@@ -202,21 +181,18 @@ std::vector<uint8_t> USBDeviceHandle::recvBulk(size_t len) {
   int success =
       libusb_bulk_transfer(devhandle_, 0x81, rxdata.data(),
                            static_cast<uint16_t>(len), &rxlen, timeout_);
-  if (success < 0)
-    throw LibUSBError("libusb_bulk_transfer Rx", success);
+  if (success < 0) throw LibUSBError("libusb_bulk_transfer Rx", success);
   rxdata.resize(rxlen);
-  if (FLAGS_verbose)
-    printf("Success! Rx: %s\n", formatHex(rxdata).c_str());
+  if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxdata).c_str());
 
   return std::move(rxdata);
 }
 
 class USBDeviceList : noncopyable {
-public:
+ public:
   USBDeviceList() {
     ndevices_ = libusb_get_device_list(g_usbctx, &list_);
-    if (ndevices_ < 0)
-      throw LibUSBError("libusb_get_device_list", ndevices_);
+    if (ndevices_ < 0) throw LibUSBError("libusb_get_device_list", ndevices_);
   }
 
   ~USBDeviceList() { ::libusb_free_device_list(list_, 1); }
@@ -224,7 +200,7 @@ public:
   libusb_device **begin() { return list_; }
   libusb_device **end() { return list_ + ndevices_; }
 
-private:
+ private:
   libusb_device **list_ = nullptr;
   ssize_t ndevices_;
 };
@@ -234,12 +210,9 @@ std::unique_ptr<USBDeviceHandle> findDevice() {
   for (libusb_device *device : list) {
     std::unique_ptr<USBDeviceHandle> devhandle = USBDeviceHandle::from(device);
 
-    if (devhandle->getDescriptor().idVendor != USBI2C_VENDOR_ID)
-      continue;
-    if (devhandle->getDescriptor().idProduct != USBI2C_PRODUCT_ID)
-      continue;
-    if (devhandle->getProductStringDescriptor() != "dmix_lpc")
-      continue;
+    if (devhandle->getDescriptor().idVendor != USBI2C_VENDOR_ID) continue;
+    if (devhandle->getDescriptor().idProduct != USBI2C_PRODUCT_ID) continue;
+    if (devhandle->getProductStringDescriptor() != "dmix_lpc") continue;
 
     return devhandle;
   }
@@ -284,93 +257,102 @@ void cmdDefault(DeviceHandle *devhandle) {
 enum class CSRTarget { CSR, Progrom, Dram0 };
 
 class CSRCommand {
-public:
+ public:
   CSRCommand() = default;
-  CSRCommand(CSRTarget target, int addr, const std::vector<uint8_t> &body)
-      : is_write_(true), target_(target), addr_(addr), body_(body),
-        len_(body.size()) {}
+  CSRCommand(CSRTarget target, int addr, uint8_t *txbody, uint8_t *rxbody,
+             size_t len)
+      : is_write_(true),
+        target_(target),
+        addr_(addr),
+        txbody_(txbody),
+        rxbody_(rxbody),
+        len_(len) {}
 
-  static CSRCommand parseFlags();
-
-  const bool is_write() const { return is_write_; }
+  bool isWrite() const { return is_write_; }
+  void setIsWrite(bool b) { is_write_ = b; }
   CSRTarget target() const { return target_; }
+  void setTarget(CSRTarget t) { target_ = t; }
   int addr() const { return addr_; }
-  const std::vector<uint8_t> &body() const { return body_; }
+  void setAddr(int addr) { addr_ = addr; }
+  const uint8_t *txbody() const { return txbody_; }
+  void setTxbody(const uint8_t *b) { txbody_ = b; }
+  uint8_t *rxbody() const { return rxbody_; }
+  void setRxbody(uint8_t *b) { rxbody_ = b; }
   int len() const { return len_; }
+  void setLen(int len) { len_ = len; }
 
   uint8_t targetByte() const {
     switch (target()) {
-    case CSRTarget::CSR:
-      return 0x00;
-    case CSRTarget::Progrom:
-      return 0x10;
-    case CSRTarget::Dram0:
-      return 0x00;
+      case CSRTarget::CSR:
+        return 0x00;
+      case CSRTarget::Progrom:
+        return 0x10;
+      case CSRTarget::Dram0:
+        return 0x00;
     }
   }
 
   int wordSize() const {
     switch (target()) {
-    case CSRTarget::CSR:
-      return 1;
-    case CSRTarget::Progrom:
-      return 4;
-    case CSRTarget::Dram0:
-      return 4;
+      case CSRTarget::CSR:
+        return 1;
+      case CSRTarget::Progrom:
+        return 4;
+      case CSRTarget::Dram0:
+        return 4;
     }
   }
 
   size_t replyOffset() const {
     switch (target()) {
-    case CSRTarget::CSR:
-      return 3;
-    case CSRTarget::Progrom:
-      return 4;
-    case CSRTarget::Dram0:
-      return 7;
+      case CSRTarget::CSR:
+        return 3;
+      case CSRTarget::Progrom:
+        return 4;
+      case CSRTarget::Dram0:
+        return 7;
     }
   }
 
-private:
+ private:
   bool is_write_ = false;
   CSRTarget target_;
   int addr_;
-  std::vector<uint8_t> body_;
+  const uint8_t *txbody_;
+  uint8_t *rxbody_;
   int len_;
 };
 
-CSRCommand CSRCommand::parseFlags() {
+void flagsToCSRCommand(CSRCommand *cmd) {
   const auto &cmdstr = FLAGS_csrcmd;
-  CSRCommand ret;
 
   int i = 0;
   for (; i < cmdstr.size(); ++i)
-    if (!isspace(cmdstr[i]))
-      break;
+    if (!isspace(cmdstr[i])) break;
 
-#define MATCH_PREFIX(prefix)                                                   \
-  if (cmdstr.size() >= i + sizeof(prefix) - 1 &&                               \
-      cmdstr.substr(i, sizeof(prefix) - 1) == prefix && ({                     \
-        i += sizeof(prefix) - 1;                                               \
-        true;                                                                  \
+#define MATCH_PREFIX(prefix)                               \
+  if (cmdstr.size() >= i + sizeof(prefix) - 1 &&           \
+      cmdstr.substr(i, sizeof(prefix) - 1) == prefix && ({ \
+        i += sizeof(prefix) - 1;                           \
+        true;                                              \
       }))
 
-  ret.is_write_ = false;
+  cmd->setIsWrite(false);
   MATCH_PREFIX("read ") {}
   else MATCH_PREFIX("write ") {
-    ret.is_write_ = true;
+    cmd->setIsWrite(true);
   }
   else {
     throw std::runtime_error(stringPrintF(
         "Failed to find read/write in cmd: \"%s\"", cmdstr.c_str()));
   }
 
-  MATCH_PREFIX("csr ") { ret.target_ = CSRTarget::CSR; }
+  MATCH_PREFIX("csr ") { cmd->setTarget(CSRTarget::CSR); }
   else MATCH_PREFIX("progrom ") {
-    ret.target_ = CSRTarget::Progrom;
+    cmd->setTarget(CSRTarget::Progrom);
   }
   else MATCH_PREFIX("dram0 ") {
-    ret.target_ = CSRTarget::Dram0;
+    cmd->setTarget(CSRTarget::Dram0);
   }
   else {
     throw std::runtime_error(stringPrintF(
@@ -380,61 +362,63 @@ CSRCommand CSRCommand::parseFlags() {
 #undef MATCH_PREFIX
 
   for (; i < cmdstr.size(); ++i)
-    if (!isspace(cmdstr[i]))
-      break;
+    if (!isspace(cmdstr[i])) break;
   int j = i;
   for (; j < cmdstr.size(); ++j)
-    if (!isalnum(cmdstr[j]))
-      break;
+    if (!isalnum(cmdstr[j])) break;
   std::string addrStr = cmdstr.substr(i, j - i);
   int addr = ::strtol(addrStr.c_str(), nullptr, 16);
   if (addr < 0 || addr >= 0xfffffff)
     throw std::runtime_error(stringPrintF("addr %05x out of range", addr));
-  if (ret.target() == CSRTarget::CSR && addr >= 0xfff)
+  if (cmd->target() == CSRTarget::CSR && addr >= 0xfff)
     throw std::runtime_error(
         stringPrintF("addr %05x out of range (csr)", addr));
-  if (ret.target() == CSRTarget::Progrom && addr >= 0xfffff)
+  if (cmd->target() == CSRTarget::Progrom && addr >= 0xfffff)
     throw std::runtime_error(
         stringPrintF("addr %05x out of range (progrom)", addr));
-  ret.addr_ = addr;
+  cmd->setAddr(addr);
 
-  if (ret.is_write()) {
-    ret.body_ = getTxBodyFromFlags();
-    ret.len_ = ret.body().size();
-  } else {
+  if (!cmd->isWrite()) {
     i = j;
     for (; i < cmdstr.size(); ++i)
-      if (!isspace(cmdstr[i]))
-        break;
+      if (!isspace(cmdstr[i])) break;
     j = i;
     for (; j < cmdstr.size(); ++j)
-      if (!isalnum(cmdstr[j]))
-        break;
+      if (!isalnum(cmdstr[j])) break;
     std::string lenStr = cmdstr.substr(i, j - i);
-    ret.len_ = ::strtol(lenStr.c_str(), nullptr, 16);
-    if (ret.len() < 0 || ret.len() >= 0xfff)
-      throw std::runtime_error(
-          stringPrintF("len %03x out of range", ret.len()));
+    int len = ::strtol(lenStr.c_str(), nullptr, 16);
+    if (len < 0 || len >= 0xfff)
+      throw std::runtime_error(stringPrintF("len %03x out of range", len));
+    cmd->setLen(len);
   }
 
   if (g_verbose)
     printf("parsed cmd: isWrite %d target %d addr %07x len %03x\n",
-           ret.is_write_, ret.target_, ret.addr_, ret.len_);
+           cmd->isWrite(), cmd->target(), cmd->addr(), cmd->len());
 
-  if (ret.len() % ret.wordSize() != 0)
+  if (cmd->len() % cmd->wordSize() != 0)
     throw std::runtime_error("body len not multiple of wordSize");
-
-  return ret;
 }
 
-void cmdCSRCmd(DeviceHandle *devhandle, const CSRCommand &csrcmd) {
+inline void assert(bool cond) {
+  if (!cond) throw std::runtime_error("assert failed");
+}
+
+class PacketDriver {
+ public:
+  virtual void executeTransaction(const uint8_t *txbuf, uint8_t *rxbuf,
+                                  size_t len) = 0;
+};
+
+void sendCSRCmd(const CSRCommand &csrcmd, uint8_t *txbuf, uint8_t *rxbuf,
+                PacketDriver *driver) {
   int wordSize = csrcmd.wordSize();
   constexpr uint8_t cmdSpecial = 0x0f;
-  uint8_t cmdByteBase = (csrcmd.is_write() ? 0x80 : 0x00) | csrcmd.targetByte();
+  uint8_t cmdByteBase = (csrcmd.isWrite() ? 0x80 : 0x00) | csrcmd.targetByte();
 
-  std::vector<uint8_t> rxdata;
   auto addrC = csrcmd.addr();
   size_t replyOffset = csrcmd.replyOffset();
+  size_t rxoffset = 0;
   for (int i = 0; i < csrcmd.len();) {
     int left = csrcmd.len() - i;
 
@@ -449,48 +433,39 @@ void cmdCSRCmd(DeviceHandle *devhandle, const CSRCommand &csrcmd) {
       nWord = 4;
       encodedChunkLen = 0x2 << 5;
     } else {
-      if (left < wordSize)
-        throw std::runtime_error("body not multiple of wordSize");
+      assert(left >= wordSize);
       nWord = 1;
       encodedChunkLen = 0x1 << 5;
     }
     int chunkLen = wordSize * nWord;
 
-    std::vector<uint8_t> txpacket;
-    txpacket.push_back(static_cast<uint8_t>(CommandType::SPI1));
-    txpacket.push_back(0xc1);
-    txpacket.push_back(0xc2);
-    txpacket.push_back(0xc3);
+    uint8_t *ptx = txbuf;
     for (int f = 0; f < nFrame; ++f) {
       switch (csrcmd.target()) {
-      case CSRTarget::CSR:
-        txpacket.push_back(cmdByteBase | encodedChunkLen |
-                           ((addrC >> 8) & 0xf));
-        txpacket.push_back((addrC >> 0) & 0xff);
-        break;
-      case CSRTarget::Progrom:
-        txpacket.push_back(cmdByteBase | encodedChunkLen |
-                           ((addrC >> 16) & 0xf));
-        txpacket.push_back((addrC >> 8) & 0xff);
-        txpacket.push_back((addrC >> 0) & 0xff);
-        break;
-      case CSRTarget::Dram0:
-        txpacket.push_back(cmdSpecial);
-        txpacket.push_back(cmdByteBase | encodedChunkLen);
-        txpacket.push_back((addrC >> 24) & 0xff);
-        txpacket.push_back((addrC >> 16) & 0xff);
-        txpacket.push_back((addrC >> 8) & 0xff);
-        txpacket.push_back((addrC >> 0) & 0xff);
-        break;
+        case CSRTarget::CSR:
+          *ptx++ = cmdByteBase | encodedChunkLen | ((addrC >> 8) & 0xf);
+          *ptx++ = (addrC >> 0) & 0xff;
+          break;
+        case CSRTarget::Progrom:
+          *ptx++ = cmdByteBase | encodedChunkLen | ((addrC >> 16) & 0xf);
+          *ptx++ = (addrC >> 8) & 0xff;
+          *ptx++ = (addrC >> 0) & 0xff;
+          break;
+        case CSRTarget::Dram0:
+          *ptx++ = cmdSpecial;
+          *ptx++ = cmdByteBase | encodedChunkLen;
+          *ptx++ = (addrC >> 24) & 0xff;
+          *ptx++ = (addrC >> 16) & 0xff;
+          *ptx++ = (addrC >> 8) & 0xff;
+          *ptx++ = (addrC >> 0) & 0xff;
+          break;
       }
-      if (csrcmd.is_write()) {
-        for (int j = 0; j < chunkLen; ++j) {
-          txpacket.push_back(csrcmd.body()[i + j]);
-        }
+      if (csrcmd.isWrite()) {
+        memcpy(ptx, csrcmd.txbody() + i, chunkLen);
+        ptx += chunkLen;
       } else {
-        for (int j = 0; j < chunkLen; ++j) {
-          txpacket.push_back(0xdd);
-        }
+        memset(ptx, 0xdd, chunkLen);
+        ptx += chunkLen;
       }
 
       i += chunkLen;
@@ -498,23 +473,55 @@ void cmdCSRCmd(DeviceHandle *devhandle, const CSRCommand &csrcmd) {
     }
 
     // NOP padding
-    txpacket.push_back(0x00);
-    devhandle->sendBulk(txpacket);
-    if (FLAGS_memh != "")
-      throw std::runtime_error("FIXME"); // writeMemh(FLAGS_memh, txpacket);
-    std::vector<uint8_t> rxpacket = devhandle->recvBulk(txpacket.size() - 4);
-    if (FLAGS_verbose)
-      printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
-    if (!csrcmd.is_write() || csrcmd.target() == CSRTarget::Dram0) {
+    *ptx++ = 0x00;
+
+    driver->executeTransaction(txbuf, rxbuf, ptx - txbuf);
+    if (!csrcmd.isWrite() || csrcmd.target() == CSRTarget::Dram0) {
       size_t frameSize = replyOffset + chunkLen - 1;
       for (int f = 0; f < nFrame; ++f) {
-        const uint8_t *start = &rxpacket[frameSize * f + replyOffset];
-        rxdata.insert(rxdata.end(), start, start + chunkLen);
+        const uint8_t *start = rxbuf + frameSize * f + replyOffset;
+        memcpy(csrcmd.rxbody() + rxoffset, start, chunkLen);
+        rxoffset += chunkLen;
       }
     }
   }
+}
 
-  // printf("result: %s\n", formatHex(rxdata).c_str());
+class USBBridgePacketDriver : public PacketDriver {
+ public:
+  USBBridgePacketDriver(DeviceHandle *usb) : usb_(usb) {}
+
+  void executeTransaction(const uint8_t *txbuf, uint8_t *rxbuf,
+                          size_t len) override {
+    std::vector<uint8_t> txpacket;
+    txpacket.push_back(static_cast<uint8_t>(CommandType::SPI1));
+    txpacket.push_back(0xc1);
+    txpacket.push_back(0xc2);
+    txpacket.push_back(0xc3);
+    txpacket.insert(txpacket.end(), txbuf, txbuf + len);
+
+    usb_->sendBulk(txpacket);
+    if (FLAGS_memh != "")
+      throw std::runtime_error("FIXME");  // writeMemh(FLAGS_memh, txpacket);
+    std::vector<uint8_t> rxpacket = usb_->recvBulk(txpacket.size() - 4);
+    if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
+  }
+
+ private:
+  DeviceHandle *usb_;
+};
+
+void cmdCSRCmd(DeviceHandle *devhandle, const CSRCommand &csrcmd) {
+  static uint8_t s_txbuf[4096];
+  static uint8_t s_rxbuf[4096];
+
+  USBBridgePacketDriver driver(devhandle);
+  sendCSRCmd(csrcmd, s_txbuf, s_rxbuf, &driver);
+  if (FLAGS_verbose)
+    printf("Rx: %s\n",
+           formatHex(std::vector<uint8_t>(csrcmd.rxbody(),
+                                          csrcmd.rxbody() + csrcmd.len()))
+               .c_str());
 }
 
 SPIChip parseDACTarget(const std::string &s) {
@@ -548,8 +555,7 @@ void cmdDACCmd(DeviceHandle *devhandle, SPIChip chip) {
   devhandle->sendBulk(txdata);
 
   std::vector<uint8_t> rxpacket = devhandle->recvBulk(body.size());
-  if (FLAGS_verbose)
-    printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
+  if (FLAGS_verbose) printf("Success! Rx: %s\n", formatHex(rxpacket).c_str());
 
   setSS(devhandle, chip, true);
 }
@@ -574,14 +580,39 @@ int main(int argc, char *argv[]) {
       devhandle = std::move(usbdevhandle);
     }
 
-    if (FLAGS_fbimg != "")
-      submitImage(FLAGS_fbimg, [&devhandle](int offset,
-                                            const std::vector<uint8_t> &data) {
-        cmdCSRCmd(devhandle.get(), CSRCommand(CSRTarget::Dram0, offset, data));
-      });
-    else if (FLAGS_csrcmd != "")
-      cmdCSRCmd(devhandle.get(), CSRCommand::parseFlags());
-    else if (FLAGS_dac != "")
+    CSRCommand cmd;
+    std::vector<uint8_t> rxbody;
+    rxbody.resize(4096);
+    cmd.setRxbody(rxbody.data());
+
+    if (FLAGS_fbimg != "") {
+      cmd.setIsWrite(true);
+      cmd.setTarget(CSRTarget::Dram0);
+      submitImage(FLAGS_fbimg,
+                  [&cmd, &devhandle, &rxbody](
+                      int offset, const std::vector<uint8_t> &body) {
+                    rxbody.resize(body.size());
+
+                    cmd.setAddr(offset);
+                    cmd.setTxbody(body.data());
+                    cmd.setRxbody(rxbody.data());
+                    cmd.setLen(body.size());
+                    cmdCSRCmd(devhandle.get(), cmd);
+                  });
+    } else if (FLAGS_csrcmd != "") {
+      flagsToCSRCommand(&cmd);
+
+      std::vector<uint8_t> txbody;
+      if (cmd.isWrite()) {
+        txbody = getTxBodyFromFlags();
+        cmd.setTxbody(txbody.data());
+        cmd.setLen(txbody.size());
+      } else {
+        txbody.resize(cmd.len());
+        cmd.setTxbody(txbody.data());
+      }
+      cmdCSRCmd(devhandle.get(), cmd);
+    } else if (FLAGS_dac != "")
       cmdDACCmd(devhandle.get(), parseDACTarget(FLAGS_dac));
     else
       cmdDefault(devhandle.get());
