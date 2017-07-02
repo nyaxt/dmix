@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "../../proto.h"
+#include "csrcommand.h"
 #include "board.h"
 #include "spi.h"
 #include "uiview.h"
@@ -102,31 +103,54 @@ class USBHandlerImpl : public USBHandler {
   }
 };
 
-class CSRDriver {
+class SPIPacketDriver : public PacketDriver {
  public:
-  void execute(const CSRCommand&);
-
- private:
-  __attribute__((aligned(4))) uint8_t cmdbuf_[1024];
-  __attribute__((aligned(4))) uint8_t spirxbuf_[1024];
+  void executeTransaction(const uint8_t *txbuf, uint8_t *rxbuf,
+                          int len) override {
+    SPI::getInstance()->sendRecv(1, txbuf, rxbuf, len);
+  }
 };
-
-void CSRDriver::execute(const CSRCommand& cmd) {
-
-}
 
 class Client : public SurfaceClient {
  public:
-  Client() {
+  Client(PacketDriver* driver) : driver_(driver) {
+    cmd_.setIsWrite(true);
+    cmd_.setTarget(CSRTarget::Dram0);
+    cmd_.setRxbody(nullptr);
   }
 
   void SyncLine(uint8_t* linebuf, int x, int y, int w) final {
-    uint8_t* dest = static_cast<uint8_t*>(pixels_) + (y * LCD_WIDTH + x) * 4;
+    int len = w * 4;
+    int addr = y << 9;
 
-    SPI::getInstance()->sendRecv(1, cmdbuf_, spirx_, len);
+    cmd_.setAddr(addr);
+    cmd_.setTxbody(linebuf);
+    cmd_.setLen(len);
+
+    sendCSRCmd(cmd_, txbuf_, rxbuf_, driver_);
   }
 
+ private:
+  CSRCommand cmd_;
+  __attribute__((aligned(4))) uint8_t txbuf_[2048];
+  __attribute__((aligned(4))) uint8_t rxbuf_[2048];
+  PacketDriver* driver_; 
 };
+
+Surface s_surface;
+
+void vUITask(void*) {
+  UIView view(&s_surface);
+  SPIPacketDriver spidriver;
+  Client client(&spidriver);
+
+  for (;;) {
+    vTaskDelay(1);
+
+    view.Update();
+    s_surface.Sync(&client);
+  }
+}
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -142,7 +166,7 @@ int main(void) {
   USB::init(&g_handler);
 
   xTaskCreate(USB::dispatchvTask, "vUSBTask", 1024, NULL, (tskIDLE_PRIORITY + 2UL), (TaskHandle_t *)nullptr);
-  xTaskCreate(USB::dispatchvTask, "vUITask", 1024, NULL, (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *)nullptr);
+  xTaskCreate(vUITask, "vUITask", 4096, NULL, (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *)nullptr);
 
   vTaskStartScheduler();
 }

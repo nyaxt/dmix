@@ -71,7 +71,8 @@ void sendCSRCmd(const CSRCommand &csrcmd, uint8_t *txbuf, uint8_t *rxbuf,
     *ptx++ = 0x00;
 
     driver->executeTransaction(txbuf, rxbuf, ptx - txbuf);
-    if (!csrcmd.isWrite() || csrcmd.target() == CSRTarget::Dram0) {
+    if (csrcmd.rxbody() &&
+        (!csrcmd.isWrite() || csrcmd.target() == CSRTarget::Dram0)) {
       int frameSize = replyOffset + chunkLen - 1;
       for (int f = 0; f < nFrame; ++f) {
         const uint8_t *start = rxbuf + frameSize * f + replyOffset;

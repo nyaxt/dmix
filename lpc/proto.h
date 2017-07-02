@@ -15,4 +15,4 @@ enum class SPIChip : uint8_t {
   VOL,
 };
 
-#endif // proto_h
+#endif  // proto_h

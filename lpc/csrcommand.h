@@ -67,8 +67,8 @@ class CSRCommand {
   bool is_write_ = false;
   CSRTarget target_;
   int addr_;
-  const uint8_t *txbody_;
-  uint8_t *rxbody_;
+  const uint8_t *txbody_ = nullptr;
+  uint8_t *rxbody_ = nullptr;
   int len_;
 };
 
@@ -81,4 +81,4 @@ class PacketDriver {
 void sendCSRCmd(const CSRCommand &csrcmd, uint8_t *txbuf, uint8_t *rxbuf,
                 PacketDriver *driver);
 
-#endif // csrcommand_h_
+#endif  // csrcommand_h_
