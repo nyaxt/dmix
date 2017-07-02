@@ -52,25 +52,9 @@ extern "C" {
 
 void MX_CORE_IRQHandler(void) { Chip_CREG_ClearM0AppEvent(); }
 
-#if 0
-void SysTick_Handler(void) {
-  ++g_ticks;
-
-  if (g_ticks % 10 == 0) {
-    M0App_TriggerIPI();
-  }
-
-  if (g_tickSinceLastDidSomething < 1000) g_tickSinceLastDidSomething++;
-}
-#endif
-
-void DMA_IRQHandler(void) { SPI::getInstance()->onDMAIRQ(); }
-
 }  // extern "C"
 
 class USBHandlerImpl : public USBHandler {
-  bool isBusy() override { return SPI::getInstance()->isTransactionActive(); }
-
   void notifyDataRecieved(uint8_t *data, size_t len) override {
     if (len == 0) return;
 
@@ -88,17 +72,15 @@ class USBHandlerImpl : public USBHandler {
         data += 4;
         len -= 4;
         assert(!SPI::getInstance()->isTransactionActive());
-        SPI::getInstance()->doSendRecv(0, data, usb->getTxBuf(), len, [len]() {
-          USB::getInstance()->enqueueResponse(len);
-        });
+        SPI::getInstance()->sendRecv(0, data, usb->getTxBuf(), len);
+        usb->enqueueResponse(len);
         break;
       case CommandType::SPI1:
         data += 4;
         len -= 4;
         assert(!SPI::getInstance()->isTransactionActive());
-        SPI::getInstance()->doSendRecv(1, data, usb->getTxBuf(), len, [len]() {
-          USB::getInstance()->enqueueResponse(len);
-        });
+        SPI::getInstance()->sendRecv(1, data, usb->getTxBuf(), len);
+        usb->enqueueResponse(len);
         break;
       case CommandType::SPI_SS:
         assert(len >= 3);
@@ -143,7 +125,6 @@ int main(void) {
   SPI::init();
   USB::init(&g_handler);
 
-	xTaskCreate(SPI::dispatchvTask, "vSPITask", 512, NULL, (tskIDLE_PRIORITY + 2UL), (TaskHandle_t *)nullptr);
   xTaskCreate(USB::dispatchvTask, "vUSBTask", 1024, NULL, (tskIDLE_PRIORITY + 1UL), (TaskHandle_t *)nullptr);
 
   vTaskStartScheduler();

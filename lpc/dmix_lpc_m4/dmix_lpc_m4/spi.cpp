@@ -29,10 +29,15 @@ SPI::SPI() {
 
   Chip_SSP_SetMaster(LPC_SSP0, TRUE);
   Chip_SSP_SetMaster(LPC_SSP1, TRUE);
+
+  m_mutex = xSemaphoreCreateMutex();
+  m_notifyCompletion = xSemaphoreCreateBinary();
 }
 
-void SPI::doSendRecvImpl(int ch, const uint8_t *txBuf, uint8_t *rxBuf,
-                         size_t len) {
+void SPI::sendRecv(int ch, const uint8_t *txBuf, uint8_t *rxBuf, size_t len) {
+  xSemaphoreTake(m_mutex, portMAX_DELAY);
+
+  taskENTER_CRITICAL();
   if (m_isTransactionActive) die();
 
   m_isTransactionActive = true;
@@ -67,19 +72,9 @@ void SPI::doSendRecvImpl(int ch, const uint8_t *txBuf, uint8_t *rxBuf,
                         GPDMA_TRANSFERTYPE_P2M_CONTROLLER_DMA, len);
     Chip_SSP_DMA_Enable(LPC_SSP1);
   }
-}
+  taskEXIT_CRITICAL();
 
-void SPI::onDMAIRQ() {
-  if (Chip_GPDMA_Interrupt(LPC_GPDMA, m_dmaTx) == SUCCESS) m_txComplete = true;
-
-  if (Chip_GPDMA_Interrupt(LPC_GPDMA, m_dmaRx) == SUCCESS) m_rxComplete = true;
-}
-
-bool SPI::isTransactionDone() { return m_txComplete && m_rxComplete; }
-
-bool SPI::callCallbackIfDone() {
-  if (!m_isTransactionActive) return false;
-  if (!isTransactionDone()) return false;
+  xSemaphoreTake(m_notifyCompletion, portMAX_DELAY);
 
   taskENTER_CRITICAL();
   Chip_GPDMA_Stop(LPC_GPDMA, m_dmaTx);
@@ -87,20 +82,24 @@ bool SPI::callCallbackIfDone() {
   Chip_SSP_DMA_Disable(LPC_SSP0);
   Chip_SSP_DMA_Disable(LPC_SSP1);
   m_isTransactionActive = false;
-  m_callback();
-  if (!m_isTransactionActive) m_callback.reset();
   taskEXIT_CRITICAL();
 
-  return true;
+  xSemaphoreGive(m_mutex);
 }
 
-void SPI::dispatchvTask(void *) { return getInstance()->vTask(); }
+static BaseType_t s_higherPriorityTaskWoken;
 
-void SPI::vTask() {
-  for (;;) {
-    vTaskDelay(1);
+extern "C" {
+void DMA_IRQHandler(void) { SPI::getInstance()->onDMAIRQ(); }
+}  // extern "C"
 
-    while (callCallbackIfDone())
-      ;
+void SPI::onDMAIRQ() {
+  if (Chip_GPDMA_Interrupt(LPC_GPDMA, m_dmaTx) == SUCCESS) m_txComplete = true;
+
+  if (Chip_GPDMA_Interrupt(LPC_GPDMA, m_dmaRx) == SUCCESS) m_rxComplete = true;
+
+  if (m_txComplete && m_rxComplete) {
+    xSemaphoreGiveFromISR(m_notifyCompletion, &s_higherPriorityTaskWoken);
+    portYIELD_FROM_ISR(s_higherPriorityTaskWoken);
   }
 }

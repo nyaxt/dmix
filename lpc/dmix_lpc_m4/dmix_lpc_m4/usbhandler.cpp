@@ -199,9 +199,6 @@ void USB::vTask() {
     if (!isConnected())
       continue;
 
-    if (m_handler->isBusy())
-      continue;
-
     while (hasUnhandledRxData()) {
       processRxData();
       enqueueNextRx();
