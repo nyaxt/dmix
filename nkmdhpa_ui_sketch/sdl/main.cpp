@@ -40,8 +40,8 @@ bool init() {
 
   g_screen_surface = SDL_GetWindowSurface(g_sdlwin);
 
-  g_lcd_surface = SDL_CreateRGBSurface(0, LCD_WIDTH, LCD_HEIGHT, 32, 0x000000ff,
-                                       0x0000ff00, 0x00ff0000, 0xff000000);
+  g_lcd_surface = SDL_CreateRGBSurface(0, LCD_WIDTH, LCD_HEIGHT, 32, 0x0000ff00,
+                                       0x00ff0000, 0xff000000, 0x000000ff);
 
   return true;
 }

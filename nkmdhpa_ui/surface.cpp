@@ -93,11 +93,11 @@ void Surface::Sync(SurfaceClient* client) {
   for (int j = 0; j < LCD_HEIGHT; ++j) {
     for (int i = 0; i < LCD_WIDTH; ++i) {
       int a = data_[j * LCD_WIDTH + i];
-      for (int c = 0; c < 3; ++c) {
+      for (int c = 1; c < 4; ++c) {
         linebuf_[i * 4 + c] = table_4to256[a & 0x3];
         a = a >> 2;
       }
-      linebuf_[i * 4 + 3] = 0xff;
+      linebuf_[i * 4] = 0xff;
     }
     client->SyncLine(linebuf_, 0, j, LCD_WIDTH);
   }
