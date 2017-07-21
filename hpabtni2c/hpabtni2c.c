@@ -127,7 +127,8 @@ void debounceBtnRead(void) {
     return;
   }
 
-  g_btnpressed |= ~g_btn_prev & curr;
+  // Note: btns are pullup so 1 when not pressed
+  g_btnpressed |= g_btn_prev & ~curr;
   g_btn_prev = curr;
 }
 
